@@ -25,9 +25,9 @@ eureka:
   instance:
     prefer-ip-address: true
 
-jwt:
-  secret: your-jwt-secret-key
-  expiration: 86400000
+#jwt:
+#  secret: your-jwt-secret-key
+#  expiration: 86400000
 
 management:
   endpoints:
