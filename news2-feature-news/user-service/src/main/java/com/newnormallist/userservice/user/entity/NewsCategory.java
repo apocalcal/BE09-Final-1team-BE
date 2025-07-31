@@ -1,4 +1,4 @@
-package com.newsservice.user.entity;
+package com.newnormallist.userservice.user.entity;
 
 public enum NewsCategory {
     POLITICS("정치"),
