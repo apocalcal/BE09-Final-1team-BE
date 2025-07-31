@@ -35,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# application-secret.yml 파일 Git 추적에서 제외
+application-secret.yml
