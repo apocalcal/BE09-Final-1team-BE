@@ -9,7 +9,7 @@ import com.newnormallist.userservice.auth.jwt.JwtTokenProvider;
 import com.newnormallist.userservice.auth.repository.RefreshTokenRepository;
 import com.newnormallist.userservice.common.ErrorCode;
 import com.newnormallist.userservice.user.entity.User;
-import com.newnormallist.userservice.user.exception.UserException;
+import com.newnormallist.userservice.common.exception.UserException;
 import com.newnormallist.userservice.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -60,5 +60,13 @@ public class AuthService {
         String newAccessToken = jwtTokenProvider.createAccessToken(user.getEmail(), user.getRole().name(), user.getId());
         // 4. 새로운 Access Token을 DTO에 담아 반환
         return new AccessTokenResponseDto(newAccessToken);
+    }
+
+    @Transactional
+    public void logout(RefreshTokenRequestDto request) {
+        // 클라이언트로부터 받은 Refresh Token 값으로 DB에서 직접 삭제를 시도합니다.
+        // 해당 토큰이 DB에 없으면 아무 일도 일어나지 않고, 있으면 삭제됩니다.
+        // 이것만으로 로그아웃의 목적은 완벽하게 달성됩니다.
+        refreshTokenRepository.deleteByTokenValue(request.getRefreshToken());
     }
 }

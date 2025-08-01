@@ -1,4 +1,4 @@
-package com.newnormallist.userservice.user.exception;
+package com.newnormallist.userservice.common.exception;
 
 import com.newnormallist.userservice.common.ErrorCode;
 import lombok.Getter;
