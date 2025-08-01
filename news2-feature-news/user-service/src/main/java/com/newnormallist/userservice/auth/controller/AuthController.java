@@ -19,16 +19,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
     private final AuthService authService;
     /**
-     * 사용자 로그인 API
+     * 로그인 API
      * @param loginRequestDto 로그인 요청 DTO
-     * @return 로그인 성공 시 토큰 정보 반환
+     * @return Access Token과 Refresh Token을 포함한 응답
      */
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<TokenResponseDto>> login(@RequestBody LoginRequestDto loginRequestDto) {
         TokenResponseDto tokenResponse = authService.login(loginRequestDto);
         return ResponseEntity.ok(ApiResponse.success(tokenResponse));
     }
-
     /**
      * Access Token 갱신 API
      * @param requestDto Refresh Token 요청 DTO
@@ -38,5 +37,15 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AccessTokenResponseDto>> refreshToken(@RequestBody RefreshTokenRequestDto requestDto) {
         AccessTokenResponseDto accessTokenResponseDto = authService.refreshToken(requestDto);
         return ResponseEntity.ok(ApiResponse.success(accessTokenResponseDto));
+    }
+    /**
+     * 로그아웃 API
+     * @param requestDto Refresh Token 요청 DTO
+     * @return 로그아웃 성공 메시지
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<String>> logout(@RequestBody RefreshTokenRequestDto requestDto) {
+        authService.logout(requestDto);
+        return ResponseEntity.ok(ApiResponse.success("로그아웃이 성공적으로 완료되었습니다."));
     }
 }

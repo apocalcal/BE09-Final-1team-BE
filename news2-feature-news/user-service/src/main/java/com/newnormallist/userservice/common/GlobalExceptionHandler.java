@@ -1,6 +1,6 @@
 package com.newnormallist.userservice.common;
 
-import com.newnormallist.userservice.user.exception.UserException;
+import com.newnormallist.userservice.common.exception.UserException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
