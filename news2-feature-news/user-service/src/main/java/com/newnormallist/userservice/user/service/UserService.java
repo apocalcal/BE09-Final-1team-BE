@@ -3,7 +3,7 @@ package com.newnormallist.userservice.user.service;
 import com.newnormallist.userservice.common.ErrorCode;
 import com.newnormallist.userservice.user.dto.SignupRequest;
 import com.newnormallist.userservice.user.entity.User;
-import com.newnormallist.userservice.user.exception.UserException;
+import com.newnormallist.userservice.common.exception.UserException;
 import com.newnormallist.userservice.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
