@@ -2,6 +2,8 @@ server:
   port: 8081
 
 spring:
+  config:
+    import: application-secret.yml
   application:
     name: user-service
   datasource:
@@ -24,10 +26,6 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
   instance:
     prefer-ip-address: true
-
-#jwt:
-#  secret: your-jwt-secret-key
-#  expiration: 86400000
 
 management:
   endpoints:

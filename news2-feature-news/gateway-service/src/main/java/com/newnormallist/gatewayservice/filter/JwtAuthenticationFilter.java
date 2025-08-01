@@ -85,7 +85,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
    */
   private boolean isPermitAllPath(String path) {
     return path.equals("/auth/login") || path.equals("/auth/refresh")
-        || path.equals("/api/users");
+        || path.equals("/api/users/signup");
   }
 
   @Override
