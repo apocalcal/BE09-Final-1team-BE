@@ -5,9 +5,9 @@ spring:
   application:
     name: news-service
   datasource:
-    url: jdbc:mysql://localhost:3306/news_db?useSSL=false&serverTimezone=UTC
-    username: root
-    password: password
+    url: jdbc:mysql://mysql.macacolabs.site:3322/newsdb?useSSL=false&serverTimezone=UTC
+    username: nnl
+    password: nnl1234  # ← 여기에 비밀번호 입력
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
