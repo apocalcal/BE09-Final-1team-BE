@@ -1,7 +1,6 @@
 package com.newsservice.news.controller;
 
-import com.newsservice.news.dto.response.NewsCrawlDto;
-import com.newsservice.news.dto.response.NewsPreviewDto;
+import com.newsservice.news.dto.NewsCrawlDto;
 import com.newsservice.news.service.NewsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,8 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class NewsCrawlController {
 
-    private final NewsService newsService;
-
+    private NewsService newsService;
 
     // 크롤러에서 전송된 뉴스 데이터를 받아 저장
     @PostMapping("/crawl")

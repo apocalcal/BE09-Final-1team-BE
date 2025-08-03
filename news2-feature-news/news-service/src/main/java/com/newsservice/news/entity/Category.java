@@ -1,32 +1,40 @@
 package com.newsservice.news.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import java.time.LocalDateTime;
+import lombok.*;
+
 import java.util.List;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "category")
 public class Category {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "category_id")
     private Integer id;
 
-    @Column(name = "category_name", nullable = false, length = 255)
+    @Column(nullable = false, unique = true)
     private String name;
 
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    @Column(name = "display_name")
+    private String displayName;
 
-    @OneToMany(mappedBy = "category")
-    private List<News> newsList;
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
+    @Column(nullable = false)
+    private Boolean active = true;
+
+    // NewsCrawl과의 관계
     @OneToMany(mappedBy = "category")
     private List<NewsCrawl> newsCrawls;
 
-}
+    // News와의 관계 (필요시)
+    @OneToMany(mappedBy = "category")
+    private List<News> news;
+} 
