@@ -55,4 +55,7 @@ public interface NewsRepository extends JpaRepository<News, Long> {
     // 특정 언론사 뉴스 조회
     @Query("SELECT n FROM News n JOIN n.originalNews nc WHERE nc.press = :press")
     Page<News> findByPress(@Param("press") String press, Pageable pageable);
+    
+    // 전체 뉴스 조회 (페이징)
+    Page<News> findAll(Pageable pageable);
 } 

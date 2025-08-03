@@ -47,7 +47,7 @@ class NewsCrawler:
         
         # DTO 형식으로 데이터 구성
         dto = {
-            "linkId": news_data.get("link"),
+            "linkId": int(news_data.get("link", "0")),  # Long 타입으로 변환
             "title": news_data.get("title"),
             "press": news_data.get("press"),
             "content": news_data.get("content"),
@@ -79,7 +79,7 @@ class NewsCrawler:
         """뉴스 데이터 미리보기 (저장하지 않음)"""
         
         dto = {
-            "linkId": news_data.get("link"),
+            "linkId": int(news_data.get("link", "0")),  # Long 타입으로 변환
             "title": news_data.get("title"),
             "press": news_data.get("press"),
             "content": news_data.get("content"),
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     
     # 크롤링된 뉴스 데이터 예시
     sample_news = {
-        "link": "https://example.com/news/123",
+        "link": 123,  # Long 타입으로 변경
         "title": "샘플 뉴스 제목",
         "press": "샘플 언론사",
         "content": "이것은 샘플 뉴스 내용입니다...",

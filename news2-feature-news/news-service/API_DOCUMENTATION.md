@@ -20,7 +20,7 @@ Content-Type: application/json
 **요청 본문:**
 ```json
 {
-  "linkId": "https://example.com/news/123",
+  "linkId": 123,
   "title": "뉴스 제목",
   "press": "언론사명",
   "content": "뉴스 내용...",
@@ -52,7 +52,7 @@ Content-Type: application/json
 - 성공 (200): 미리보기 데이터 반환
 ```json
 {
-  "linkId": "https://example.com/news/123",
+  "linkId": 123,
   "title": "뉴스 제목",
   "press": "언론사명",
   "content": "뉴스 내용...",
@@ -79,7 +79,7 @@ GET /api/news/crawl
 
 | 필드 | 타입 | 설명 | 필수 여부 |
 |------|------|------|-----------|
-| linkId | String | 뉴스 링크 URL | ✅ |
+| linkId | Long | 뉴스 링크 ID | ✅ |
 | title | String | 뉴스 제목 | ✅ |
 | press | String | 언론사명 | ✅ |
 | content | String | 뉴스 내용 | ✅ |
@@ -95,7 +95,7 @@ import requests
 
 # 뉴스 데이터
 news_data = {
-    "linkId": "https://example.com/news/123",
+    "linkId": 123,
     "title": "샘플 뉴스",
     "press": "샘플 언론사",
     "content": "뉴스 내용...",
@@ -119,7 +119,7 @@ print(response.text)
 RestTemplate restTemplate = new RestTemplate();
 
 NewsCrawlDto dto = NewsCrawlDto.builder()
-    .linkId("https://example.com/news/123")
+    .linkId(123L)
     .title("샘플 뉴스")
     .press("샘플 언론사")
     .content("뉴스 내용...")

@@ -63,6 +63,4 @@ public interface NewsCrawlRepository extends JpaRepository<NewsCrawl, Long> {
     // 내용이 긴 뉴스 조회 (내용 길이 기준)
     @Query("SELECT nc FROM NewsCrawl nc WHERE LENGTH(nc.content) > :minLength")
     Page<NewsCrawl> findByContentLengthGreaterThan(@Param("minLength") Integer minLength, Pageable pageable);
-
-    boolean existsByLinkId(String linkId);
 } 

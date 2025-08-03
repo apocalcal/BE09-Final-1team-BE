@@ -10,7 +10,7 @@ import com.newsservice.news.entity.NewsCrawl;
 import com.newsservice.news.repository.CategoryRepository;
 import com.newsservice.news.repository.NewsCrawlRepository;
 import com.newsservice.news.repository.NewsRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,13 +21,17 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
 public class NewsServiceImpl implements NewsService {
 
-    private final NewsCrawlRepository newsCrawlRepository;
-    private final NewsRepository newsRepository;
-    private final CategoryRepository categoryRepository;
+    @Autowired
+    private NewsCrawlRepository newsCrawlRepository;
+    
+    @Autowired
+    private NewsRepository newsRepository;
+    
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     // 크롤링 관련 메서드들
     @Override
@@ -46,7 +50,7 @@ public class NewsServiceImpl implements NewsService {
 
         // NewsCrawl 엔티티 생성
         NewsCrawl newsCrawl = NewsCrawl.builder()
-                .linkId(Long.valueOf(dto.getLinkId()))
+                .linkId(dto.getLinkId())
                 .title(dto.getTitle())
                 .press(dto.getPress())
                 .content(dto.getContent())
@@ -158,7 +162,7 @@ public class NewsServiceImpl implements NewsService {
     
     @Override
     public List<CategoryDto> getAllCategories() {
-        return categoryRepository.findActiveCategories()
+        return categoryRepository.findAll()
                 .stream()
                 .map(this::convertToCategoryDto)
                 .collect(Collectors.toList());
