@@ -25,41 +25,31 @@ public class News {
     @Column(name = "original_news_id", nullable = false)
     private Long originalNewsId;
 
-    @Column(nullable = false, length = 500)
-    private String title;
-
-    @Column(columnDefinition = "TEXT")
-    private String content;
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
 
     @Column(columnDefinition = "TEXT")
     private String summary;
 
-    @Column(columnDefinition = "TEXT")
     private Integer trusted;
 
-    @Column(name = "published_at")
-    private LocalDateTime publishedAt;
-
     @CreationTimestamp
-    @Column(name = "created_at")
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
-    private Category category;
-
-
-    @Column(name = "views", columnDefinition = "INTEGER DEFAULT 0")
-    private Integer views;
 
     // NewsCrawl과의 관계 설정
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "original_news_id", insertable = false, updatable = false)
     private NewsCrawl originalNews;
+
+    // Category와의 관계 설정
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
 
     // 뉴스레터와의 N:N 연결
     @OneToMany(mappedBy = "news")

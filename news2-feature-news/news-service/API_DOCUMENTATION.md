@@ -1,210 +1,149 @@
-# 뉴스 서비스 API 문서
+# News Service API Documentation
 
 ## 📋 개요
-뉴스 서비스는 트렌딩, 추천, 카테고리별 필터링, 검색 기능을 제공하는 RESTful API입니다.
+뉴스 서비스의 REST API 문서입니다.
 
-## 🔗 기본 URL
+## 🔗 크롤링 관련 API
+
+### 1. 뉴스 저장 API
+크롤러에서 수집한 뉴스 데이터를 저장합니다.
+
 ```
-http://localhost:8080/api/news
+POST /api/news/crawl
 ```
 
-## 📊 API 엔드포인트
+**요청 헤더:**
+```
+Content-Type: application/json
+```
 
-### 🔥 트렌딩 뉴스
-**GET** `/api/news/trending`
-
-신뢰도와 조회수를 기반으로 한 인기 뉴스를 조회합니다.
-
-**Query Parameters:**
-- `page` (optional): 페이지 번호 (기본값: 0)
-- `size` (optional): 페이지 크기 (기본값: 20)
-
-**Response:**
+**요청 본문:**
 ```json
 {
-  "content": [
-    {
-      "newsId": 1,
-      "title": "AI 기술 발전으로 일자리 변화 예상",
-      "summary": "인공지능 기술의 발전으로 많은 직업이 변화할 것으로 예상됩니다...",
-      "press": "조선일보",
-      "category": "IT/과학",
-      "publishedAt": "2025-01-03T10:00:00",
-      "trusted": 90,
-      "views": 150
-    }
-  ],
-  "totalElements": 10,
-  "totalPages": 1,
-  "size": 20,
-  "number": 0
+  "linkId": "https://example.com/news/123",
+  "title": "뉴스 제목",
+  "press": "언론사명",
+  "content": "뉴스 내용...",
+  "reporterName": "기자명",
+  "publishedAt": "2024-01-15T10:30:00",
+  "categoryId": 1
 }
 ```
 
-### 🎯 추천 뉴스
-**GET** `/api/news/recommendations`
+**응답:**
+- 성공 (200): `"뉴스가 성공적으로 저장되었습니다."`
+- 실패 (400): `"저장 실패: [에러 메시지]"`
 
-사용자의 관심 카테고리 기반으로 추천 뉴스를 조회합니다.
+### 2. 뉴스 미리보기 API
+크롤링된 뉴스 데이터를 미리보기합니다 (저장하지 않음).
 
-**Query Parameters:**
-- `userId` (optional): 사용자 ID (기본값: 1)
-- `page` (optional): 페이지 번호
-- `size` (optional): 페이지 크기
+```
+POST /api/news/crawl/preview
+```
 
-**Response:** 트렌딩 뉴스와 동일한 형식
+**요청 헤더:**
+```
+Content-Type: application/json
+```
 
-### 🗂️ 카테고리별 뉴스
-**GET** `/api/news/category/{categoryId}`
+**요청 본문:** (위와 동일)
 
-특정 카테고리의 뉴스를 조회합니다.
-
-**Path Parameters:**
-- `categoryId`: 카테고리 ID (1: 경제, 2: 정치, 3: 사회, 4: 문화, 5: IT/과학, 6: 스포츠, 7: 국제)
-
-**Query Parameters:**
-- `page` (optional): 페이지 번호
-- `size` (optional): 페이지 크기
-
-**Response:** 트렌딩 뉴스와 동일한 형식
-
-### 🔍 키워드 검색
-**GET** `/api/news/search`
-
-제목, 요약, 내용에서 키워드를 검색합니다.
-
-**Query Parameters:**
-- `query` (required): 검색 키워드
-- `page` (optional): 페이지 번호
-- `size` (optional): 페이지 크기
-
-**Response:** 트렌딩 뉴스와 동일한 형식
-
-### 📊 인기 뉴스 (조회수 기반)
-**GET** `/api/news/popular`
-
-조회수를 기준으로 한 인기 뉴스를 조회합니다.
-
-**Query Parameters:**
-- `page` (optional): 페이지 번호
-- `size` (optional): 페이지 크기
-
-**Response:** 트렌딩 뉴스와 동일한 형식
-
-### 📰 최신 뉴스
-**GET** `/api/news/latest`
-
-최신 등록 순으로 뉴스를 조회합니다.
-
-**Query Parameters:**
-- `page` (optional): 페이지 번호
-- `size` (optional): 페이지 크기
-
-**Response:** 트렌딩 뉴스와 동일한 형식
-
-### 📰 뉴스 상세 조회
-**GET** `/api/news/{newsId}`
-
-특정 뉴스의 상세 정보를 조회합니다.
-
-**Path Parameters:**
-- `newsId`: 뉴스 ID
-
-**Response:**
+**응답:**
+- 성공 (200): 미리보기 데이터 반환
 ```json
 {
-  "newsId": 1,
-  "originalNewsId": 1,
-  "title": "AI 기술 발전으로 일자리 변화 예상",
-  "content": "인공지능 기술의 발전으로 많은 직업이 변화할 것으로 예상됩니다...",
-  "press": "조선일보",
-  "link": "https://example.com/news1",
-  "summary": "인공지능 기술의 발전으로 많은 직업이 변화할 것으로 예상됩니다...",
-  "trusted": 90,
-  "publishedAt": "2025-01-03T10:00:00",
-  "createdAt": "2025-01-03T10:00:00",
-  "reporterName": "테스트 기자 1"
+  "linkId": "https://example.com/news/123",
+  "title": "뉴스 제목",
+  "press": "언론사명",
+  "content": "뉴스 내용...",
+  "reporterName": "기자명",
+  "publishedAt": "2024-01-15T10:30:00",
+  "categoryId": 1
 }
 ```
 
-### 👁️ 조회수 증가
-**POST** `/api/news/{newsId}/view`
+### 3. 크롤링된 뉴스 목록 조회 API
+저장된 크롤링 뉴스 목록을 조회합니다.
 
-뉴스 조회수를 증가시킵니다.
-
-**Path Parameters:**
-- `newsId`: 뉴스 ID
-
-**Response:** 200 OK
-
-## 🧪 테스트
-
-### 테스트 데이터 생성
-**POST** `/api/news/test-data`
-
-다양한 카테고리의 테스트 데이터를 생성합니다.
-
-**Response:**
-```json
-"5개의 테스트 데이터가 생성되었습니다."
+```
+GET /api/news/crawl
 ```
 
-## 📝 사용 예시
+**응답:**
+- 성공 (200): 크롤링된 뉴스 목록
 
-### 1. 트렌딩 뉴스 조회
-```bash
-curl -X GET "http://localhost:8080/api/news/trending?page=0&size=10"
+## 📊 데이터 모델
+
+### NewsCrawlDto
+크롤러에서 전송하는 뉴스 데이터 형식입니다.
+
+| 필드 | 타입 | 설명 | 필수 여부 |
+|------|------|------|-----------|
+| linkId | String | 뉴스 링크 URL | ✅ |
+| title | String | 뉴스 제목 | ✅ |
+| press | String | 언론사명 | ✅ |
+| content | String | 뉴스 내용 | ✅ |
+| reporterName | String | 기자명 | ❌ |
+| publishedAt | LocalDateTime | 발행일시 | ❌ |
+| categoryId | Integer | 카테고리 ID | ❌ |
+
+## 🔧 사용 예시
+
+### Python 예시
+```python
+import requests
+
+# 뉴스 데이터
+news_data = {
+    "linkId": "https://example.com/news/123",
+    "title": "샘플 뉴스",
+    "press": "샘플 언론사",
+    "content": "뉴스 내용...",
+    "reporterName": "홍길동",
+    "publishedAt": "2024-01-15T10:30:00",
+    "categoryId": 1
+}
+
+# 백엔드로 전송
+response = requests.post(
+    "http://localhost:8082/api/news/crawl",
+    json=news_data,
+    headers={"Content-Type": "application/json"}
+)
+
+print(response.text)
 ```
 
-### 2. 카테고리별 뉴스 조회
-```bash
-curl -X GET "http://localhost:8080/api/news/category/1?page=0&size=10"
+### Java 예시
+```java
+RestTemplate restTemplate = new RestTemplate();
+
+NewsCrawlDto dto = NewsCrawlDto.builder()
+    .linkId("https://example.com/news/123")
+    .title("샘플 뉴스")
+    .press("샘플 언론사")
+    .content("뉴스 내용...")
+    .reporterName("홍길동")
+    .publishedAt(LocalDateTime.now())
+    .categoryId(1)
+    .build();
+
+String result = restTemplate.postForObject(
+    "http://localhost:8082/api/news/crawl",
+    dto,
+    String.class
+);
 ```
 
-### 3. 키워드 검색
-```bash
-curl -X GET "http://localhost:8080/api/news/search?query=AI&page=0&size=10"
-```
+## ⚠️ 주의사항
 
-### 4. 뉴스 조회수 증가
-```bash
-curl -X POST "http://localhost:8080/api/news/1/view"
-```
+1. **중복 방지**: 같은 `linkId`로 중복 저장 시 에러 발생
+2. **데이터 검증**: 필수 필드 누락 시 저장 실패
+3. **CORS 설정**: `@CrossOrigin(origins = "*")` 설정으로 크로스 오리진 요청 허용
+4. **에러 처리**: 네트워크 오류, DB 오류 등 예외 상황 처리
 
-## 🔧 기술 스택
+## 📈 성능 고려사항
 
-- **Framework**: Spring Boot 3.x
-- **Database**: JPA/Hibernate
-- **Build Tool**: Gradle
-- **Language**: Java 17
-
-## 📊 데이터베이스 스키마
-
-### News 테이블
-- `news_id`: 뉴스 ID (PK)
-- `original_news_id`: 원본 뉴스 ID (FK)
-- `published_at`: 발행일
-- `summary`: 요약
-- `trusted`: 신뢰도 점수
-- `views`: 조회수
-- `created_at`: 생성일
-- `updated_at`: 수정일
-
-### NewsCrawl 테이블
-- `raw_id`: 원본 ID (PK)
-- `link_id`: 링크 ID
-- `link`: 뉴스 링크
-- `title`: 제목
-- `press`: 언론사
-- `content`: 내용
-- `reporter_name`: 기자명
-- `category_id2`: 카테고리 ID
-- `created_at`: 생성일
-
-## 🚀 향후 개선 사항
-
-1. **개인화 추천**: 사용자 관심사 기반 정교한 추천 알고리즘
-2. **실시간 트렌딩**: 실시간 조회수 기반 트렌딩 계산
-3. **AI 요약**: GPT 등 AI 모델을 활용한 자동 요약
-4. **감정 분석**: 뉴스 내용의 감정 분석 및 분류
-5. **댓글 시스템**: 뉴스별 댓글 기능
-6. **북마크**: 사용자별 뉴스 북마크 기능 
+1. **대량 데이터**: 많은 뉴스를 한 번에 전송할 때는 배치 처리 고려
+2. **네트워크 타임아웃**: 긴 뉴스 내용 전송 시 타임아웃 설정
+3. **메모리 사용량**: 큰 뉴스 내용 전송 시 메모리 사용량 모니터링 

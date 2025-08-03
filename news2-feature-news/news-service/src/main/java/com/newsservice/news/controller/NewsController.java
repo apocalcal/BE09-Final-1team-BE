@@ -1,23 +1,19 @@
 package com.newsservice.news.controller;
 
 import com.newsservice.news.dto.CategoryDto;
-import com.newsservice.news.dto.response.NewsCrawlDto;
-import com.newsservice.news.dto.response.NewsListResponse;
-import com.newsservice.news.dto.response.NewsResponse;
-import com.newsservice.news.entity.News;
-import com.newsservice.news.entity.NewsCrawl;
-import com.newsservice.news.entity.NewsCategory;
-import com.newsservice.news.repository.NewsCrawlRepository;
-import com.newsservice.news.repository.NewsRepository;
+import com.newsservice.news.dto.NewsListResponse;
+import com.newsservice.news.dto.NewsResponse;
+import com.newsservice.news.entity.Category;
+import com.newsservice.news.repository.CategoryRepository;
 import com.newsservice.news.service.NewsService;
+
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/news")
@@ -28,11 +24,7 @@ public class NewsController {
     private NewsService newsService;
     
     @Autowired
-    private NewsRepository newsRepository;
-    
-    @Autowired
-    private NewsCrawlRepository newsCrawlRepository;
-    private NewsCrawl newsCrawl;
+    private CategoryRepository categoryRepository;
 
     // 뉴스 목록 조회(페이징 지원)
     @GetMapping
@@ -42,14 +34,17 @@ public class NewsController {
             Pageable pageable) {
 
         try {
-            NewsCategory newsCategory = null;
+            Category categoryEntity = null;
 
             // "전체"는 category 파라미터 생략 처리
             if (category != null && !category.equals("전체")) {
-                newsCategory = NewsCategory.fromDisplayName(category); // "정치" → POLITICS
+                categoryEntity = categoryRepository.findByName(category);
+                if (categoryEntity == null) {
+                    throw new IllegalArgumentException("지원하지 않는 카테고리입니다.");
+                }
             }
 
-            Page<NewsResponse> newsList = newsService.getNews(newsCategory, keyword, pageable);
+            Page<NewsResponse> newsList = newsService.getNews(categoryEntity, keyword, pageable);
             return ResponseEntity.ok(newsList);
 
         } catch (IllegalArgumentException e) {
@@ -142,14 +137,12 @@ public class NewsController {
         return ResponseEntity.ok(news);
     }
 
-    // 카테고리 목록 조회 -> ㅇ
+    // 카테고리 목록 조회
     @GetMapping("/categories")
     public ResponseEntity<List<CategoryDto>> getCategories() {
         List<CategoryDto> categories = newsService.getAllCategories();
         return ResponseEntity.ok(categories);
     }
-    
-
     
     // 관리자용: 크롤링된 뉴스를 승격하여 노출용 뉴스로 전환
     @PostMapping("/promote/{newsCrawlId}")
@@ -161,7 +154,4 @@ public class NewsController {
             return ResponseEntity.badRequest().body("승격 실패: " + e.getMessage());
         }
     }
-    
-
-   
 }
