@@ -1,33 +1,22 @@
+# 1. 서버 포트 설정
 server:
   port: 8000
 
+# 2. 애플리케이션 식별 및 Config 서버 연결 설정
 spring:
-  config:
-    import: application-secret.yml
   application:
-    name: gateway-service
+    name: gateway-service # Eureka와 Config 서버가 이 서비스를 식별하는 이름 (필수)
+  config:
+    import: optional:configserver:http://localhost:8888 # Config 서버 연결 (필수)
   cloud:
     gateway:
-       server:
-         webflux:
-          routes:
-            - id: user-service
-              uri: lb://USER-SERVICE
-              predicates:
-                - Path=/api/user-service/users/**
-              filters:
-                - RewritePath=/api/user-service/users/(?<segment>.*), /api/users/${segment}
-            - id: news-service
-              uri: lb://NEWS-SERVICE
-              predicates:
-                - Path=api/news-service/news/**
-              filters:
-                - RewritePath=/api/news-service/news/(?<segment>.*), /api/news/${segment}
+      server:
+        webflux:
           discovery:
             locator:
-              enabled: true
-              lower-case-service-id: true
+              enabled: false
 
+# 3. Eureka 클라이언트 설정 (인프라 연결 정보)
 eureka:
   client:
     service-url:
@@ -38,6 +27,7 @@ eureka:
     prefer-ip-address: true
     hostname: localhost
 
+# 4. 로컬 개발/디버깅을 위한 로깅 레벨 설정
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG

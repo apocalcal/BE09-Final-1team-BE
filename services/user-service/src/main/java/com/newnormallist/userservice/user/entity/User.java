@@ -1,6 +1,7 @@
 package com.newnormallist.userservice.user.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -55,4 +56,12 @@ public class User {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    public void updatePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
+
+    public void updateProfile(@NotNull(message = "뉴스레터 수신 동의 여부는 필수입니다.") Boolean letterOk, Set<String> hobbies) {
+
+    }
 }

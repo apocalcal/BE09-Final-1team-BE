@@ -1,15 +1,15 @@
 package com.newnormallist.userservice.user.controller;
 
 import com.newnormallist.userservice.common.ApiResponse;
+import com.newnormallist.userservice.user.dto.MyPageResponse;
 import com.newnormallist.userservice.user.dto.SignupRequest;
+import com.newnormallist.userservice.user.dto.UserUpdateRequest;
 import com.newnormallist.userservice.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/users")
@@ -24,6 +24,31 @@ public class UserController {
     public ResponseEntity<ApiResponse<String>> signup(@Valid @RequestBody SignupRequest signupRequest) {
         userService.signup(signupRequest);
         return ResponseEntity.ok(ApiResponse.success("회원가입이 성공적으로 완료되었습니다."));
+    }
+
+    /**
+     * 마이페이지 정보 조회 API
+     * @return 마이페이지 정보
+     * */
+    @GetMapping("/mypage")
+    public ResponseEntity<ApiResponse<MyPageResponse>> getMyPage(@AuthenticationPrincipal String userIdStr) {
+        Long userId = Long.parseLong(userIdStr);
+        MyPageResponse myPageResponse = userService.getMyPage(userId);
+        return ResponseEntity.ok(ApiResponse.success(myPageResponse));
+    }
+
+    /**
+     * 마이페이지 정보 수정 API
+     * @return 마이페이지 정보 수정 성공 메시지
+     */
+    @PutMapping("/mypageupdate")
+    public ResponseEntity<ApiResponse<String>> updateMyPage(
+            @AuthenticationPrincipal String userIdStr,
+            @Valid @RequestBody UserUpdateRequest userUpdateRequest
+    ) {
+        Long userId = Long.parseLong(userIdStr);
+        userService.updateMyPage(userId, userUpdateRequest);
+        return ResponseEntity.ok(ApiResponse.success("마이페이지 정보가 성공적으로 수정되었습니다."));
     }
 
 }
