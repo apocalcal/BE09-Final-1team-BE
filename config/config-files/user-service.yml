@@ -1,0 +1,13 @@
+spring:
+  config:
+    activate:
+      on-profile: user-service
+
+custom:
+  user:
+    welcome-message: "Welcome, User!"
+
+logging:
+  level:
+    com.newnormallist.userservice: DEBUG
+    org.springframework.security: WARN
