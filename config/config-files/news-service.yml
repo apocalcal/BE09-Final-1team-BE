@@ -1,0 +1,13 @@
+spring:
+  config:
+    activate:
+      on-profile: news-service
+
+custom:
+  news:
+    welcome-message: "Welcome to the News Service!"
+    
+logging:
+  level:
+    com.newnormallist.newsservice: DEBUG
+    org.springframework.security: WARN
