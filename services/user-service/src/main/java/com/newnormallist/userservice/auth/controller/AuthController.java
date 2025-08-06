@@ -1,11 +1,9 @@
 package com.newnormallist.userservice.auth.controller;
 
-import com.newnormallist.userservice.auth.dto.AccessTokenResponseDto;
-import com.newnormallist.userservice.auth.dto.LoginRequestDto;
-import com.newnormallist.userservice.auth.dto.RefreshTokenRequestDto;
-import com.newnormallist.userservice.auth.dto.TokenResponseDto;
+import com.newnormallist.userservice.auth.dto.*;
 import com.newnormallist.userservice.auth.service.AuthService;
 import com.newnormallist.userservice.common.ApiResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,5 +45,23 @@ public class AuthController {
     public ResponseEntity<ApiResponse<String>> logout(@RequestBody RefreshTokenRequestDto requestDto) {
         authService.logout(requestDto);
         return ResponseEntity.ok(ApiResponse.success("로그아웃이 성공적으로 완료되었습니다."));
+    }
+    /**
+     * 비밀번호 재설정 메일 발송 요청 API
+     * @return 비밀번호 재설정 메일 발송 성공 메시지
+     * */
+    @PostMapping("/password/find")
+    public ResponseEntity<ApiResponse<String>> requestPasswordReset(@Valid @RequestBody PasswordFindRequest request) {
+        authService.requestPasswordReset(request);
+        return ResponseEntity.ok(ApiResponse.success("비밀번호 재설정 메일이 발송되었습니다."));
+    }
+    /**
+     * 비밀번호 재설정 API
+     * @return 비밀번호 재설정 성공 메시지
+     * */
+    @PostMapping("/password/reset")
+    public ResponseEntity<ApiResponse<String>> resetPassword(@Valid @RequestBody PasswordResetRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(ApiResponse.success("비밀번호가 성공적으로 재설정되었습니다."));
     }
 }
