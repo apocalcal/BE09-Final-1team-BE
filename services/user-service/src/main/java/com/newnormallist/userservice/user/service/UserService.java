@@ -1,5 +1,6 @@
 package com.newnormallist.userservice.user.service;
 
+import com.newnormallist.userservice.auth.repository.RefreshTokenRepository;
 import com.newnormallist.userservice.common.ErrorCode;
 import com.newnormallist.userservice.user.dto.MyPageResponse;
 import com.newnormallist.userservice.user.dto.SignupRequest;
@@ -22,6 +23,7 @@ import java.util.HashSet;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
 
     /**
@@ -67,22 +69,45 @@ public class UserService {
     /**
      * 마이페이지 정보 수정 로직
      * @param userId 현재 인증된 사용자 ID
-     * @param userUpdateRequest 수정할 정보
+     * @param request 수정할 정보
      */
     @Transactional
-    public void updateMyPage(Long userId, UserUpdateRequest userUpdateRequest) {
+    public void updateMyPage(Long userId, UserUpdateRequest request) {
         // 1. 사용자 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
-        // 2. 비밀번호가 변경된 경우 암호화
-        if (userUpdateRequest.getPassword() != null && !userUpdateRequest.getPassword().isBlank()) {
-            String encodedPassword = passwordEncoder.encode(userUpdateRequest.getPassword());
-            user.updatePassword(encodedPassword);
-            // 3. 뉴스레터 수신 동의 여부 업데이트 및 관심사 업데이트
-            user.updateProfile(userUpdateRequest.getLetterOk(), userUpdateRequest.getHobbies());
-            log.info("사용자 마이페이지 정보 수정 완료 - 사용자 ID: {}", userId);
-        } else {
-            throw new UserException(ErrorCode.INVALID_INPUT_VALUE);
+
+        // 2. 비밀번호 변경 로직
+        // newPassword 필드가 비어있지 않은 경우에만 실행
+        if (request.getNewPassword() != null && !request.getNewPassword().isBlank()) {
+            // 2-1. 새 비밀번호와 확인 비밀번호 일치 여부 확인
+            if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+                throw new UserException(ErrorCode.PASSWORD_MISMATCH);
             }
+            // 2-2. 비밀번호 암호화 및 업데이트
+            String encodedPassword = passwordEncoder.encode(request.getNewPassword());
+            user.updatePassword(encodedPassword);
         }
+
+        // 3. 뉴스레터 수신 여부 및 관심사 업데이트
+        user.updateProfile(request.getLetterOk(), request.getHobbies());
+        log.info("사용자 마이페이지 정보 수정 완료 - 사용자 ID: {}", userId);
+    }
+    /**
+     * 회원 탈퇴 로직
+     * @param userId 현재 인증된 사용자 ID
+     */
+    @Transactional
+    public void deleteUser(Long userId) {
+        // 1. 사용자 ID로 refreshtoken 삭제
+        refreshTokenRepository.deleteByUserId(userId);
+        // 2. 사용자 존재 여부 조회
+        if (!userRepository.existsById(userId)) {
+            throw new UserException(ErrorCode.USER_NOT_FOUND);
+        }
+        // 3. 사용자 삭제
+        userRepository.deleteById(userId);
+        log.info("사용자 탈퇴 완료 - 사용자 ID: {}", userId);
+    }
+
     }

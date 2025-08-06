@@ -41,7 +41,7 @@ public class UserController {
      * 마이페이지 정보 수정 API
      * @return 마이페이지 정보 수정 성공 메시지
      */
-    @PutMapping("/mypageupdate")
+    @PutMapping("/myupdate")
     public ResponseEntity<ApiResponse<String>> updateMyPage(
             @AuthenticationPrincipal String userIdStr,
             @Valid @RequestBody UserUpdateRequest userUpdateRequest
@@ -49,6 +49,16 @@ public class UserController {
         Long userId = Long.parseLong(userIdStr);
         userService.updateMyPage(userId, userUpdateRequest);
         return ResponseEntity.ok(ApiResponse.success("마이페이지 정보가 성공적으로 수정되었습니다."));
+    }
+    /**
+     * 회원 탈퇴 API
+     * @return 회원 탈퇴 성공 메시지
+     */
+    @DeleteMapping("/delete")
+    public ResponseEntity<ApiResponse<String>> deleteUser(@AuthenticationPrincipal String userIdStr) {
+        Long userId = Long.parseLong(userIdStr);
+        userService.deleteUser(userId);
+        return ResponseEntity.ok(ApiResponse.success("회원 탈퇴가 성공적으로 완료되었습니다."));
     }
 
 }

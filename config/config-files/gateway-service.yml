@@ -1,27 +1,21 @@
 spring:
   cloud:
     gateway:
-      routes:
-        # User Service 라우팅 규칙
-        - id: user-service-route
-          uri: lb://USER-SERVICE  # Eureka에 등록된 서비스 ID
-          predicates:
-            - Path=/api/users/**
-        - id: user-service-auth-route
-          uri: lb://USER-SERVICE
-          predicates:
-            - Path=/api/auth/**
-
-        # News Service 라우팅 규칙
-        - id: news-service-route
-          uri: lb://NEWS-SERVICE
-          predicates:
-            - Path=/api/news/**
+      server:
+        webflux:
+          routes:
+            # User Service 라우팅 규칙
+            - id: user-service-route
+              uri: lb://USER-SERVICE  # Eureka에 등록된 서비스 ID
+              predicates:
+                - Path=/api/users/**, /api/auth/**
+            # News Service 라우팅 규칙
+            - id: news-service-route
+              uri: lb://NEWS-SERVICE
+              predicates:
+                - Path=/api/news/**
 management:
   endpoints:
     web:
       exposure:
         include: "*"
-  endpoint:
-    gateway:
-      enabled: true  # Gateway 관련 엔드포인트 활성화

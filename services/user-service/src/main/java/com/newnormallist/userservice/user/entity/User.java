@@ -62,6 +62,18 @@ public class User {
     }
 
     public void updateProfile(@NotNull(message = "뉴스레터 수신 동의 여부는 필수입니다.") Boolean letterOk, Set<String> hobbies) {
+        this.letterOk = letterOk;
 
+        if (hobbies != null) {
+            this.hobbies = hobbies.stream()
+                    .map(hobby -> {
+                        try {
+                            return NewsCategory.valueOf(hobby.toUpperCase());
+                        } catch (IllegalArgumentException e) {
+                            throw new IllegalArgumentException("유효하지 않은 관심사 카테고리입니다: " + hobby);
+                        }
+                    })
+                    .collect(java.util.stream.Collectors.toSet());
+        }
     }
 }
