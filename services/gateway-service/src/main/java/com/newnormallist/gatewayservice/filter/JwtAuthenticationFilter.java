@@ -2,94 +2,102 @@ package com.newnormallist.gatewayservice.filter;
 
 import com.newnormallist.gatewayservice.jwt.GatewayJwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
-
 
   private final GatewayJwtTokenProvider jwtTokenProvider;
 
   @Override
   public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-
-    // 현재 요청 경로 확인
     String path = exchange.getRequest().getURI().getPath();
+    log.info("✅ [Gateway] Request Path: {}", path);
 
-    // 디버깅용 로그 추가
-    System.out.println("Gateway Filter - Request Path: " + path);
-    System.out.println("Gateway Filter - Full URI: " + exchange.getRequest().getURI());
-
-    // permitAll 경로는 JWT 검증 건너뛰기
+    // permitAll 경로는 토큰 검증 없이 통과
     if (isPermitAllPath(path)) {
-      System.out.println("Gateway Filter - PermitAll path detected, skipping JWT validation");
-      // 인증 없는 요청으로 그냥 통과
-      ServerHttpRequest mutateRequest = exchange.getRequest().mutate()
-          .header("X-User-Id", "0")
-          .header("X-User-Role", "GUEST")
-          .build();
-      ServerWebExchange mutatedExchange = exchange.mutate().request(mutateRequest).build();
-      return chain.filter(mutatedExchange);
+      log.info("✅ [Gateway] PermitAll path, skipping token validation.");
+      return chain.filter(exchange);
     }
 
-    // 헤더에서 'Authorization' 값을 읽어온다.
-    String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
+    // Authorization 헤더에서 토큰 추출
+    String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
-    // 만약 토큰이 없거나, "Bearer "로 시작하지 않으면 다음 체인으로 요청을 전달한다.
     if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-      ServerHttpRequest mutateRequest = exchange.getRequest().mutate()
-          .header("X-User-Id", "0")
-          .header("X-User-Role", "GUEST") // GUEST 사용자
-          .build();
-      ServerWebExchange mutatedExchange = exchange.mutate().request(mutateRequest).build();
-      return chain.filter(mutatedExchange);
+      log.error("❌ [Gateway] Authorization header is missing or does not start with Bearer.");
+      return handleUnauthorized(exchange, "Authorization header is missing or invalid.");
     }
 
-    // "Bearer " 접두어를 제거하고 순수 JWT 토큰만 추출한다.
     String token = authHeader.substring(7);
+    log.info("✅ [Gateway] Token found. Processing token...");
 
-    // JWT 토큰의 유효성을 확인
-    if (!jwtTokenProvider.validateToken(token)) {
-      // 유효하지 않다면 401상태코드를 응답
-      exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-      return exchange.getResponse().setComplete();
+    try {
+      // 토큰 유효성 검증
+      if (!jwtTokenProvider.validateToken(token)) {
+        // validateToken 내부에서 이미 로그를 찍고 false를 반환
+        return handleUnauthorized(exchange, "Token validation failed.");
+      }
+      log.info("✅ [Gateway] Token validation successful. Extracting claims...");
+
+      // 클레임 추출
+      Long userId = jwtTokenProvider.getUserIdFromJWT(token);
+      String role = jwtTokenProvider.getRoleFromJWT(token);
+
+      // userId가 null인 경우 처리 (클레임 이름 불일치 등)
+      if (userId == null) {
+        log.error("❌ [Gateway] Could not extract userId from token. Check claim names ('USERID' vs 'userId').");
+        return handleUnauthorized(exchange, "Invalid token claims.");
+      }
+
+      log.info("✅ [Gateway] Claims extracted. UserId: {}, Role: {}", userId, role);
+
+      // 새로운 헤더를 추가하여 다운스트림으로 요청 전달
+      ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
+              .header("X-User-Id", String.valueOf(userId))
+              .header("X-User-Role", role)
+              .build();
+
+      log.info("✅ [Gateway] X-User-Id and X-User-Role headers added. Forwarding request to downstream.");
+
+      return chain.filter(exchange.mutate().request(mutatedRequest).build());
+
+    } catch (Exception e) {
+      log.error("❌ [Gateway] An unexpected error occurred during token processing.", e);
+      return handleUnauthorized(exchange, "Error processing token.");
     }
-
-    // 토큰에서 ID와 Role정보를 추출한다.
-    Long userId = jwtTokenProvider.getUserIdFromJWT(token);
-    String role = jwtTokenProvider.getRoleFromJWT(token);
-
-    // 기존 요청 객체를 복제(mutate)하고 헤더에 정보를 추가한다.
-    ServerHttpRequest mutateRequest = exchange.getRequest().mutate()
-        .header("X-User-Id", String.valueOf(userId))
-        .header("X-User-Role", role)
-        .build();
-
-    // 변경된 요청 객체를 포함하는 새로운 ServerWebExchange를 생성
-    ServerWebExchange mutatedExchange = exchange.mutate().request(mutateRequest).build();
-
-    // 다음 필터로 요청 전달
-    return chain.filter(mutatedExchange);
   }
 
   /**
    * 인증이 필요하지 않은 경로인지 확인
    */
   private boolean isPermitAllPath(String path) {
-    return path.equals("/auth/login") || path.equals("/auth/refresh")
-        || path.equals("/api/users/signup");
+    // startsWith를 사용하면 /auth/login, /auth/refresh 등을 모두 포함할 수 있습니다.
+    return path.startsWith("/api/users/signup") || path.startsWith("/api/auth/");
+  }
+
+  /**
+   * 401 Unauthorized 응답을 처리하는 헬퍼 메소드
+   */
+  private Mono<Void> handleUnauthorized(ServerWebExchange exchange, String message) {
+    exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+    // 필요하다면 응답 본문에 에러 메시지를 추가할 수도 있습니다.
+    return exchange.getResponse().setComplete();
   }
 
   @Override
   public int getOrder() {
+    // 이 필터가 다른 필터들보다 먼저 실행되도록 순서를 높게 설정합니다.
     return -1;
   }
 }
