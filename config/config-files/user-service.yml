@@ -1,8 +1,23 @@
-spring:
-  config:
-    activate:
-      on-profile: user-service
+# 1. 서버 포트 설정
+server:
+  port: 8081
 
+# 2. Eureka 클라이언트 설정
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+# 3. Actuator 엔드포인트 노출 설정
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+# 4. 로깅 레벨 설정
 logging:
   level:
     com.newnormallist.userservice: DEBUG

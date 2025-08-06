@@ -20,9 +20,13 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        // OPTIONS 메서드에 대해서는 필터를 건너뛰도록 처리
+        if (request.getMethod().equalsIgnoreCase("OPTIONS")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         log.info("✅ [User-Service] HeaderAuthenticationFilter is running for path: {}", request.getRequestURI());
-
         // API Gateway가 전달한 헤더 읽기
         String userId = request.getHeader("X-User-Id");
         String role = request.getHeader("X-User-Role");
