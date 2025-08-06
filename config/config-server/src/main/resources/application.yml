@@ -11,4 +11,4 @@ spring:
       server:
         native:
           #  yml 파일을 읽어올 경로를 지정합니다.
-          search-locations: file:../config-files/
+          search-locations: file:./config/config-files/
