@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
-public interface NewsCrawlRepository extends JpaRepository<NewsCrawl, Long> {
+public interface  NewsCrawlRepository extends JpaRepository<NewsCrawl, Long> {
     
     // 링크 ID로 중복 체크
     boolean existsByLinkId(Long linkId);
