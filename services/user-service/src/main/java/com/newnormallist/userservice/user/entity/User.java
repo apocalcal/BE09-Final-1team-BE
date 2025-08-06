@@ -1,6 +1,7 @@
 package com.newnormallist.userservice.user.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -55,4 +56,24 @@ public class User {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    public void updatePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
+
+    public void updateProfile(@NotNull(message = "뉴스레터 수신 동의 여부는 필수입니다.") Boolean letterOk, Set<String> hobbies) {
+        this.letterOk = letterOk;
+
+        if (hobbies != null) {
+            this.hobbies = hobbies.stream()
+                    .map(hobby -> {
+                        try {
+                            return NewsCategory.valueOf(hobby.toUpperCase());
+                        } catch (IllegalArgumentException e) {
+                            throw new IllegalArgumentException("유효하지 않은 관심사 카테고리입니다: " + hobby);
+                        }
+                    })
+                    .collect(java.util.stream.Collectors.toSet());
+        }
+    }
 }
