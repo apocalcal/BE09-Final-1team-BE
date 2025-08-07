@@ -19,12 +19,12 @@ public class AuthController {
     /**
      * 로그인 API
      * @param loginRequestDto 로그인 요청 DTO
-     * @return Access Token과 Refresh Token을 포함한 응답
+     * @return Access Token, Refresh Token과 사용자 정보를 포함한 응답
      */
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<TokenResponseDto>> login(@RequestBody LoginRequestDto loginRequestDto) {
-        TokenResponseDto tokenResponse = authService.login(loginRequestDto);
-        return ResponseEntity.ok(ApiResponse.success(tokenResponse));
+    public ResponseEntity<ApiResponse<LoginResponseDto>> login(@RequestBody LoginRequestDto loginRequestDto) {
+        LoginResponseDto loginResponse = authService.login(loginRequestDto);
+        return ResponseEntity.ok(ApiResponse.success(loginResponse));
     }
     /**
      * Access Token 갱신 API
