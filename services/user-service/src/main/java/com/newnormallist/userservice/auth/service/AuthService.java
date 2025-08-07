@@ -10,7 +10,6 @@ import com.newnormallist.userservice.common.ErrorCode;
 import com.newnormallist.userservice.user.entity.User;
 import com.newnormallist.userservice.common.exception.UserException;
 import com.newnormallist.userservice.user.repository.UserRepository;
-import io.jsonwebtoken.security.Password;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -32,7 +31,7 @@ public class AuthService {
      * 로그인 로직
      * */
     @Transactional
-    public TokenResponseDto login(LoginRequestDto loginRequestDto) {
+    public LoginResponseDto login(LoginRequestDto loginRequestDto) {
         // 1. 사용자 조회 및 비밀번호 검증
         User user = userRepository.findByEmail(loginRequestDto.getEmail())
                 .filter(u -> passwordEncoder.matches(loginRequestDto.getPassword(), u.getPassword()))
@@ -49,8 +48,15 @@ public class AuthService {
                         // 없으면 새로 생성하여 저장
                         () -> refreshTokenRepository.save(new RefreshToken(user, refreshTokenValue))
                 );
-        // 5. 토큰을 DTO에 담아 반환
-        return new TokenResponseDto(accessToken, refreshTokenValue);
+        // 5. 사용자 정보 DTO 생성
+        LoginResponseDto.UserInfoDto userInfo = new LoginResponseDto.UserInfoDto(
+                user.getId(),
+                user.getEmail(),
+                user.getName(),
+                user.getRole()
+        );
+        // 6. 토큰과 사용자 정보를 DTO에 담아 반환
+        return new LoginResponseDto(accessToken, refreshTokenValue, userInfo);
     }
     /**
      * 토큰 갱신 로직
