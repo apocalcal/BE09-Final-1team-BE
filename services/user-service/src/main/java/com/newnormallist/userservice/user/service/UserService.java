@@ -45,7 +45,8 @@ public class UserService {
                 .email(signupRequest.getEmail())
                 .password(encodedPassword)
                 .name(signupRequest.getName())
-                .letterOk(signupRequest.getLetterOk())
+                .birthYear(signupRequest.getBirthYear())
+                .gender(signupRequest.getGender())
                 .hobbies(signupRequest.getHobbies() != null ? signupRequest.getHobbies() : new HashSet<>())
                 .build();
         // 4. 사용자 저장
