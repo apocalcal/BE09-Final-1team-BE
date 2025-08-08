@@ -1,10 +1,7 @@
 package com.newnormallist.userservice.user.dto;
 
 import com.newnormallist.userservice.user.entity.NewsCategory;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -26,11 +23,13 @@ public class SignupRequest {
     private String password;
 
     @NotBlank(message = "이름은 필수입니다.")
-    @Size(min = 2, max = 50, message = "이름은 2자 이상 50자 이하여야 합니다.")
     private String name;
 
-    @NotNull(message = "뉴스레터 수신 동의 여부는 필수입니다.")
-    private Boolean letterOk;
+    @NotNull(message = "출생연도는 필수입니다.")
+    private Integer birthYear;
+
+    @NotBlank(message = "성별은 필수입니다.")
+    private String gender;
 
     private Set<NewsCategory> hobbies;
 }
