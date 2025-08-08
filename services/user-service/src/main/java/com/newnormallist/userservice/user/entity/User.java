@@ -34,6 +34,12 @@ public class User {
     @Column(nullable = false)
     private String name;
 
+    @Column(name = "birth_year", nullable = false)
+    private Integer birthYear;
+
+    @Column(name = "gender", nullable = false)
+    private String gender;
+
     @Column(name = "letter_ok", nullable = false)
     @Builder.Default
     private Boolean letterOk = false;
