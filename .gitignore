@@ -39,4 +39,3 @@ out/
 ### secrets ###
 /config/config-files/*-secret.yml
 /config/config-files/*-secrets.yml
-.DS_Store
