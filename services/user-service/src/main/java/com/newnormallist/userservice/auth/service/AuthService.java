@@ -10,7 +10,6 @@ import com.newnormallist.userservice.common.ErrorCode;
 import com.newnormallist.userservice.user.entity.User;
 import com.newnormallist.userservice.common.exception.UserException;
 import com.newnormallist.userservice.user.repository.UserRepository;
-import io.jsonwebtoken.security.Password;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

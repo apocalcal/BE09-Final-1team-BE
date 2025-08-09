@@ -83,7 +83,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
    */
   private boolean isPermitAllPath(String path) {
     // startsWith를 사용하면 /auth/login, /auth/refresh 등을 모두 포함할 수 있습니다.
-    return path.startsWith("/api/users/signup") || path.startsWith("/api/auth/");
+    return path.startsWith("/api/users/signup")
+            || path.startsWith("/api/auth/")
+            || path.startsWith("/api/users/categories");
   }
 
   /**
