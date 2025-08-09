@@ -1,0 +1,44 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-service
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/your-org/config-repo
+          default-label: main
+          search-paths: configs
+        encrypt:
+          enabled: true
+  security:
+    user:
+      name: config-user
+      password: '{cipher}AQA...' # 암호화된 패스워드
+
+# Jenkins 설정
+jenkins:
+  local:
+    account:
+      username: news_admin
+      password: news1
+      name: 백엔드 9기 1팀
+      email: yudaeun222@gmail.com
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+encrypt:
+  key: your-encryption-key
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,refresh,env
