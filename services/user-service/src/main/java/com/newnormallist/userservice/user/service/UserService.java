@@ -2,11 +2,9 @@ package com.newnormallist.userservice.user.service;
 
 import com.newnormallist.userservice.auth.repository.RefreshTokenRepository;
 import com.newnormallist.userservice.common.ErrorCode;
-import com.newnormallist.userservice.user.dto.CategoryResponse;
 import com.newnormallist.userservice.user.dto.MyPageResponse;
 import com.newnormallist.userservice.user.dto.SignupRequest;
 import com.newnormallist.userservice.user.dto.UserUpdateRequest;
-import com.newnormallist.userservice.user.entity.NewsCategory;
 import com.newnormallist.userservice.user.entity.User;
 import com.newnormallist.userservice.common.exception.UserException;
 import com.newnormallist.userservice.user.repository.UserRepository;
@@ -16,9 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -45,8 +41,7 @@ public class UserService {
                 .email(signupRequest.getEmail())
                 .password(encodedPassword)
                 .name(signupRequest.getName())
-                .birthYear(signupRequest.getBirthYear())
-                .gender(signupRequest.getGender())
+                .letterOk(signupRequest.getLetterOk())
                 .hobbies(signupRequest.getHobbies() != null ? signupRequest.getHobbies() : new HashSet<>())
                 .build();
         // 4. 사용자 저장
@@ -64,7 +59,6 @@ public class UserService {
      * @param userId 현재 인증된 사용자 ID
      * @return MyPageResponse 마이페이지 정보
      */
-    @Transactional(readOnly = true)
     public MyPageResponse getMyPage(Long userId) {
         // 1. 사용자 조회
         User user = userRepository.findById(userId)
@@ -82,25 +76,19 @@ public class UserService {
         // 1. 사용자 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+
         // 2. 비밀번호 변경 로직
         // newPassword 필드가 비어있지 않은 경우에만 실행
         if (request.getNewPassword() != null && !request.getNewPassword().isBlank()) {
-            // 2-1. 현재 비밀번호 확인
-            if (request.getCurrentPassword() == null || request.getCurrentPassword().isBlank()) {
-                throw new UserException(ErrorCode.CURRENT_PASSWORD_REQUIRED);
-            }
-            // 2-2. 현재 비밀번호가 올바른지 검증
-            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-                throw new UserException(ErrorCode.CURRENT_PASSWORD_MISMATCH);
-            }
-            // 2-3. 새 비밀번호와 확인 비밀번호 일치 여부 확인
+            // 2-1. 새 비밀번호와 확인 비밀번호 일치 여부 확인
             if (!request.getNewPassword().equals(request.getConfirmPassword())) {
                 throw new UserException(ErrorCode.PASSWORD_MISMATCH);
             }
-            // 2-4. 비밀번호 암호화 및 업데이트
+            // 2-2. 비밀번호 암호화 및 업데이트
             String encodedPassword = passwordEncoder.encode(request.getNewPassword());
             user.updatePassword(encodedPassword);
         }
+
         // 3. 뉴스레터 수신 여부 및 관심사 업데이트
         user.updateProfile(request.getLetterOk(), request.getHobbies());
         log.info("사용자 마이페이지 정보 수정 완료 - 사용자 ID: {}", userId);
@@ -121,18 +109,5 @@ public class UserService {
         userRepository.deleteById(userId);
         log.info("사용자 탈퇴 완료 - 사용자 ID: {}", userId);
     }
-    /**
-     * 뉴스 카테고리 목록 조회 로직
-     * @return List<CategoryResponse> 뉴스 카테고리 목록
-     * */
-    public List<CategoryResponse> getNewsCategories() {
-        List<CategoryResponse> categories = Arrays.stream(NewsCategory.values())
-                .map(category -> new CategoryResponse(
-                        category.name(),
-                        category.getCategoryName(),
-                        category.getIcon()))
-                .toList();
-        log.info("뉴스 카테고리 목록 조회 완료 - 카테고리 수: {}", categories.size());
-        return categories;
+
     }
-}
