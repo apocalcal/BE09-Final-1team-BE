@@ -1,11 +1,9 @@
 package com.newsservice.news.service;
 
 import com.newsservice.news.dto.CategoryDto;
-import com.newsservice.news.dto.KeywordSubscriptionDto;
 import com.newsservice.news.dto.NewsCrawlDto;
 import com.newsservice.news.dto.NewsListResponse;
 import com.newsservice.news.dto.NewsResponse;
-import com.newsservice.news.dto.TrendingKeywordDto;
 import com.newsservice.news.entity.News;
 import com.newsservice.news.entity.NewsCrawl;
 import org.springframework.data.domain.Page;
@@ -34,9 +32,6 @@ public interface NewsService {
     Page<NewsListResponse> getRecommendedNews(Long userId, Pageable pageable);
     Page<NewsListResponse> getNewsByCategory(News.Category category, Pageable pageable);
     Page<NewsListResponse> searchNews(String query, Pageable pageable);
-    Page<NewsListResponse> searchNewsWithFilters(String query, String sortBy, String sortOrder, 
-                                                String category, String press, String startDate, 
-                                                String endDate, Pageable pageable);
     Page<NewsListResponse> getPopularNews(Pageable pageable);
     Page<NewsListResponse> getLatestNews(Pageable pageable);
     List<CategoryDto> getAllCategories();

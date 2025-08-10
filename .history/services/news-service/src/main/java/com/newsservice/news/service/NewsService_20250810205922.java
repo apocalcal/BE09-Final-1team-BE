@@ -1,11 +1,9 @@
 package com.newsservice.news.service;
 
 import com.newsservice.news.dto.CategoryDto;
-import com.newsservice.news.dto.KeywordSubscriptionDto;
 import com.newsservice.news.dto.NewsCrawlDto;
 import com.newsservice.news.dto.NewsListResponse;
 import com.newsservice.news.dto.NewsResponse;
-import com.newsservice.news.dto.TrendingKeywordDto;
 import com.newsservice.news.entity.News;
 import com.newsservice.news.entity.NewsCrawl;
 import org.springframework.data.domain.Page;
@@ -13,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public interface NewsService {
     
@@ -34,9 +33,6 @@ public interface NewsService {
     Page<NewsListResponse> getRecommendedNews(Long userId, Pageable pageable);
     Page<NewsListResponse> getNewsByCategory(News.Category category, Pageable pageable);
     Page<NewsListResponse> searchNews(String query, Pageable pageable);
-    Page<NewsListResponse> searchNewsWithFilters(String query, String sortBy, String sortOrder, 
-                                                String category, String press, String startDate, 
-                                                String endDate, Pageable pageable);
     Page<NewsListResponse> getPopularNews(Pageable pageable);
     Page<NewsListResponse> getLatestNews(Pageable pageable);
     List<CategoryDto> getAllCategories();
@@ -53,12 +49,28 @@ public interface NewsService {
     // 관리자용: 크롤링된 뉴스 목록 조회
     Page<NewsCrawl> getCrawledNews(Pageable pageable);
     
-    // 키워드 구독 관련 메서드들
-    KeywordSubscriptionDto subscribeKeyword(Long userId, String keyword);
-    void unsubscribeKeyword(Long userId, String keyword);
-    List<KeywordSubscriptionDto> getUserKeywordSubscriptions(Long userId);
+    // === 새로운 고급 검색 기능들 ===
     
-    // 트렌딩 키워드 관련 메서드들
-    List<TrendingKeywordDto> getTrendingKeywords(int limit);
-    List<TrendingKeywordDto> getPopularKeywords(int limit);
+    // 고급 검색 (정렬, 필터링 포함)
+    Page<NewsListResponse> searchNews(String query, String sortBy, String category, String press, Pageable pageable);
+    
+    // 자동완성 제안
+    List<String> getAutocompleteSuggestions(String query, int limit);
+    
+    // 인기 검색어
+    List<String> getTrendingKeywords(int limit);
+    
+    // 검색 통계
+    Map<String, Object> getSearchStats(String query);
+    
+    // 관련 키워드 추천
+    List<String> getRelatedKeywords(String query, int limit);
+    
+    // 검색 결과 하이라이팅
+    Page<NewsListResponse> searchNewsWithHighlight(String query, Pageable pageable);
+    
+    // 고급 검색 (여러 조건 조합)
+    Page<NewsListResponse> advancedSearch(String query, String category, String press, String reporter, 
+                                         LocalDateTime startDate, LocalDateTime endDate, Boolean trusted, 
+                                         String sortBy, Pageable pageable);
 } 

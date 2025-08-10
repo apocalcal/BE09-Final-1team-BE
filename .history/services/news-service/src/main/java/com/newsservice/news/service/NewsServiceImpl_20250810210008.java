@@ -1,17 +1,13 @@
 package com.newsservice.news.service;
 
 import com.newsservice.news.dto.CategoryDto;
-import com.newsservice.news.dto.KeywordSubscriptionDto;
 import com.newsservice.news.dto.NewsCrawlDto;
 import com.newsservice.news.dto.NewsListResponse;
 import com.newsservice.news.dto.NewsResponse;
-import com.newsservice.news.dto.TrendingKeywordDto;
-import com.newsservice.news.entity.KeywordSubscription;
 import com.newsservice.news.entity.News;
 import com.newsservice.news.entity.NewsCrawl;
 import com.newsservice.news.exception.NewsNotFoundException;
 
-import com.newsservice.news.repository.KeywordSubscriptionRepository;
 import com.newsservice.news.repository.NewsCrawlRepository;
 import com.newsservice.news.repository.NewsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,9 +31,6 @@ public class NewsServiceImpl implements NewsService {
     
     @Autowired
     private NewsRepository newsRepository;
-    
-    @Autowired
-    private KeywordSubscriptionRepository keywordSubscriptionRepository;
     
 
 
@@ -150,100 +145,174 @@ public class NewsServiceImpl implements NewsService {
                 .map(this::convertToNewsListResponse);
     }
     
+    // 새로운 고급 검색 메서드 (오버로드)
     @Override
-    public Page<NewsListResponse> searchNewsWithFilters(String query, String sortBy, String sortOrder, 
-                                                       String category, String press, String startDate, 
-                                                       String endDate, Pageable pageable) {
-        // 기본 검색 결과 가져오기
-        Page<News> newsPage = newsRepository.searchByKeyword(query, pageable);
-        
-        // 필터링 적용
-        List<News> filteredNews = newsPage.getContent().stream()
-                .filter(news -> {
-                    // 카테고리 필터
-                    if (category != null && !category.isEmpty()) {
-                        try {
-                            News.Category categoryEnum = News.Category.valueOf(category.toUpperCase());
-                            if (!news.getCategoryName().equals(categoryEnum)) {
-                                return false;
-                            }
-                        } catch (IllegalArgumentException e) {
-                            return false;
-                        }
-                    }
-                    
-                    // 언론사 필터
-                    if (press != null && !press.isEmpty()) {
-                        if (!news.getPress().toLowerCase().contains(press.toLowerCase())) {
-                            return false;
-                        }
-                    }
-                    
-                    // 날짜 필터
-                    if (startDate != null && !startDate.isEmpty()) {
-                        LocalDateTime start = parsePublishedAt(startDate);
-                        if (news.getCreatedAt().isBefore(start)) {
-                            return false;
-                        }
-                    }
-                    
-                    if (endDate != null && !endDate.isEmpty()) {
-                        LocalDateTime end = parsePublishedAt(endDate);
-                        if (news.getCreatedAt().isAfter(end)) {
-                            return false;
-                        }
-                    }
-                    
-                    return true;
-                })
-                .collect(Collectors.toList());
-        
-        // 정렬 적용
-        if (sortBy != null && !sortBy.isEmpty()) {
-            String order = (sortOrder != null && sortOrder.equalsIgnoreCase("desc")) ? "desc" : "asc";
-            
-            switch (sortBy.toLowerCase()) {
-                case "date":
-                    if (order.equals("desc")) {
-                        filteredNews.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
-                    } else {
-                        filteredNews.sort((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()));
-                    }
-                    break;
-                case "title":
-                    if (order.equals("desc")) {
-                        filteredNews.sort((a, b) -> b.getTitle().compareTo(a.getTitle()));
-                    } else {
-                        filteredNews.sort((a, b) -> a.getTitle().compareTo(b.getTitle()));
-                    }
-                    break;
-                case "press":
-                    if (order.equals("desc")) {
-                        filteredNews.sort((a, b) -> b.getPress().compareTo(a.getPress()));
-                    } else {
-                        filteredNews.sort((a, b) -> a.getPress().compareTo(b.getPress()));
-                    }
-                    break;
-                default:
-                    // 기본 정렬: 최신순
-                    filteredNews.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+    public Page<NewsListResponse> searchNews(String query, String sortBy, String category, String press, Pageable pageable) {
+        News.Category categoryEnum = null;
+        if (category != null && !category.isEmpty()) {
+            try {
+                categoryEnum = News.Category.valueOf(category.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // 잘못된 카테고리명은 무시
             }
         }
         
-        // 페이징 적용
-        int pageSize = pageable.getPageSize();
-        int pageNumber = pageable.getPageNumber();
-        int start = pageNumber * pageSize;
-        int end = Math.min(start + pageSize, filteredNews.size());
+        Page<News> newsPage = newsRepository.searchByKeywordAdvanced(query, categoryEnum, press, pageable);
         
-        List<News> pagedNews = filteredNews.subList(start, end);
-        List<NewsListResponse> responseList = pagedNews.stream()
-                .map(this::convertToNewsListResponse)
+        // 정렬 옵션에 따른 추가 처리
+        if ("popular".equals(sortBy)) {
+            newsPage = newsRepository.findPopularNews(pageable);
+        } else if ("latest".equals(sortBy)) {
+            newsPage = newsRepository.findLatestNews(pageable);
+        }
+        
+        return newsPage.map(this::convertToNewsListResponse);
+    }
+    
+    @Override
+    public List<String> getAutocompleteSuggestions(String query, int limit) {
+        if (query == null || query.trim().isEmpty() || query.length() < 2) {
+            return List.of();
+        }
+        
+        Pageable pageable = Pageable.ofSize(limit);
+        List<String> titles = newsRepository.findTitlesByKeyword(query, pageable);
+        
+        // 제목에서 키워드 추출 및 정리
+        return titles.stream()
+                .filter(title -> title != null && !title.isEmpty())
+                .map(title -> {
+                    // 제목에서 검색어 이후 부분을 추출하여 제안
+                    int index = title.toLowerCase().indexOf(query.toLowerCase());
+                    if (index >= 0 && index + query.length() < title.length()) {
+                        return query + title.substring(index + query.length()).split("\\s+")[0];
+                    }
+                    return title.substring(0, Math.min(20, title.length()));
+                })
+                .distinct()
+                .limit(limit)
                 .collect(Collectors.toList());
+    }
+    
+    @Override
+    public List<String> getTrendingKeywords(int limit) {
+        Pageable pageable = Pageable.ofSize(limit * 2); // 더 많은 결과에서 필터링
+        List<String> keywords = newsRepository.findPopularKeywords(pageable);
         
-        // Page 객체 생성
-        return new org.springframework.data.domain.PageImpl<>(
-                responseList, pageable, filteredNews.size());
+        return keywords.stream()
+                .filter(keyword -> keyword != null && keyword.length() > 2)
+                .distinct()
+                .limit(limit)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public Map<String, Object> getSearchStats(String query) {
+        Map<String, Object> stats = new HashMap<>();
+        
+        // 전체 검색 결과 수
+        long totalCount = newsRepository.searchByKeyword(query, Pageable.unpaged()).getTotalElements();
+        stats.put("totalCount", totalCount);
+        
+        // 언론사별 통계
+        List<Object[]> pressStats = newsRepository.getPressStatsByQuery(query);
+        Map<String, Long> pressCounts = new HashMap<>();
+        for (Object[] stat : pressStats) {
+            pressCounts.put((String) stat[0], (Long) stat[1]);
+        }
+        stats.put("pressStats", pressCounts);
+        
+        // 카테고리별 통계
+        List<Object[]> categoryStats = newsRepository.getCategoryStatsByQuery(query);
+        Map<String, Long> categoryCounts = new HashMap<>();
+        for (Object[] stat : categoryStats) {
+            categoryCounts.put(((News.Category) stat[0]).name(), (Long) stat[1]);
+        }
+        stats.put("categoryStats", categoryCounts);
+        
+        return stats;
+    }
+    
+    @Override
+    public List<String> getRelatedKeywords(String query, int limit) {
+        if (query == null || query.trim().isEmpty()) {
+            return List.of();
+        }
+        
+        Pageable pageable = Pageable.ofSize(limit * 2);
+        List<String> relatedTitles = newsRepository.findRelatedKeywords(query, pageable);
+        
+        // 제목에서 키워드 추출
+        return relatedTitles.stream()
+                .filter(title -> title != null && !title.isEmpty())
+                .map(title -> {
+                    // 제목에서 첫 번째 명사/키워드 추출
+                    String[] words = title.split("\\s+");
+                    return words.length > 0 ? words[0] : title.substring(0, Math.min(10, title.length()));
+                })
+                .distinct()
+                .limit(limit)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public Page<NewsListResponse> searchNewsWithHighlight(String query, Pageable pageable) {
+        Page<News> newsPage = newsRepository.searchByKeyword(query, pageable);
+        
+        return newsPage.map(news -> {
+            NewsListResponse response = convertToNewsListResponse(news);
+            
+            // 검색어 하이라이팅 적용
+            if (query != null && !query.trim().isEmpty()) {
+                String highlightedTitle = highlightKeyword(response.getTitle(), query);
+                String highlightedSummary = highlightKeyword(response.getSummary(), query);
+                
+                response.setTitle(highlightedTitle);
+                response.setSummary(highlightedSummary);
+            }
+            
+            return response;
+        });
+    }
+    
+    @Override
+    public Page<NewsListResponse> advancedSearch(String query, String category, String press, String reporter, 
+                                                LocalDateTime startDate, LocalDateTime endDate, Boolean trusted, 
+                                                String sortBy, Pageable pageable) {
+        News.Category categoryEnum = null;
+        if (category != null && !category.isEmpty()) {
+            try {
+                categoryEnum = News.Category.valueOf(category.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // 잘못된 카테고리명은 무시
+            }
+        }
+        
+        Page<News> newsPage = newsRepository.advancedSearch(query, categoryEnum, press, reporter, 
+                                                           startDate, endDate, trusted, pageable);
+        
+        return newsPage.map(this::convertToNewsListResponse);
+    }
+    
+    // 검색어 하이라이팅 헬퍼 메서드
+    private String highlightKeyword(String text, String keyword) {
+        if (text == null || keyword == null || keyword.trim().isEmpty()) {
+            return text;
+        }
+        
+        String lowerText = text.toLowerCase();
+        String lowerKeyword = keyword.toLowerCase();
+        
+        if (lowerText.contains(lowerKeyword)) {
+            int index = lowerText.indexOf(lowerKeyword);
+            String before = text.substring(0, index);
+            String match = text.substring(index, index + keyword.length());
+            String after = text.substring(index + keyword.length());
+            
+            return before + "<mark>" + match + "</mark>" + after;
+        }
+        
+        return text;
     }
     
     @Override
@@ -439,77 +508,5 @@ public class NewsServiceImpl implements NewsService {
             System.err.println("날짜 파싱 실패: " + publishedAt + ", 에러: " + e.getMessage());
             return LocalDateTime.now();
         }
-    }
-    
-    // 키워드 구독 관련 메서드들
-    @Override
-    public KeywordSubscriptionDto subscribeKeyword(Long userId, String keyword) {
-        // 이미 구독 중인지 확인
-        if (keywordSubscriptionRepository.existsByUserIdAndKeywordAndIsActiveTrue(userId, keyword)) {
-            throw new RuntimeException("이미 구독 중인 키워드입니다: " + keyword);
-        }
-        
-        KeywordSubscription subscription = KeywordSubscription.builder()
-                .userId(userId)
-                .keyword(keyword)
-                .isActive(true)
-                .build();
-        
-        KeywordSubscription saved = keywordSubscriptionRepository.save(subscription);
-        return convertToKeywordSubscriptionDto(saved);
-    }
-    
-    @Override
-    public void unsubscribeKeyword(Long userId, String keyword) {
-        KeywordSubscription subscription = keywordSubscriptionRepository
-                .findByUserIdAndKeywordAndIsActiveTrue(userId, keyword)
-                .orElseThrow(() -> new RuntimeException("구독하지 않은 키워드입니다: " + keyword));
-        
-        subscription.setIsActive(false);
-        keywordSubscriptionRepository.save(subscription);
-    }
-    
-    @Override
-    public List<KeywordSubscriptionDto> getUserKeywordSubscriptions(Long userId) {
-        return keywordSubscriptionRepository.findByUserIdAndIsActiveTrue(userId)
-                .stream()
-                .map(this::convertToKeywordSubscriptionDto)
-                .collect(Collectors.toList());
-    }
-    
-    // 트렌딩 키워드 관련 메서드들
-    @Override
-    public List<TrendingKeywordDto> getTrendingKeywords(int limit) {
-        // 최근 7일간의 뉴스에서 키워드 추출 및 트렌딩 점수 계산
-        LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
-        
-        // 실제 구현에서는 뉴스 내용에서 키워드를 추출하고 트렌딩 점수를 계산해야 함
-        // 여기서는 간단한 예시로 인기 키워드를 반환
-        return getPopularKeywords(limit);
-    }
-    
-    @Override
-    public List<TrendingKeywordDto> getPopularKeywords(int limit) {
-        List<Object[]> popularKeywords = keywordSubscriptionRepository.findPopularKeywords();
-        
-        return popularKeywords.stream()
-                .limit(limit)
-                .map(result -> TrendingKeywordDto.builder()
-                        .keyword((String) result[0])
-                        .count((Long) result[1])
-                        .trendScore((double) result[1]) // 간단히 구독 수를 트렌딩 점수로 사용
-                        .build())
-                .collect(Collectors.toList());
-    }
-    
-    private KeywordSubscriptionDto convertToKeywordSubscriptionDto(KeywordSubscription subscription) {
-        return KeywordSubscriptionDto.builder()
-                .subscriptionId(subscription.getSubscriptionId())
-                .userId(subscription.getUserId())
-                .keyword(subscription.getKeyword())
-                .isActive(subscription.getIsActive())
-                .createdAt(subscription.getCreatedAt())
-                .updatedAt(subscription.getUpdatedAt())
-                .build();
     }
 } 
