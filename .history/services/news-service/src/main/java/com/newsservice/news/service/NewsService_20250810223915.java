@@ -34,9 +34,6 @@ public interface NewsService {
     Page<NewsListResponse> getRecommendedNews(Long userId, Pageable pageable);
     Page<NewsListResponse> getNewsByCategory(News.Category category, Pageable pageable);
     Page<NewsListResponse> searchNews(String query, Pageable pageable);
-    Page<NewsListResponse> searchNewsWithFilters(String query, String sortBy, String sortOrder, 
-                                                String category, String press, String startDate, 
-                                                String endDate, Pageable pageable);
     Page<NewsListResponse> getPopularNews(Pageable pageable);
     Page<NewsListResponse> getLatestNews(Pageable pageable);
     List<CategoryDto> getAllCategories();
