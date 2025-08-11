@@ -94,7 +94,7 @@ public class LegacyNewsController {
     @GetMapping("/search")
     @Deprecated
     public ResponseEntity<?> searchNews(@RequestParam String query, Pageable pageable) {
-        return searchController.searchNews(query, pageable);
+        return searchController.searchNews(query, null, null, null, null, null, null, pageable);
     }
 
     @GetMapping("/press/{press}")
