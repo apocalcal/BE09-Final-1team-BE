@@ -67,4 +67,28 @@ public interface NewsRepository extends JpaRepository<News, Long> {
     
     // 전체 뉴스 조회 (페이징)
     Page<News> findAll(Pageable pageable);
+    
+    // 연관뉴스 조회를 위한 메서드들
+    
+    // oid_aid 리스트로 뉴스 조회
+    @Query("SELECT n FROM News n WHERE n.oidAid IN :oidAids")
+    List<News> findByOidAidIn(@Param("oidAids") List<String> oidAids);
+    
+    // 같은 생성일, 같은 카테고리, 특정 뉴스 제외
+    @Query("SELECT n FROM News n WHERE n.createdAt = :createdAt AND n.categoryName = :categoryName AND n.newsId != :excludeNewsId")
+    List<News> findByCreatedAtAndCategoryNameAndNewsIdNot(@Param("createdAt") LocalDateTime createdAt, 
+                                                          @Param("categoryName") News.Category categoryName, 
+                                                          @Param("excludeNewsId") Long excludeNewsId);
+    
+    // oid_aid 리스트로 뉴스 조회 (특정 뉴스 제외)
+    @Query("SELECT n FROM News n WHERE n.oidAid IN :oidAids AND n.newsId != :excludeNewsId")
+    List<News> findByOidAidInAndNewsIdNot(@Param("oidAids") List<String> oidAids, 
+                                          @Param("excludeNewsId") Long excludeNewsId);
+    
+    // 특정 기간, 같은 카테고리, 특정 뉴스들 제외
+    @Query("SELECT n FROM News n WHERE n.createdAt BETWEEN :startDate AND :endDate AND n.categoryName = :categoryName AND n.newsId NOT IN :excludeNewsIds")
+    List<News> findByCreatedAtBetweenAndCategoryNameAndNewsIdNotIn(@Param("startDate") LocalDateTime startDate, 
+                                                                   @Param("endDate") LocalDateTime endDate, 
+                                                                   @Param("categoryName") News.Category categoryName, 
+                                                                   @Param("excludeNewsIds") List<Long> excludeNewsIds);
 } 
