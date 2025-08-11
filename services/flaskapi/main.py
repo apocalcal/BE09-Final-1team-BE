@@ -2,6 +2,7 @@ from app import create_app
 app = create_app()
 import os
 
+
 print(os.getenv("DATABASE_URL"))
 
 @app.get("/")
