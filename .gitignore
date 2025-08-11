@@ -40,3 +40,8 @@ out/
 /config/config-files/*-secret.yml
 /config/config-files/*-secrets.yml
 .DS_Store
+
+# 터미널 및 IDE 히스토리
+.history
+.bash_history
+.zsh_history
