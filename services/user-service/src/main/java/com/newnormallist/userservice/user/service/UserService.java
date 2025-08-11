@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -168,5 +169,36 @@ public class UserService {
         Page<User> users = userRepository.findAll(spec, pageable);
         // 3. Page<UserAdminResponse>로 변환
         return users.map(UserAdminResponse::new);
+    }
+    /**
+     * 관리자용 사용자 정보 삭제 로직
+     * @param userId 삭제할 사용자 ID
+     */
+    @Transactional
+    public void adminHardDeleteUser(Long userId) {
+        int affected = userRepository.hardDeleteIFDeleted(userId);
+        if (affected == 1) {
+            log.info("관리자에 의한 사용자 하드 삭제 완료 - 사용자 ID: {}", userId);
+            return;
+        }
+        // 실패한 경우
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+        if (user.getStatus() != UserStatus.DELETED) {
+            throw new UserException(ErrorCode.INVALID_STATUS);
+        }
+        throw new UserException(ErrorCode.OPERATION_FAILED);
+    }
+    /**
+     * 관리자용 배치 하드 삭제 로직
+     * @param before 삭제 기준 날짜 (이 날짜 이전의 사용자)
+     * @return int 삭제된 사용자 수
+     */
+    @Transactional
+    public int adminPurgeDeleted(LocalDateTime before) {
+        // 1. 상태가 DELETED인 사용자 중, updatedAt이 before보다 이전인 사용자 삭제
+        int deletedCount = userRepository.deleteByStatusBefore(UserStatus.DELETED, before);
+        log.info("관리자에 의한 배치 하드 삭제 완료 - 삭제된 사용자 수: {}, before = {}", deletedCount, before);
+        return deletedCount;
     }
 }
