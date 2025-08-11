@@ -23,6 +23,23 @@ public interface NewsRepository extends JpaRepository<News, Long> {
            "n.title LIKE %:keyword% OR n.content LIKE %:keyword% OR n.summary LIKE %:keyword%")
     Page<News> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
     
+    // 연관 기사 검색 (같은 카테고리에서 유사한 키워드 검색)
+    @Query("SELECT n FROM News n WHERE " +
+           "n.categoryName = :category AND " +
+           "(n.title LIKE %:keyword% OR n.content LIKE %:keyword% OR n.summary LIKE %:keyword%) " +
+           "ORDER BY n.createdAt DESC")
+    Page<News> findRelatedNewsByCategory(@Param("category") News.Category category, 
+                                        @Param("keyword") String keyword, 
+                                        Pageable pageable);
+    
+    // 유사한 제목의 기사 검색
+    @Query("SELECT n FROM News n WHERE " +
+           "n.title LIKE %:keyword% OR n.title LIKE %:similarKeyword% " +
+           "ORDER BY n.createdAt DESC")
+    Page<News> findSimilarTitles(@Param("keyword") String keyword, 
+                                 @Param("similarKeyword") String similarKeyword, 
+                                 Pageable pageable);
+    
     // 최신 뉴스 조회 (발행일 기준 내림차순)
     @Query("SELECT n FROM News n ORDER BY n.createdAt DESC")
     Page<News> findLatestNews(Pageable pageable);
@@ -67,28 +84,4 @@ public interface NewsRepository extends JpaRepository<News, Long> {
     
     // 전체 뉴스 조회 (페이징)
     Page<News> findAll(Pageable pageable);
-
-    // 연관뉴스 조회를 위한 메서드들
-
-    // oid_aid 리스트로 뉴스 조회
-    @Query("SELECT n FROM News n WHERE n.oidAid IN :oidAids")
-    List<News> findByOidAidIn(@Param("oidAids") List<String> oidAids);
-
-    // 같은 생성일, 같은 카테고리, 특정 뉴스 제외
-    @Query("SELECT n FROM News n WHERE n.createdAt = :createdAt AND n.categoryName = :categoryName AND n.newsId != :excludeNewsId")
-    List<News> findByCreatedAtAndCategoryNameAndNewsIdNot(@Param("createdAt") LocalDateTime createdAt,
-                                                          @Param("categoryName") News.Category categoryName,
-                                                          @Param("excludeNewsId") Long excludeNewsId);
-
-    // oid_aid 리스트로 뉴스 조회 (특정 뉴스 제외)
-    @Query("SELECT n FROM News n WHERE n.oidAid IN :oidAids AND n.newsId != :excludeNewsId")
-    List<News> findByOidAidInAndNewsIdNot(@Param("oidAids") List<String> oidAids,
-                                          @Param("excludeNewsId") Long excludeNewsId);
-
-    // 특정 기간, 같은 카테고리, 특정 뉴스들 제외
-    @Query("SELECT n FROM News n WHERE n.createdAt BETWEEN :startDate AND :endDate AND n.categoryName = :categoryName AND n.newsId NOT IN :excludeNewsIds")
-    List<News> findByCreatedAtBetweenAndCategoryNameAndNewsIdNotIn(@Param("startDate") LocalDateTime startDate,
-                                                                   @Param("endDate") LocalDateTime endDate,
-                                                                   @Param("categoryName") News.Category categoryName,
-                                                                   @Param("excludeNewsIds") List<Long> excludeNewsIds);
-}
+} 
