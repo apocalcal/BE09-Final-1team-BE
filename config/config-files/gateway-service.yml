@@ -18,6 +18,10 @@ spring:
               uri: lb://NEWS-SERVICE
               predicates:
                 - Path=/api/news/**
+            - id: admin-service-route
+              uri: lb://ADMIN-SERVICE
+              predicates:
+                - Path=/api/admin/**
           globalcors:
             cors-configurations:
               '[/**]':

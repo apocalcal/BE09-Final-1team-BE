@@ -63,6 +63,11 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_status", nullable = false)
+    @Builder.Default
+    private UserStatus status = UserStatus.ACTIVE;
+
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
     }
@@ -81,5 +86,9 @@ public class User {
                     })
                     .collect(java.util.stream.Collectors.toSet());
         }
+    }
+
+    public void changeStatus(UserStatus userStatus) {
+        this.status = userStatus;
     }
 }
