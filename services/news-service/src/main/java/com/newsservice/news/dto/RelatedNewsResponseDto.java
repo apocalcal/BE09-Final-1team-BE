@@ -1,5 +1,6 @@
 package com.newsservice.news.dto;
 
+import com.newsservice.news.entity.Category;
 import com.newsservice.news.entity.News;
 import lombok.*;
 
@@ -20,7 +21,7 @@ public class RelatedNewsResponseDto {
     private LocalDateTime createdAt;
     private String imageUrl;
     private String summary;
-    private News.Category categoryName;
+    private Category categoryName;
 
     public static RelatedNewsResponseDto from(News news) {
         return RelatedNewsResponseDto.builder()
@@ -31,7 +32,6 @@ public class RelatedNewsResponseDto {
                 .reporter(news.getReporter())
                 .createdAt(news.getCreatedAt())
                 .imageUrl(news.getImageUrl())
-                .summary(news.getSummary())
                 .categoryName(news.getCategoryName())
                 .build();
     }

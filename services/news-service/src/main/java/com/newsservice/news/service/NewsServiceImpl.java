@@ -6,9 +6,7 @@ import com.newsservice.news.dto.NewsCrawlDto;
 import com.newsservice.news.dto.NewsListResponse;
 import com.newsservice.news.dto.NewsResponse;
 import com.newsservice.news.dto.TrendingKeywordDto;
-import com.newsservice.news.entity.KeywordSubscription;
-import com.newsservice.news.entity.News;
-import com.newsservice.news.entity.NewsCrawl;
+import com.newsservice.news.entity.*;
 import com.newsservice.news.exception.NewsNotFoundException;
 
 import com.newsservice.news.repository.KeywordSubscriptionRepository;
@@ -48,7 +46,7 @@ public class NewsServiceImpl implements NewsService {
         }
 
         // Category enum 사용
-        News.Category category = dto.getCategory();
+        Category category = dto.getCategory();
 
         // NewsCrawl 엔티티 생성
         NewsCrawl newsCrawl = NewsCrawl.builder()
@@ -73,7 +71,7 @@ public class NewsServiceImpl implements NewsService {
 
     // 뉴스 조회 관련 메서드들
     @Override
-    public Page<NewsResponse> getNews(News.Category category, String keyword, Pageable pageable) {
+    public Page<NewsResponse> getNews(Category category, String keyword, Pageable pageable) {
         if (keyword != null && !keyword.trim().isEmpty()) {
             // 키워드 검색
             return newsRepository.searchByKeyword(keyword, pageable)
@@ -139,7 +137,7 @@ public class NewsServiceImpl implements NewsService {
     }
     
     @Override
-    public Page<NewsListResponse> getNewsByCategory(News.Category category, Pageable pageable) {
+    public Page<NewsListResponse> getNewsByCategory(Category category, Pageable pageable) {
         return newsRepository.findByCategory(category, pageable)
                 .map(this::convertToNewsListResponse);
     }
@@ -163,7 +161,7 @@ public class NewsServiceImpl implements NewsService {
                     // 카테고리 필터
                     if (category != null && !category.isEmpty()) {
                         try {
-                            News.Category categoryEnum = News.Category.valueOf(category.toUpperCase());
+                            Category categoryEnum = Category.valueOf(category.toUpperCase());
                             if (!news.getCategoryName().equals(categoryEnum)) {
                                 return false;
                             }
@@ -260,7 +258,7 @@ public class NewsServiceImpl implements NewsService {
     
     @Override
     public List<CategoryDto> getAllCategories() {
-        return List.of(News.Category.values())
+        return List.of(Category.values())
                 .stream()
                 .map(this::convertToCategoryDto)
                 .collect(Collectors.toList());
@@ -287,7 +285,7 @@ public class NewsServiceImpl implements NewsService {
     }
     
     @Override
-    public Long getNewsCountByCategory(News.Category category) {
+    public Long getNewsCountByCategory(Category category) {
         return newsRepository.countByCategory(category);
     }
     
@@ -298,23 +296,21 @@ public class NewsServiceImpl implements NewsService {
                 .orElseThrow(() -> new NewsNotFoundException("NewsCrawl not found with id: " + newsCrawlId));
         
         // 이미 승격된 뉴스인지 확인
-        List<News> existingNews = newsRepository.findByOriginalNewsId(newsCrawl.getRawId());
-        if (!existingNews.isEmpty()) {
-            throw new RuntimeException("이미 승격된 뉴스입니다: " + newsCrawlId);
-        }
-        
+//        List<News> existingNews = newsRepository.findByOriginalNewsId(newsCrawl.getRawId());
+//        if (!existingNews.isEmpty()) {
+//            throw new RuntimeException("이미 승격된 뉴스입니다: " + newsCrawlId);
+//        }
+//
         // News 엔티티 생성 및 저장
         News news = News.builder()
-                .originalNewsId(newsCrawl.getRawId())
                 .title(newsCrawl.getTitle())
                 .content(newsCrawl.getContent())
                 .press(newsCrawl.getPress())
                 .reporter(newsCrawl.getReporterName())
                 .publishedAt(newsCrawl.getPublishedAt().toString())
-                .summary(generateSummary(newsCrawl.getContent())) // 요약 생성
                 .trusted(calculateTrusted(newsCrawl)) // 신뢰도 계산
                 .categoryName(newsCrawl.getCategory()) // 카테고리 설정
-                .dedupState(News.DedupState.KEPT) // 기본값
+                .dedupState(DedupState.KEPT) // 기본값
                 .build();
         
         newsRepository.save(news);
@@ -329,18 +325,15 @@ public class NewsServiceImpl implements NewsService {
     private NewsResponse convertToNewsResponse(News news) {
         return NewsResponse.builder()
                 .newsId(news.getNewsId())
-                .originalNewsId(news.getOriginalNewsId())
                 .title(news.getTitle())
                 .content(news.getContent())
                 .press(news.getPress())
                 .link(null) // TODO: link 필드 추가 필요
-                .summary(news.getSummary())
                 .trusted(news.getTrusted() ? 1 : 0)
                 .publishedAt(parsePublishedAt(news.getPublishedAt()))
                 .createdAt(news.getCreatedAt())
                 .reporterName(news.getReporter())
                 .categoryName(news.getCategoryName().name())
-                .categoryDescription(news.getCategoryName().getDescription())
                 .dedupState(news.getDedupState().name())
                 .dedupStateDescription(news.getDedupState().getDescription())
                 .imageUrl(news.getImageUrl())
@@ -352,9 +345,7 @@ public class NewsServiceImpl implements NewsService {
     private NewsListResponse convertToNewsListResponse(News news) {
         return NewsListResponse.builder()
                 .newsId(news.getNewsId())
-                .originalNewsId(news.getOriginalNewsId())
                 .title(news.getTitle())
-                .summary(news.getSummary())
                 .press(news.getPress())
                 .link(null) // TODO: link 필드 추가 필요
                 .trusted(news.getTrusted() ? 1 : 0)
@@ -363,7 +354,6 @@ public class NewsServiceImpl implements NewsService {
                 .reporterName(news.getReporter())
                 .viewCount(0) // TODO: view count 필드 추가 필요
                 .categoryName(news.getCategoryName().name())
-                .categoryDescription(news.getCategoryName().getDescription())
                 .dedupState(news.getDedupState().name())
                 .dedupStateDescription(news.getDedupState().getDescription())
                 .imageUrl(news.getImageUrl())
@@ -372,10 +362,10 @@ public class NewsServiceImpl implements NewsService {
                 .build();
     }
     
-    private CategoryDto convertToCategoryDto(News.Category category) {
+    private CategoryDto convertToCategoryDto(Category category) {
         return CategoryDto.builder()
                 .categoryCode(category.name())
-                .categoryName(category.getDescription())
+                .categoryName(category.getCategoryName())
                 .icon("📰") // 기본 아이콘
                 .build();
     }
@@ -476,13 +466,13 @@ public class NewsServiceImpl implements NewsService {
                 .map(this::convertToKeywordSubscriptionDto)
                 .collect(Collectors.toList());
     }
-    
+
     // 트렌딩 키워드 관련 메서드들
     @Override
     public List<TrendingKeywordDto> getTrendingKeywords(int limit) {
         // 최근 7일간의 뉴스에서 키워드 추출 및 트렌딩 점수 계산
         LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
-        
+
         // 실제 구현에서는 뉴스 내용에서 키워드를 추출하고 트렌딩 점수를 계산해야 함
         // 여기서는 간단한 예시로 인기 키워드를 반환
         return getPopularKeywords(limit);

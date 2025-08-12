@@ -38,14 +38,14 @@ public class NewsCrawl {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false)
-    private News.Category category;
+    private Category category;
     
     // 기본 생성자
     public NewsCrawl() {}
     
     // 전체 생성자
     public NewsCrawl(Long rawId, Long linkId, String title, String press, String content,
-                    LocalDateTime createdAt, String reporterName, LocalDateTime publishedAt, News.Category category) {
+                    LocalDateTime createdAt, String reporterName, LocalDateTime publishedAt, Category category) {
         this.rawId = rawId;
         this.linkId = linkId;
         this.title = title;
@@ -87,8 +87,8 @@ public class NewsCrawl {
     public LocalDateTime getPublishedAt() { return publishedAt; }
     public void setPublishedAt(LocalDateTime publishedAt) { this.publishedAt = publishedAt; }
     
-    public News.Category getCategory() { return category; }
-    public void setCategory(News.Category category) { this.category = category; }
+    public Category getCategory() { return category; }
+    public void setCategory(Category category) { this.category = category; }
     
     // Builder 클래스
     public static class NewsCrawlBuilder {
@@ -100,7 +100,7 @@ public class NewsCrawl {
         private LocalDateTime createdAt;
         private String reporterName;
         private LocalDateTime publishedAt;
-        private News.Category category;
+        private Category category;
         
         public NewsCrawlBuilder rawId(Long rawId) {
             this.rawId = rawId;
@@ -142,7 +142,7 @@ public class NewsCrawl {
             return this;
         }
         
-        public NewsCrawlBuilder category(News.Category category) {
+        public NewsCrawlBuilder category(Category category) {
             this.category = category;
             return this;
         }
