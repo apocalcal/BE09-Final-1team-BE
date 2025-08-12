@@ -111,4 +111,15 @@ public class UserController {
         int deleted = userService.adminPurgeDeleted(before);
         return ResponseEntity.ok(ApiResponse.success(Map.of("deleted", deleted, "before", before.toString())));
     }
+    /**
+     * 마이페이지 - 읽은 뉴스 목록 조회 API
+     */
+    @PostMapping("/mypage/history/{newsId}")
+    public ResponseEntity<ApiResponse<String>> addReadHistory(
+            @AuthenticationPrincipal String userIdStr,
+            @PathVariable Long newsId) {
+        Long userId = Long.parseLong(userIdStr);
+        userService.addReadHistory(userId, newsId);
+        return ResponseEntity.ok(ApiResponse.success("읽은 뉴스 목록에 추가됨!"));
+    }
 }

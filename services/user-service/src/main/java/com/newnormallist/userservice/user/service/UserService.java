@@ -2,6 +2,8 @@ package com.newnormallist.userservice.user.service;
 
 import com.newnormallist.userservice.auth.repository.RefreshTokenRepository;
 import com.newnormallist.userservice.common.ErrorCode;
+import com.newnormallist.userservice.history.entity.UserReadHistory;
+import com.newnormallist.userservice.history.repository.UserReadHistoryRepository;
 import com.newnormallist.userservice.user.dto.*;
 import com.newnormallist.userservice.user.entity.NewsCategory;
 import com.newnormallist.userservice.user.entity.User;
@@ -32,6 +34,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserReadHistoryRepository userReadHistoryRepository;
 
     /**
      * 회원가입 로직
@@ -200,5 +203,31 @@ public class UserService {
         int deletedCount = userRepository.deleteByStatusBefore(UserStatus.DELETED, before);
         log.info("관리자에 의한 배치 하드 삭제 완료 - 삭제된 사용자 수: {}, before = {}", deletedCount, before);
         return deletedCount;
+    }
+    /**
+     * 뉴스 읽음 기록 추가 로직
+     * @param userId 사용자 ID
+     * @param newsId 읽은 뉴스 ID
+     * */
+    @Transactional
+    public void addReadHistory(Long userId, Long newsId) {
+        // 이미 읽은 기록이 있는지 확인
+        synchronized (this) { // 동기화 블록으로 중복 방지
+            if (userReadHistoryRepository.existsByUser_IdAndNewsId(userId, newsId)) {
+                log.info("이미 읽은 뉴스 기록이 존재합니다 - 사용자 ID: {}, 뉴스 ID: {}", userId, newsId);
+                return;
+            }
+            // 기록을 저장하기 위해 User 엔티티 조회
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+            // 읽은 기록 엔티티 생성
+            UserReadHistory history = UserReadHistory.builder()
+                    .user(user)
+                    .newsId(newsId)
+                    .build();
+            // 읽은 기록 저장
+            userReadHistoryRepository.save(history);
+            log.info("뉴스 읽음 기록 추가 완료 - 사용자 ID: {}, 뉴스 ID: {}", userId, newsId);
+        }
     }
 }
