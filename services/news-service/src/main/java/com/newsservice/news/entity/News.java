@@ -22,9 +22,6 @@ public class News {
     @Column(name = "news_id")
     private Long newsId;
 
-    @Column(name = "old_aid", unique = true, columnDefinition = "TEXT")
-    private String oldAid;
-
     @Column(name = "title", nullable = false, columnDefinition = "TEXT")
     private String title;
 
@@ -66,48 +63,7 @@ public class News {
     @Column(name = "oid_aid")
     private String oidAid;
 
-    @Column(name = "original_news_id")
-    private Long originalNewsId;
-
-    @Column(name = "summary", columnDefinition = "TEXT")
-    private String summary;
-
     // 뉴스레터와의 N:N 연결
     @OneToMany(mappedBy = "news")
     private List<NewsletterNews> newsletterNewsList;
-
-    public enum Category {
-        POLITICS("정치"),
-        ECONOMY("경제"),
-        SOCIETY("사회"),
-        CULTURE("문화"),
-        INTERNATIONAL("세계"),
-        IT_SCIENCE("IT/과학");
-
-        private final String description;
-
-        Category(String description) {
-            this.description = description;
-        }
-
-        public String getDescription() {
-            return description;
-        }
-    }
-
-    public enum DedupState {
-        REPRESENTATIVE("대표"),
-        RELATED("관련"),
-        KEPT("보관");
-
-        private final String description;
-
-        DedupState(String description) {
-            this.description = description;
-        }
-
-        public String getDescription() {
-            return description;
-        }
-    }
 }

@@ -1,5 +1,6 @@
 package com.newsservice.news.repository;
 
+import com.newsservice.news.entity.Category;
 import com.newsservice.news.entity.News;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,11 +17,11 @@ public interface NewsRepository extends JpaRepository<News, Long> {
     
     // 카테고리별 뉴스 조회
     @Query("SELECT n FROM News n WHERE n.categoryName = :category")
-    Page<News> findByCategory(@Param("category") News.Category category, Pageable pageable);
+    Page<News> findByCategory(@Param("category") Category category, Pageable pageable);
     
     // 키워드 검색 (제목, 내용, 요약에서 검색)
     @Query("SELECT n FROM News n WHERE " +
-           "n.title LIKE %:keyword% OR n.content LIKE %:keyword% OR n.summary LIKE %:keyword%")
+           "n.title LIKE %:keyword% OR n.content LIKE %:keyword%") /* OR n.summary LIKE %:keyword% */
     Page<News> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
     
     // 최신 뉴스 조회 (발행일 기준 내림차순)
@@ -51,11 +52,11 @@ public interface NewsRepository extends JpaRepository<News, Long> {
     Page<News> findByTrustedTrue(Pageable pageable);
     
     // 원본 뉴스 ID로 조회
-    List<News> findByOriginalNewsId(Long originalNewsId);
+//    List<News> findByOriginalNewsId(Long originalNewsId);
     
-    // 요약이 있는 뉴스만 조회
-    @Query("SELECT n FROM News n WHERE n.summary IS NOT NULL AND n.summary != ''")
-    Page<News> findWithSummary(Pageable pageable);
+//    // 요약이 있는 뉴스만 조회
+//    @Query("SELECT n FROM News n WHERE n.summary IS NOT NULL AND n.summary != ''")
+//    Page<News> findWithSummary(Pageable pageable);
     
     // 특정 언론사 뉴스 조회
     @Query("SELECT n FROM News n WHERE n.press = :press")
@@ -63,32 +64,32 @@ public interface NewsRepository extends JpaRepository<News, Long> {
     
     // 카테고리별 뉴스 개수 조회
     @Query("SELECT COUNT(n) FROM News n WHERE n.categoryName = :category")
-    Long countByCategory(@Param("category") News.Category category);
+    Long countByCategory(@Param("category") Category category);
     
     // 전체 뉴스 조회 (페이징)
     Page<News> findAll(Pageable pageable);
-
+    
     // 연관뉴스 조회를 위한 메서드들
-
+    
     // oid_aid 리스트로 뉴스 조회
     @Query("SELECT n FROM News n WHERE n.oidAid IN :oidAids")
     List<News> findByOidAidIn(@Param("oidAids") List<String> oidAids);
-
+    
     // 같은 생성일, 같은 카테고리, 특정 뉴스 제외
     @Query("SELECT n FROM News n WHERE n.createdAt = :createdAt AND n.categoryName = :categoryName AND n.newsId != :excludeNewsId")
-    List<News> findByCreatedAtAndCategoryNameAndNewsIdNot(@Param("createdAt") LocalDateTime createdAt,
-                                                          @Param("categoryName") News.Category categoryName,
+    List<News> findByCreatedAtAndCategoryNameAndNewsIdNot(@Param("createdAt") LocalDateTime createdAt, 
+                                                          @Param("categoryName") Category categoryName, 
                                                           @Param("excludeNewsId") Long excludeNewsId);
-
+    
     // oid_aid 리스트로 뉴스 조회 (특정 뉴스 제외)
     @Query("SELECT n FROM News n WHERE n.oidAid IN :oidAids AND n.newsId != :excludeNewsId")
-    List<News> findByOidAidInAndNewsIdNot(@Param("oidAids") List<String> oidAids,
+    List<News> findByOidAidInAndNewsIdNot(@Param("oidAids") List<String> oidAids, 
                                           @Param("excludeNewsId") Long excludeNewsId);
-
+    
     // 특정 기간, 같은 카테고리, 특정 뉴스들 제외
     @Query("SELECT n FROM News n WHERE n.createdAt BETWEEN :startDate AND :endDate AND n.categoryName = :categoryName AND n.newsId NOT IN :excludeNewsIds")
-    List<News> findByCreatedAtBetweenAndCategoryNameAndNewsIdNotIn(@Param("startDate") LocalDateTime startDate,
-                                                                   @Param("endDate") LocalDateTime endDate,
-                                                                   @Param("categoryName") News.Category categoryName,
+    List<News> findByCreatedAtBetweenAndCategoryNameAndNewsIdNotIn(@Param("startDate") LocalDateTime startDate, 
+                                                                   @Param("endDate") LocalDateTime endDate, 
+                                                                   @Param("categoryName") Category categoryName, 
                                                                    @Param("excludeNewsIds") List<Long> excludeNewsIds);
-}
+} 
