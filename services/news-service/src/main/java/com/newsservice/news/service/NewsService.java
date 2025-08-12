@@ -6,6 +6,7 @@ import com.newsservice.news.dto.NewsCrawlDto;
 import com.newsservice.news.dto.NewsListResponse;
 import com.newsservice.news.dto.NewsResponse;
 import com.newsservice.news.dto.TrendingKeywordDto;
+import com.newsservice.news.entity.Category;
 import com.newsservice.news.entity.News;
 import com.newsservice.news.entity.NewsCrawl;
 import org.springframework.data.domain.Page;
@@ -23,7 +24,7 @@ public interface NewsService {
     NewsCrawlDto previewCrawledNews(NewsCrawlDto dto);
     
     // 뉴스 조회 관련 메서드들
-    Page<NewsResponse> getNews(News.Category category, String keyword, Pageable pageable);
+    Page<NewsResponse> getNews(Category category, String keyword, Pageable pageable);
     NewsResponse getNewsById(Long newsId);
     List<NewsResponse> getPersonalizedNews(Long userId);
     List<NewsResponse> getTrendingNews();
@@ -32,7 +33,7 @@ public interface NewsService {
     // 새로운 API 엔드포인트들을 위한 메서드들
     Page<NewsListResponse> getTrendingNews(Pageable pageable);
     Page<NewsListResponse> getRecommendedNews(Long userId, Pageable pageable);
-    Page<NewsListResponse> getNewsByCategory(News.Category category, Pageable pageable);
+    Page<NewsListResponse> getNewsByCategory(Category category, Pageable pageable);
     Page<NewsListResponse> searchNews(String query, Pageable pageable);
     Page<NewsListResponse> searchNewsWithFilters(String query, String sortBy, String sortOrder, 
                                                 String category, String press, String startDate, 
@@ -45,7 +46,7 @@ public interface NewsService {
     Page<NewsListResponse> getNewsByPress(String press, Pageable pageable);
     List<NewsListResponse> getNewsByDateRange(LocalDateTime startDate, LocalDateTime endDate);
     Long getNewsCount();
-    Long getNewsCountByCategory(News.Category category);
+    Long getNewsCountByCategory(Category category);
     
     // 관리자용: 크롤링된 뉴스를 승격하여 노출용 뉴스로 전환
     void promoteToNews(Long newsCrawlId);
