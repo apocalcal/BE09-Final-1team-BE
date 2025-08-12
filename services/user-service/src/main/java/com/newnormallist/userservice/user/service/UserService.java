@@ -2,20 +2,23 @@ package com.newnormallist.userservice.user.service;
 
 import com.newnormallist.userservice.auth.repository.RefreshTokenRepository;
 import com.newnormallist.userservice.common.ErrorCode;
-import com.newnormallist.userservice.user.dto.CategoryResponse;
-import com.newnormallist.userservice.user.dto.MyPageResponse;
-import com.newnormallist.userservice.user.dto.SignupRequest;
-import com.newnormallist.userservice.user.dto.UserUpdateRequest;
+import com.newnormallist.userservice.user.dto.*;
 import com.newnormallist.userservice.user.entity.NewsCategory;
 import com.newnormallist.userservice.user.entity.User;
 import com.newnormallist.userservice.common.exception.UserException;
+import com.newnormallist.userservice.user.entity.UserStatus;
 import com.newnormallist.userservice.user.repository.UserRepository;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -111,15 +114,18 @@ public class UserService {
      */
     @Transactional
     public void deleteUser(Long userId) {
-        // 1. 사용자 ID로 refreshtoken 삭제
+        // 1. 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+
+        // 2. 리프레시 토큰 삭제
         refreshTokenRepository.deleteByUserId(userId);
-        // 2. 사용자 존재 여부 조회
-        if (!userRepository.existsById(userId)) {
-            throw new UserException(ErrorCode.USER_NOT_FOUND);
-        }
-        // 3. 사용자 삭제
-        userRepository.deleteById(userId);
-        log.info("사용자 탈퇴 완료 - 사용자 ID: {}", userId);
+
+        // 3. 상태를 DELETED로 변경 (Soft Delete)
+        user.changeStatus(UserStatus.DELETED);
+        // userRepository.delete(user); <-- 이 코드를 위 코드로 대체
+
+        log.info("사용자 탈퇴 처리 완료 - 사용자 ID: {}", userId);;
     }
     /**
      * 뉴스 카테고리 목록 조회 로직
@@ -134,5 +140,65 @@ public class UserService {
                 .toList();
         log.info("뉴스 카테고리 목록 조회 완료 - 카테고리 수: {}", categories.size());
         return categories;
+    }
+    /**
+     * 관리자용 사용자 정보 조회 로직
+     * @param status 필터링할 회원 상태
+     * @param keyword 검색 키워드 (이메일 또는 이름)
+     * @param pageable 페이지 정보
+     * @return Page<UserAdminResponse> 페이징 처리된 회원 목록
+     */
+    @Transactional(readOnly = true)
+    public Page<UserAdminResponse> getUsersForAdmin(UserStatus status, String keyword, Pageable pageable) {
+        // 1. Specification을 사용한 동적 쿼리 생성
+        Specification<User> spec = (root, query, criteriaBuilder) -> {
+            Predicate predicate = criteriaBuilder.conjunction(); // 기본적으로 AND 조건으로 시작
+            // 1-1. status 필터링 조건
+            if (status != null) {
+                predicate = criteriaBuilder.and(predicate, criteriaBuilder.equal(root.get("status"), status));
+            }
+            // 1-2. keyword 검색 조건 (이메일 또는 이름)
+            if (keyword != null && !keyword.isBlank()) {
+                Predicate emailLike = criteriaBuilder.like(root.get("email"), "%" + keyword + "%");
+                Predicate nameLike = criteriaBuilder.like(root.get("name"), "%" + keyword + "%");
+                predicate= criteriaBuilder.and(predicate, criteriaBuilder.or(emailLike, nameLike));
+            }
+            return predicate;
+        };
+        // 2. 페이징과 Specification을 적용하여 데이터 조회
+        Page<User> users = userRepository.findAll(spec, pageable);
+        // 3. Page<UserAdminResponse>로 변환
+        return users.map(UserAdminResponse::new);
+    }
+    /**
+     * 관리자용 사용자 정보 삭제 로직
+     * @param userId 삭제할 사용자 ID
+     */
+    @Transactional
+    public void adminHardDeleteUser(Long userId) {
+        int affected = userRepository.hardDeleteIFDeleted(userId);
+        if (affected == 1) {
+            log.info("관리자에 의한 사용자 하드 삭제 완료 - 사용자 ID: {}", userId);
+            return;
+        }
+        // 실패한 경우
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+        if (user.getStatus() != UserStatus.DELETED) {
+            throw new UserException(ErrorCode.INVALID_STATUS);
+        }
+        throw new UserException(ErrorCode.OPERATION_FAILED);
+    }
+    /**
+     * 관리자용 배치 하드 삭제 로직
+     * @param before 삭제 기준 날짜 (이 날짜 이전의 사용자)
+     * @return int 삭제된 사용자 수
+     */
+    @Transactional
+    public int adminPurgeDeleted(LocalDateTime before) {
+        // 1. 상태가 DELETED인 사용자 중, updatedAt이 before보다 이전인 사용자 삭제
+        int deletedCount = userRepository.deleteByStatusBefore(UserStatus.DELETED, before);
+        log.info("관리자에 의한 배치 하드 삭제 완료 - 삭제된 사용자 수: {}, before = {}", deletedCount, before);
+        return deletedCount;
     }
 }

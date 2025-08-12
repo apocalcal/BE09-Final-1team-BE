@@ -1,6 +1,6 @@
 # 1. 서버 포트 설정
 server:
-  port: 8082
+  port: 8085
 
 # 2. Eureka 클라이언트 설정
 eureka:
@@ -19,6 +19,7 @@ management:
 
 # 4. 로깅 레벨 설정
 logging:
-  level:
-    com.newnormallist.newsservice: DEBUG
-    org.springframework.security: WARN
+    level:
+        com.newnormallist.adminservice: DEBUG
+        org.springframework.security: WARN
+

@@ -18,10 +18,14 @@ spring:
               uri: lb://NEWS-SERVICE
               predicates:
                 - Path=/api/news/**
+            - id: admin-service-route
+              uri: lb://ADMIN-SERVICE
+              predicates:
+                - Path=/api/admin/**
           globalcors:
             cors-configurations:
               '[/**]':
-                allowedOrigins: "http://localhost:3000"
+                allowedOrigins: 'http://localhost:3000'
                 allowedMethods:
                   - GET
                   - POST
@@ -29,14 +33,14 @@ spring:
                   - DELETE
                   - PATCH
                   - OPTIONS
-                allowedHeaders: "*"
+                allowedHeaders: '*'
                 allowCredentials: true
 
 management:
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: '*'
 
 eureka:
   client:
