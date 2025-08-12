@@ -212,7 +212,7 @@ public class UserService {
     @Transactional
     public void addReadHistory(Long userId, Long newsId) {
         // 이미 읽은 기록이 있는지 확인
-        if (userReadHistoryRepository.existsByUser_IDAndNewsId(userId, newsId)) {
+        if (userReadHistoryRepository.existsByUser_IdAndNewsId(userId, newsId)) {
             log.info("이미 읽은 뉴스 기록이 존재합니다 - 사용자 ID: {}, 뉴스 ID: {}", userId, newsId);
             return;
         }
