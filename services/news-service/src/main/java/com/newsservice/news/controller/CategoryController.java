@@ -2,6 +2,7 @@ package com.newsservice.news.controller;
 
 import com.newsservice.news.dto.CategoryDto;
 import com.newsservice.news.dto.NewsListResponse;
+import com.newsservice.news.entity.Category;
 import com.newsservice.news.entity.News;
 import com.newsservice.news.service.NewsService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +38,7 @@ public class CategoryController {
             @PathVariable String categoryName,
             Pageable pageable) {
         try {
-            News.Category category = News.Category.valueOf(categoryName.toUpperCase());
+            Category category = Category.valueOf(categoryName.toUpperCase());
             Page<NewsListResponse> news = newsService.getNewsByCategory(category, pageable);
             return ResponseEntity.ok(news);
         } catch (IllegalArgumentException e) {
@@ -52,7 +53,7 @@ public class CategoryController {
     @GetMapping("/{categoryName}/count")
     public ResponseEntity<?> getNewsCountByCategory(@PathVariable String categoryName) {
         try {
-            News.Category category = News.Category.valueOf(categoryName.toUpperCase());
+            Category category = Category.valueOf(categoryName.toUpperCase());
             Long count = newsService.getNewsCountByCategory(category);
             return ResponseEntity.ok(count);
         } catch (IllegalArgumentException e) {

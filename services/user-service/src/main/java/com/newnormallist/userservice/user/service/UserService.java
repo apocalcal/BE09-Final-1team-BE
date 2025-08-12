@@ -212,20 +212,22 @@ public class UserService {
     @Transactional
     public void addReadHistory(Long userId, Long newsId) {
         // 이미 읽은 기록이 있는지 확인
-        if (userReadHistoryRepository.existsByUser_IdAndNewsId(userId, newsId)) {
-            log.info("이미 읽은 뉴스 기록이 존재합니다 - 사용자 ID: {}, 뉴스 ID: {}", userId, newsId);
-            return;
+        synchronized (this) { // 동기화 블록으로 중복 방지
+            if (userReadHistoryRepository.existsByUser_IdAndNewsId(userId, newsId)) {
+                log.info("이미 읽은 뉴스 기록이 존재합니다 - 사용자 ID: {}, 뉴스 ID: {}", userId, newsId);
+                return;
+            }
+            // 기록을 저장하기 위해 User 엔티티 조회
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+            // 읽은 기록 엔티티 생성
+            UserReadHistory history = UserReadHistory.builder()
+                    .user(user)
+                    .newsId(newsId)
+                    .build();
+            // 읽은 기록 저장
+            userReadHistoryRepository.save(history);
+            log.info("뉴스 읽음 기록 추가 완료 - 사용자 ID: {}, 뉴스 ID: {}", userId, newsId);
         }
-        // 기록을 저장하기 위해 User 엔티티 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
-        // 읽은 기록 엔티티 생성
-        UserReadHistory history = UserReadHistory.builder()
-                .user(user)
-                .newsId(newsId)
-                .build();
-        // 읽은 기록 저장
-        userReadHistoryRepository.save(history);
-        log.info("뉴스 읽음 기록 추가 완료 - 사용자 ID: {}, 뉴스 ID: {}", userId, newsId);
     }
 }
