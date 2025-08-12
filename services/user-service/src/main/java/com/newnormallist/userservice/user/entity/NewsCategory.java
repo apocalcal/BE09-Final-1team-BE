@@ -14,8 +14,7 @@ public enum NewsCategory {
     IT_SCIENCE("IT/과학", "💻"),
     VEHICLE("자동차/교통", "🚗"),
     TRAVEL_FOOD("여행/음식", "🧳"),
-    ART("예술", "🎨"),
-    FASHION("패션/뷰티", "👠");
+    ART("예술", "🎨");
 
     private final String categoryName;
     private final String icon;
