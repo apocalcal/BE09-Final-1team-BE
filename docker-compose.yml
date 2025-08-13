@@ -1,0 +1,78 @@
+# 실행하려는 서비스(컨테이너)들을 정의
+services:
+  # 1. Config Server
+  config-server:
+    build: ./config/config-server  # ⭐️ 경로 수정
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    networks:
+      - msa-network
+
+  # 2. Discovery Service (Eureka)
+  discovery-service:
+    build: ./services/discovery-service # ⭐️ 경로 수정
+    container_name: discovery-service
+    ports:
+      - "8761:8761"
+    networks:
+      - msa-network
+    depends_on:
+      - config-server
+    environment:
+      - SPRING_CONFIG_URI=http://config-server:8888
+
+  # 3. Gateway Service
+  gateway-service:
+    build: ./services/gateway-service # ⭐️ 경로 수정
+    container_name: gateway-service
+    ports:
+      - "8000:8000"
+    networks:
+      - msa-network
+    depends_on:
+      - discovery-service
+    environment:
+      - SPRING_CONFIG_URI=http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka
+
+  # 4. User Service
+  user-service:
+    build: ./services/user-service # ⭐️ 경로 수정
+    container_name: user-service
+    networks:
+      - msa-network
+    depends_on:
+      - discovery-service
+    environment:
+      - SPRING_CONFIG_URI=http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka
+
+  # 5. News Service
+  news-service:
+    build: ./services/news-service # ⭐️ 경로 수정
+    container_name: news-service
+    networks:
+      - msa-network
+    depends_on:
+      - discovery-service
+    environment:
+      - SPRING_CONFIG_URI=http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka
+
+#  # 6. Flask API (새로운 서비스 추가)
+#  flaskapi:
+#    build: ./services/flaskapi # ⭐️ 경로 수정
+#    container_name: flaskapi
+#    networks:
+#      - msa-network
+#    depends_on:
+#      - discovery-service
+#    environment: # 파이썬 유레카 클라이언트 설정 (예시)
+#      - EUREKA_SERVER=http://discovery-service:8761/eureka
+#      # 다른 필요한 환경변수가 있다면 추가
+
+# 서비스들이 사용할 공용 네트워크 정의
+networks:
+  msa-network:
+    driver: bridge
