@@ -1,6 +1,7 @@
 package com.newnormallist.userservice.user.controller;
 
 import com.newnormallist.userservice.common.ApiResponse;
+import com.newnormallist.userservice.history.dto.ReadHistoryResponse;
 import com.newnormallist.userservice.user.dto.*;
 import com.newnormallist.userservice.user.entity.UserStatus;
 import com.newnormallist.userservice.user.service.UserService;
@@ -111,4 +112,28 @@ public class UserController {
         int deleted = userService.adminPurgeDeleted(before);
         return ResponseEntity.ok(ApiResponse.success(Map.of("deleted", deleted, "before", before.toString())));
     }
+    /**
+     * 마이페이지 - 읽은 뉴스 목록 조회 API
+     */
+    @PostMapping("/mypage/history/{newsId}")
+    public ResponseEntity<ApiResponse<String>> addReadHistory(
+            @AuthenticationPrincipal String userIdStr,
+            @PathVariable Long newsId) {
+        Long userId = Long.parseLong(userIdStr);
+        userService.addReadHistory(userId, newsId);
+        return ResponseEntity.ok(ApiResponse.success("읽은 뉴스 목록에 추가됨!"));
+    }
+    /**
+     * 마이페이지 - 읽은 뉴스 목록 조회 API
+     */
+    @GetMapping("/mypage/history/index")
+    public ResponseEntity<ApiResponse<Page<ReadHistoryResponse>>> getReadHistory(
+        @AuthenticationPrincipal String userIdStr,
+        @PageableDefault(size = 10, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Long userId = Long.parseLong(userIdStr);
+        Page<ReadHistoryResponse> historyNewsIds = userService.getReadHistory(userId, pageable);
+        return ResponseEntity.ok(ApiResponse.success(historyNewsIds));
+    }
+
+
 }

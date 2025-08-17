@@ -1,5 +1,6 @@
 package com.newsservice.news.dto;
 
+import com.newsservice.news.entity.Category;
 import com.newsservice.news.entity.News;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,6 +20,6 @@ public class NewsCrawlDto {
     private String content;
     private String reporterName;
     private LocalDateTime publishedAt;
-    private News.Category category;
+    private Category category;
 
 }

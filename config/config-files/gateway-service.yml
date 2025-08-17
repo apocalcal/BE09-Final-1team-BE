@@ -25,7 +25,9 @@ spring:
           globalcors:
             cors-configurations:
               '[/**]':
-                allowedOrigins: 'http://localhost:3000'
+                allowedOrigins:
+                - 'be09-final-1team-fe.vercel.app'
+                - 'http://localhost:3000'
                 allowedMethods:
                   - GET
                   - POST
