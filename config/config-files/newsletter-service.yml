@@ -1,0 +1,31 @@
+# 1. 서버 포트 설정
+server:
+  port: 8085
+
+# 2. Eureka 클라이언트 설정
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+# 3. Actuator 엔드포인트 노출 설정
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+# 4. 로깅 레벨 설정
+logging:
+  level:
+    com.newnormallist.newsservice: DEBUG
+    org.springframework.security: WARN
+
+# 5. 서비스 간 통신을 위한 URL 설정
+services:
+  user-service:
+    url: http://localhost:8081
+  news-service:
+    url: http://localhost:8083

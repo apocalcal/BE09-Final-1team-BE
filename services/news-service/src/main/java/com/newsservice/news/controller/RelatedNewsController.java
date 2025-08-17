@@ -10,9 +10,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/news")
+@RequestMapping("/api/related")
 @RequiredArgsConstructor
 @Slf4j
+@CrossOrigin(origins = "*")
 public class RelatedNewsController {
 
     private final RelatedNewsService relatedNewsService;
@@ -22,7 +23,7 @@ public class RelatedNewsController {
      * @param newsId 조회할 뉴스 ID
      * @return 연관뉴스 목록 (최대 4개)
      */
-    @GetMapping("/{newsId}/related")
+    @GetMapping("/{newsId}")
     public ResponseEntity<List<RelatedNewsResponseDto>> getRelatedNews(@PathVariable Long newsId) {
         log.info("연관뉴스 조회 요청: newsId = {}", newsId);
         

@@ -338,7 +338,6 @@ public class NewsServiceImpl implements NewsService {
                 .dedupStateDescription(news.getDedupState().getDescription())
                 .imageUrl(news.getImageUrl())
                 .oidAid(news.getOidAid())
-                .updatedAt(news.getUpdatedAt())
                 .build();
     }
     
@@ -358,7 +357,6 @@ public class NewsServiceImpl implements NewsService {
                 .dedupStateDescription(news.getDedupState().getDescription())
                 .imageUrl(news.getImageUrl())
                 .oidAid(news.getOidAid())
-                .updatedAt(news.getUpdatedAt())
                 .build();
     }
     
