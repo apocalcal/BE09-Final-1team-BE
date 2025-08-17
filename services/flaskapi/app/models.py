@@ -1,68 +1,79 @@
-# app/models.py
-from datetime import datetime
-from sqlalchemy import text
+# ORM 모델 정의
+from sqlalchemy import text, Index
 from sqlalchemy.dialects import mysql
 from .extensions import db
 
-# MySQL 실제 ENUM과 동일
-CATEGORY_ENUM = ("POLITICS", "ECONOMY", "SOCIETY", "CULTURE", "INTERNATIONAL", "IT_SCIENCE")
-DEDUP_ENUM    = ("REPRESENTATIVE", "RELATED", "KEPT")
+# ENUM 정의 (DDL과 동일)
+CATEGORY_ENUM = (
+    "POLITICS", "ECONOMY", "SOCIETY", "LIFE",
+    "INTERNATIONAL", "IT_SCIENCE", "VEHICLE", "TRAVEL_FOOD", "ART"
+)
+DEDUP_ENUM = ("REPRESENTATIVE", "RELATED", "KEPT")
+
 
 class News(db.Model):
     __tablename__ = "news"
-    __table_args__ = {"sqlite_autoincrement": True}
+    __table_args__ = (
+        Index("idx_dedup_state", "dedup_state"),
+        Index("idx_published_at", "published_at"),
+        {"sqlite_autoincrement": True},
+    )
 
+    # bigint auto_increment primary key (SQLite에서는 Integer로 대체)
     news_id = db.Column(
         db.BigInteger().with_variant(db.Integer, "sqlite"),
-        primary_key=True, autoincrement=True, nullable=False
+        primary_key=True,
+        autoincrement=True,
+        nullable=False,
     )
-
-    # MySQL: varchar(255) UNIQUE NULL
-    oid_aid = db.Column(db.String(255), unique=True, nullable=True)
 
     title = db.Column(db.Text, nullable=False)
-
-    # MySQL ENUM
-    category_name = db.Column(
-        db.Enum(*CATEGORY_ENUM, name="category_name", native_enum=True),
-        nullable=False
-    )
-
-    # MEDIUMTEXT on MySQL
     content = db.Column(
         db.Text().with_variant(mysql.MEDIUMTEXT(), "mysql"),
-        nullable=False
+        nullable=False,
     )
-
     press = db.Column(db.Text, nullable=False)
 
-    # MySQL: datetime(6) NULL
-    published_at = db.Column(
-        db.DateTime().with_variant(mysql.DATETIME(fsp=6), "mysql"),
-        nullable=True
-    )
+    # DDL: varchar(100) NULL (datetime 아님)
+    published_at = db.Column(db.String(100), nullable=True)
 
     reporter = db.Column(db.Text, nullable=False)
 
-    # MySQL: datetime(6) NULL (기본값 없음)
-    created_at = db.Column(
-        db.DateTime().with_variant(mysql.DATETIME(fsp=6), "mysql"),
-        nullable=True
-    )
-    updated_at = db.Column(
-        db.DateTime().with_variant(mysql.DATETIME(fsp=6), "mysql"),
-        nullable=True
-    )
-
     dedup_state = db.Column(
         db.Enum(*DEDUP_ENUM, name="dedup_state", native_enum=True),
-        nullable=False
+        nullable=False,
+    )
+
+    # datetime(6) NULL
+    created_at = db.Column(
+        db.DateTime().with_variant(mysql.DATETIME(fsp=6), "mysql"),
+        nullable=True,
+    )
+    # DB에서 삭제
+    # updated_at = db.Column(
+    #     db.DateTime().with_variant(mysql.DATETIME(fsp=6), "mysql"),
+    #     nullable=True,
+    # )
+
+    # DDL: bit NOT NULL
+    trusted = db.Column(
+        db.Boolean().with_variant(mysql.BIT(1), "mysql"),
+        nullable=False,
+        server_default=text("0"),   # MySQL BIT(1) 기본값으로 0
     )
 
     image_url = db.Column(db.Text, nullable=True)
 
-    # MySQL: tinyint(1) NULL
-    trusted = db.Column(db.Boolean, nullable=True)
+    # varchar(255) UNIQUE NULL
+    oid_aid = db.Column(db.String(255), unique=True, nullable=True)
+
+    # ENUM + 기본값 'POLITICS' NOT NULL
+    category_name = db.Column(
+        db.Enum(*CATEGORY_ENUM, name="category_name", native_enum=True),
+        nullable=False,
+        server_default=text("'POLITICS'"),
+    )
+
 
 
 class NewsSummary(db.Model):
@@ -98,3 +109,6 @@ class NewsSummary(db.Model):
     )
 
     news = db.relationship("News", backref=db.backref("summaries", lazy=True))
+
+
+
