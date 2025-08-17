@@ -74,8 +74,6 @@ class News(db.Model):
         server_default=text("'POLITICS'"),
     )
 
-
-
 class NewsSummary(db.Model):
     __tablename__ = "news_summary"
 
