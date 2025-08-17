@@ -1,6 +1,7 @@
  package com.newsservice.news.controller;
 
 import com.newsservice.news.dto.NewsResponse;
+import com.newsservice.news.entity.Category;
 import com.newsservice.news.entity.News;
 import com.newsservice.news.service.NewsService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,12 +47,12 @@ public class NewsController {
             Pageable pageable) {
 
         try {
-            News.Category categoryEntity = null;
+            Category categoryEntity = null;
 
             // "전체"는 category 파라미터 생략 처리
             if (category != null && !category.equals("전체")) {
                 try {
-                    categoryEntity = News.Category.valueOf(category.toUpperCase());
+                    categoryEntity = Category.valueOf(category.toUpperCase());
                 } catch (IllegalArgumentException e) {
                     throw new IllegalArgumentException("지원하지 않는 카테고리입니다.");
                 }

@@ -1,5 +1,6 @@
 package com.newsservice.news.repository;
 
+import com.newsservice.news.entity.Category;
 import com.newsservice.news.entity.News;
 import com.newsservice.news.entity.NewsCrawl;
 import org.springframework.data.domain.Page;
@@ -22,7 +23,7 @@ public interface  NewsCrawlRepository extends JpaRepository<NewsCrawl, Long> {
     boolean existsByTitle(String title);
     
     // 카테고리별 크롤링 뉴스 조회
-    Page<NewsCrawl> findByCategory(News.Category category, Pageable pageable);
+    Page<NewsCrawl> findByCategory(Category category, Pageable pageable);
     
     // 언론사별 크롤링 뉴스 조회
     Page<NewsCrawl> findByPress(String press, Pageable pageable);
@@ -45,14 +46,14 @@ public interface  NewsCrawlRepository extends JpaRepository<NewsCrawl, Long> {
     Page<NewsCrawl> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
     
     // 승격되지 않은 크롤링 뉴스 조회 (News 테이블에 없는 것들)
-    @Query("SELECT nc FROM NewsCrawl nc WHERE nc.rawId NOT IN " +
-           "(SELECT n.originalNewsId FROM News n WHERE n.originalNewsId IS NOT NULL)")
-    Page<NewsCrawl> findUnpromotedNews(Pageable pageable);
+//    @Query("SELECT nc FROM NewsCrawl nc WHERE nc.rawId NOT IN " +
+//           "(SELECT n.originalNewsId FROM News n WHERE n.originalNewsId IS NOT NULL)")
+//    Page<NewsCrawl> findUnpromotedNews(Pageable pageable);
     
     // 승격된 크롤링 뉴스 조회 (News 테이블에 있는 것들)
-    @Query("SELECT nc FROM NewsCrawl nc WHERE nc.rawId IN " +
-           "(SELECT n.originalNewsId FROM News n WHERE n.originalNewsId IS NOT NULL)")
-    Page<NewsCrawl> findPromotedNews(Pageable pageable);
+//    @Query("SELECT nc FROM NewsCrawl nc WHERE nc.rawId IN " +
+//           "(SELECT n.originalNewsId FROM News n WHERE n.originalNewsId IS NOT NULL)")
+//    Page<NewsCrawl> findPromotedNews(Pageable pageable);
     
     // 특정 링크 ID로 조회
     NewsCrawl findByLinkId(Long linkId);
