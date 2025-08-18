@@ -11,7 +11,7 @@ spring:
       server:
         git:
           uri: https://github.com/backend20250319/BE09-Final-1team-BE.git
-          default-label: develop
+          default-label: feature/chaehee
         native:
           #  yml 파일을 읽어올 경로를 지정합니다.
           search-locations: file:./config/config-files/
