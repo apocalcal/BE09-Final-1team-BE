@@ -3,3 +3,11 @@ spring:
     name: gateway-service
   config:
     import: optional:configserver:http://config-server:8888
+  cloud:
+    config:
+        # ⭐️ Config 서버 연결 재시도 설정을 여기에 추가합니다.
+      fail-fast: true
+      retry:
+        initial-interval: 3000  # 3초 후 첫 재시도
+        max-attempts: 20        # 최대 20번 시도
+        multiplier: 1.2
