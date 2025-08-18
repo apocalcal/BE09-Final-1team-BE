@@ -8,10 +8,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
-
+import jakarta.servlet.http.HttpServletRequest;
 
 @Configuration
 @EnableFeignClients(basePackages = "com.newsletterservice.client")
@@ -24,10 +24,13 @@ public class FeignConfig {
     @Bean
     public RequestInterceptor requestInterceptor() {
         return requestTemplate -> {
-            // JWT 토큰을 헤더에 추가 (Gateway에서 전달받은 토큰 사용)
+            // 현재 요청에서 Authorization 헤더를 가져와서 Feign 요청에 추가
             String token = getCurrentJwtToken();
-            if (token != null) {
-                requestTemplate.header("Authorization", "Bearer " + token);
+            if (token != null && !token.isEmpty()) {
+                requestTemplate.header("Authorization", token);
+                log.debug("Feign 요청에 Authorization 헤더 추가: {}", token.substring(0, Math.min(token.length(), 20)) + "...");
+            } else {
+                log.debug("JWT 토큰이 없어 Authorization 헤더를 추가하지 않습니다.");
             }
         };
     }
@@ -49,10 +52,18 @@ public class FeignConfig {
     }
     
     private String getCurrentJwtToken() {
-        // SecurityContext에서 현재 토큰 추출
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication instanceof JwtAuthenticationToken) {
-            return ((JwtAuthenticationToken) authentication).getToken().getTokenValue();
+        try {
+            // 현재 HTTP 요청에서 Authorization 헤더 추출
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attributes != null) {
+                HttpServletRequest request = attributes.getRequest();
+                String authHeader = request.getHeader("Authorization");
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    return authHeader; // "Bearer " 포함하여 반환
+                }
+            }
+        } catch (Exception e) {
+            log.warn("JWT 토큰 추출 중 오류 발생: {}", e.getMessage());
         }
         return null;
     }

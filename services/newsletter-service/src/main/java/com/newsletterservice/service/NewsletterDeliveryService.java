@@ -1,11 +1,13 @@
 package com.newsletterservice.service;
 
 
+import com.newsletterservice.dto.DeliveryStats;
 import com.newsletterservice.entity.NewsletterDelivery;
 import com.newsletterservice.entity.DeliveryStatus;
 import com.newsletterservice.entity.DeliveryMethod;
 import com.newsletterservice.entity.SubscriptionFrequency;
 import com.newsletterservice.repository.NewsletterDeliveryRepository;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -21,6 +23,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Getter
 public class NewsletterDeliveryService {
 
     private final NewsletterDeliveryRepository deliveryRepository;
@@ -35,13 +38,13 @@ public class NewsletterDeliveryService {
                 .newsletterId(requestDTO.getNewsletterId())
                 .userId(requestDTO.getUserId())
                 .personalizedContent(requestDTO.getPersonalizedContent())
-                .recipientEmail(requestDTO.getRecipientEmail())
-                .senderEmail(requestDTO.getSenderEmail())
+                .sentAt(requestDTO.getSentAt())
+                .openedAt(requestDTO.getOpenedAt())
+                .status(DeliveryStatus.PENDING)
                 .deliveryMethod(requestDTO.getDeliveryMethod())
-                .subscriptionFrequency(requestDTO.getSubscriptionFrequency())
                 .scheduledAt(requestDTO.getScheduledAt())
-                .status(DeliveryStatus.SCHEDULED)
                 .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .build();
 
         NewsletterDelivery saved = deliveryRepository.save(delivery);
@@ -54,18 +57,18 @@ public class NewsletterDeliveryService {
      * 즉시 발송
      */
     public NewsletterDelivery sendImmediately(NewsletterDelivery requestDTO) {
-        log.info("즉시 뉴스레터 발송 시작: {}", requestDTO.getTitle());
+        log.info("즉시 뉴스레터 발송 시작: {}", requestDTO.getId());
 
         NewsletterDelivery delivery = NewsletterDelivery.builder()
-                .title(requestDTO.getTitle())
-                .content(requestDTO.getContent())
-                .recipientEmail(requestDTO.getRecipientEmail())
-                .senderEmail(requestDTO.getSenderEmail())
+                .newsletterId(requestDTO.getNewsletterId())
+                .userId(requestDTO.getUserId())
+                .personalizedContent(requestDTO.getPersonalizedContent())
+                .sentAt(requestDTO.getSentAt())
+                .openedAt(requestDTO.getOpenedAt())
+                .status(DeliveryStatus.PENDING)
                 .deliveryMethod(requestDTO.getDeliveryMethod())
-                .subscriptionFrequency(SubscriptionFrequency.IMMEDIATE)
-                .scheduledAt(LocalDateTime.now())
-                .status(DeliveryStatus.IN_PROGRESS)
                 .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .build();
 
         NewsletterDelivery saved = deliveryRepository.save(delivery);
@@ -94,12 +97,12 @@ public class NewsletterDeliveryService {
      */
     @Transactional(readOnly = true)
     public Page<NewsletterDelivery> getDeliveriesByRecipient(
-            String recipientEmail, Pageable pageable) {
+            Long userId, Pageable pageable) {
 
-        log.info("수신자별 발송 이력 조회: email={}", recipientEmail);
+        log.info("수신자별 발송 이력 조회: userId={}", userId);
 
         Page<NewsletterDelivery> deliveries =
-                deliveryRepository.findByRecipientEmailOrderByCreatedAtDesc(recipientEmail, pageable);
+                deliveryRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
         return deliveries.map(this::convertToResponseDTO);
     }
 
@@ -112,7 +115,7 @@ public class NewsletterDeliveryService {
 
         List<NewsletterDelivery> scheduled =
                 deliveryRepository.findByStatusAndScheduledAtBefore(
-                        DeliveryStatus.SCHEDULED, LocalDateTime.now());
+                        DeliveryStatus.PENDING, LocalDateTime.now());
 
         return scheduled.stream()
                 .map(this::convertToResponseDTO)
@@ -132,7 +135,7 @@ public class NewsletterDeliveryService {
             throw new IllegalStateException("이미 발송된 뉴스레터는 취소할 수 없습니다.");
         }
 
-        delivery.updateStatus(DeliveryStatus.CANCELLED);
+        delivery.updateStatus(DeliveryStatus.BOUNCED);
         NewsletterDelivery updated = deliveryRepository.save(delivery);
 
         log.info("발송 취소 완료: ID={}", deliveryId);
@@ -152,7 +155,7 @@ public class NewsletterDeliveryService {
             throw new IllegalStateException("실패한 발송만 재시도할 수 있습니다.");
         }
 
-        delivery.updateStatus(DeliveryStatus.IN_PROGRESS);
+        delivery.updateStatus(DeliveryStatus.PENDING);
         delivery.incrementRetryCount();
         NewsletterDelivery updated = deliveryRepository.save(delivery);
 
@@ -166,7 +169,7 @@ public class NewsletterDeliveryService {
      * 발송 통계 조회
      */
     @Transactional(readOnly = true)
-    public DeliveryStatsDTO getDeliveryStats(LocalDateTime startDate, LocalDateTime endDate) {
+    public DeliveryStats getDeliveryStats(LocalDateTime startDate, LocalDateTime endDate) {
         log.info("발송 통계 조회: {} ~ {}", startDate, endDate);
 
         long totalSent = deliveryRepository.countByStatusAndCreatedAtBetween(
@@ -174,9 +177,9 @@ public class NewsletterDeliveryService {
         long totalFailed = deliveryRepository.countByStatusAndCreatedAtBetween(
                 DeliveryStatus.FAILED, startDate, endDate);
         long totalScheduled = deliveryRepository.countByStatusAndCreatedAtBetween(
-                DeliveryStatus.SCHEDULED, startDate, endDate);
+                DeliveryStatus.PENDING, startDate, endDate);
 
-        return DeliveryStatsDTO.builder()
+        return DeliveryStats.builder()
                 .totalSent(totalSent)
                 .totalFailed(totalFailed)
                 .totalScheduled(totalScheduled)
@@ -197,7 +200,7 @@ public class NewsletterDeliveryService {
             switch (delivery.getDeliveryMethod()) {
                 case EMAIL -> sendByEmail(delivery);
                 case SMS -> sendBySms(delivery);
-                case PUSH_NOTIFICATION -> sendByPushNotification(delivery);
+                case PUSH -> sendByPushNotification(delivery);
             }
 
             delivery.updateStatus(DeliveryStatus.SENT);
@@ -214,60 +217,38 @@ public class NewsletterDeliveryService {
 
     private void sendByEmail(NewsletterDelivery delivery) {
         // 실제 이메일 발송 로직
-        log.info("이메일 발송: {} -> {}", delivery.getSenderEmail(), delivery.getRecipientEmail());
+        log.info("이메일 발송: {} -> {}", delivery.getDeliveryMethod(), delivery.getDeliveryMethod());
         // EmailService 호출
     }
 
     private void sendBySms(NewsletterDelivery delivery) {
         // 실제 SMS 발송 로직
-        log.info("SMS 발송: {}", delivery.getRecipientEmail());
+        log.info("SMS 발송: {}", delivery.getDeliveryMethod());
         // SmsService 호출
     }
 
     private void sendByPushNotification(NewsletterDelivery delivery) {
         // 실제 푸시 알림 발송 로직
-        log.info("푸시 알림 발송: {}", delivery.getRecipientEmail());
+        log.info("푸시 알림 발송: {}", delivery.getDeliveryMethod());
         // PushNotificationService 호출
     }
 
     private NewsletterDelivery convertToResponseDTO(NewsletterDelivery delivery) {
         return NewsletterDelivery.builder()
                 .id(delivery.getId())
-                .title(delivery.getTitle())
-                .content(delivery.getContent())
-                .recipientEmail(delivery.getRecipientEmail())
-                .senderEmail(delivery.getSenderEmail())
-                .deliveryMethod(delivery.getDeliveryMethod())
-                .subscriptionFrequency(delivery.getSubscriptionFrequency())
-                .status(delivery.getStatus())
-                .scheduledAt(delivery.getScheduledAt())
+                .newsletterId(delivery.getNewsletterId())
+                .userId(delivery.getUserId())
+                .personalizedContent(delivery.getPersonalizedContent())
                 .sentAt(delivery.getSentAt())
-                .createdAt(delivery.getCreatedAt())
-                .updatedAt(delivery.getUpdatedAt())
+                .openedAt(delivery.getOpenedAt())
+                .status(delivery.getStatus())
+                .deliveryMethod(delivery.getDeliveryMethod())
+                .scheduledAt(delivery.getScheduledAt())
                 .retryCount(delivery.getRetryCount())
                 .errorMessage(delivery.getErrorMessage())
+                .createdAt(delivery.getCreatedAt())
+                .updatedAt(delivery.getUpdatedAt())
                 .build();
     }
 
-    // 통계 DTO
-    public static class DeliveryStatsDTO {
-        private final long totalSent;
-        private final long totalFailed;
-        private final long totalScheduled;
-        private final double successRate;
-
-        @lombok.Builder
-        public DeliveryStatsDTO(long totalSent, long totalFailed, long totalScheduled, double successRate) {
-            this.totalSent = totalSent;
-            this.totalFailed = totalFailed;
-            this.totalScheduled = totalScheduled;
-            this.successRate = successRate;
-        }
-
-        // Getters
-        public long getTotalSent() { return totalSent; }
-        public long getTotalFailed() { return totalFailed; }
-        public long getTotalScheduled() { return totalScheduled; }
-        public double getSuccessRate() { return successRate; }
-    }
 }

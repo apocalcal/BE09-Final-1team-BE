@@ -40,6 +40,16 @@ public class NewsletterDelivery {
     @Enumerated(EnumType.STRING)
     private DeliveryMethod deliveryMethod; // EMAIL, PUSH, SMS
 
+    @Column(name = "scheduled_at")
+    private LocalDateTime scheduledAt; // 예약 발송 시간
+
+    @Column(name = "retry_count", columnDefinition = "INT DEFAULT 0")
+    @Builder.Default
+    private Integer retryCount = 0; // 재시도 횟수
+
+    @Column(name = "error_message", columnDefinition = "TEXT")
+    private String errorMessage; // 에러 메시지
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -52,10 +62,31 @@ public class NewsletterDelivery {
         if (status == null) {
             status = DeliveryStatus.PENDING;
         }
+        if (retryCount == null) {
+            retryCount = 0;
+        }
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    // 상태 업데이트 메서드
+    public void updateStatus(DeliveryStatus newStatus) {
+        this.status = newStatus;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // 재시도 횟수 증가 메서드
+    public void incrementRetryCount() {
+        this.retryCount = (this.retryCount == null) ? 1 : this.retryCount + 1;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // 에러 메시지 설정 메서드
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+        this.updatedAt = LocalDateTime.now();
     }
 }

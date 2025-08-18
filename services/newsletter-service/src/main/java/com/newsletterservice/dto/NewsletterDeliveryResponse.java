@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
+@Getter
 @NoArgsConstructor
 @AllArgsConstructor
 public class NewsletterDeliveryResponse {

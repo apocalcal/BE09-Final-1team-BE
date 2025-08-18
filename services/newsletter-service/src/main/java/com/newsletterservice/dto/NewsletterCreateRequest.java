@@ -16,10 +16,13 @@ public class NewsletterCreateRequest {
 
     private List<Long> targetUserIds; // 특정 사용자들에게 발송 (null이면 전체)
 
+    @Builder.Default
     private DeliveryMethod deliveryMethod = DeliveryMethod.EMAIL;
 
+    @Builder.Default
     private boolean isPersonalized = true; // 개인화 여부
 
+    @Builder.Default
     private boolean isScheduled = false; // 예약 발송 여부
 
     private String scheduledAt; // 예약 발송 시간 (ISO format)

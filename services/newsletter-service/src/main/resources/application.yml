@@ -3,3 +3,27 @@ spring:
     name: newsletter-service
   config:
     import: optional:configserver:http://localhost:8888
+  main:
+    allow-bean-definition-overriding: true
+
+# Feign 클라이언트 설정
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 5000
+        loggerLevel: basic
+
+# 서비스 URL 설정
+services:
+  news-service:
+    url: http://localhost:8082
+  user-service:
+    url: http://localhost:8081
+
+# 로깅 설정
+logging:
+  level:
+    com.newsletterservice.client: DEBUG
+    feign: DEBUG

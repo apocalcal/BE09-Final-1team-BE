@@ -30,5 +30,6 @@ public class SubscriptionRequest {
     @Max(value = 23, message = "발송 시간은 0-23 사이여야 합니다")
     private Integer sendTime; // 기본값: 9 (오전 9시)
 
+    @Builder.Default
     private boolean isPersonalized = true; // 기본값: 개인화 활성
 }

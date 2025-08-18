@@ -1,6 +1,8 @@
 package com.newsletterservice.client;
 
-import com.newnormallist.userservice.user.dto.CategoryResponse;
+
+
+import com.newsletterservice.client.dto.CategoryResponse;
 import com.newsletterservice.common.ApiResponse;
 import com.newsletterservice.client.dto.UserResponse;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -8,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@FeignClient(name = "user-service", url = "${services.user-service.url:http://localhost:8081}")
+@FeignClient(name = "user-service-client", url = "${services.user-service.url:http://localhost:8081}")
 public interface UserServiceClient {
     
     /**

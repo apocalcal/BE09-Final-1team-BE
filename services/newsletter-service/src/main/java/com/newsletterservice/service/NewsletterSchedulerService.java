@@ -34,7 +34,7 @@ public class NewsletterSchedulerService {
         LocalDateTime now = LocalDateTime.now();
         List<NewsletterDelivery> scheduledDeliveries =
                 deliveryRepository.findByStatusAndScheduledAtBefore(
-                        DeliveryStatus.SCHEDULED, now);
+                        DeliveryStatus.PENDING, now);
 
         if (scheduledDeliveries.isEmpty()) {
             log.debug("처리할 예약된 뉴스레터가 없습니다.");
@@ -130,7 +130,7 @@ public class NewsletterSchedulerService {
 
         List<NewsletterDelivery> oldDeliveries =
                 deliveryRepository.findByCreatedAtBeforeAndStatusIn(
-                        cutoff, List.of(DeliveryStatus.SENT, DeliveryStatus.CANCELLED));
+                        cutoff, List.of(DeliveryStatus.SENT, DeliveryStatus.BOUNCED));
 
         if (oldDeliveries.isEmpty()) {
             log.info("정리할 오래된 기록이 없습니다.");
@@ -154,7 +154,7 @@ public class NewsletterSchedulerService {
     private void processScheduledDelivery(NewsletterDelivery delivery) {
         log.info("예약된 뉴스레터 처리: ID={}", delivery.getId());
 
-        delivery.updateStatus(DeliveryStatus.IN_PROGRESS);
+        delivery.updateStatus(DeliveryStatus.PROCESSING);
         deliveryRepository.save(delivery);
 
         // 발송 수행
@@ -170,37 +170,37 @@ public class NewsletterSchedulerService {
         log.info("일간 뉴스레터 생성");
 
         // 일간 구독자들을 위한 뉴스레터 생성
-        List<String> dailySubscribers = getDailySubscribers();
+        List<Long> dailySubscribers = getDailySubscribers();
 
-        for (String subscriberEmail : dailySubscribers) {
-            createDailyNewsletter(subscriberEmail, todayStart.plusHours(9)); // 오전 9시 발송
+        for (Long subscriberId : dailySubscribers) {
+            createDailyNewsletter(subscriberId, todayStart.plusHours(9)); // 오전 9시 발송
         }
     }
 
     private void processWeeklyNewsletters(LocalDateTime weekStart) {
         log.info("주간 뉴스레터 생성");
 
-        List<String> weeklySubscribers = getWeeklySubscribers();
+        List<Long> weeklySubscribers = getWeeklySubscribers();
 
-        for (String subscriberEmail : weeklySubscribers) {
-            createWeeklyNewsletter(subscriberEmail, weekStart.plusHours(10)); // 오전 10시 발송
+        for (Long subscriberId : weeklySubscribers) {
+            createWeeklyNewsletter(subscriberId, weekStart.plusHours(10)); // 오전 10시 발송
         }
     }
 
     private void processMonthlyNewsletters(LocalDateTime monthStart) {
         log.info("월간 뉴스레터 생성");
 
-        List<String> monthlySubscribers = getMonthlySubscribers();
+        List<Long> monthlySubscribers = getMonthlySubscribers();
 
-        for (String subscriberEmail : monthlySubscribers) {
-            createMonthlyNewsletter(subscriberEmail, monthStart.plusHours(11)); // 오전 11시 발송
+        for (Long subscriberId : monthlySubscribers) {
+            createMonthlyNewsletter(subscriberId, monthStart.plusHours(11)); // 오전 11시 발송
         }
     }
 
     private void retryFailedDelivery(NewsletterDelivery delivery) {
         log.info("실패한 발송 재시도: ID={}", delivery.getId());
 
-        delivery.updateStatus(DeliveryStatus.IN_PROGRESS);
+        delivery.updateStatus(DeliveryStatus.PROCESSING);
         delivery.incrementRetryCount();
         deliveryRepository.save(delivery);
 
@@ -214,7 +214,7 @@ public class NewsletterSchedulerService {
             switch (delivery.getDeliveryMethod()) {
                 case EMAIL -> sendEmail(delivery);
                 case SMS -> sendSms(delivery);
-                case PUSH_NOTIFICATION -> sendPushNotification(delivery);
+                case PUSH -> sendPushNotification(delivery);
             }
 
             delivery.updateStatus(DeliveryStatus.SENT);
@@ -230,26 +230,26 @@ public class NewsletterSchedulerService {
     }
 
     private boolean isRecurringDelivery(NewsletterDelivery delivery) {
-        return delivery.getSubscriptionFrequency() != SubscriptionFrequency.IMMEDIATE &&
-                delivery.getSubscriptionFrequency() != null;
+        // NewsletterDelivery 엔티티에는 subscriptionFrequency 필드가 없으므로
+        // scheduledAt이 설정되어 있는지로 판단
+        return delivery.getScheduledAt() != null;
     }
 
     private void scheduleNextDelivery(NewsletterDelivery originalDelivery) {
         LocalDateTime nextScheduledTime = calculateNextDeliveryTime(
                 originalDelivery.getScheduledAt(),
-                originalDelivery.getSubscriptionFrequency()
+                SubscriptionFrequency.DAILY // 기본값으로 DAILY 사용
         );
 
         NewsletterDelivery nextDelivery = NewsletterDelivery.builder()
-                .title(originalDelivery.getTitle())
-                .content(originalDelivery.getContent())
-                .recipientEmail(originalDelivery.getRecipientEmail())
-                .senderEmail(originalDelivery.getSenderEmail())
+                .newsletterId(originalDelivery.getNewsletterId())
+                .userId(originalDelivery.getUserId())
+                .personalizedContent(originalDelivery.getPersonalizedContent())
                 .deliveryMethod(originalDelivery.getDeliveryMethod())
-                .subscriptionFrequency(originalDelivery.getSubscriptionFrequency())
                 .scheduledAt(nextScheduledTime)
-                .status(DeliveryStatus.SCHEDULED)
+                .status(DeliveryStatus.PENDING)
                 .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .build();
 
         deliveryRepository.save(nextDelivery);
@@ -263,53 +263,52 @@ public class NewsletterSchedulerService {
             case DAILY -> current.plusDays(1);
             case WEEKLY -> current.plusWeeks(1);
             case MONTHLY -> current.plusMonths(1);
-            default -> current.plusDays(1);
         };
     }
 
     // 구독자 조회 메소드들 (실제로는 별도 구독자 관리 서비스에서 조회)
-    private List<String> getDailySubscribers() {
+    private List<Long> getDailySubscribers() {
         // SubscriberService에서 일간 구독자 목록 조회
         return List.of(); // 임시
     }
 
-    private List<String> getWeeklySubscribers() {
+    private List<Long> getWeeklySubscribers() {
         // SubscriberService에서 주간 구독자 목록 조회
         return List.of(); // 임시
     }
 
-    private List<String> getMonthlySubscribers() {
+    private List<Long> getMonthlySubscribers() {
         // SubscriberService에서 월간 구독자 목록 조회
         return List.of(); // 임시
     }
 
-    private void createDailyNewsletter(String subscriberEmail, LocalDateTime scheduledTime) {
+    private void createDailyNewsletter(Long subscriberId, LocalDateTime scheduledTime) {
         // 일간 뉴스레터 템플릿으로 생성
-        log.info("일간 뉴스레터 생성: {}, 예약시간: {}", subscriberEmail, scheduledTime);
+        log.info("일간 뉴스레터 생성: {}, 예약시간: {}", subscriberId, scheduledTime);
     }
 
-    private void createWeeklyNewsletter(String subscriberEmail, LocalDateTime scheduledTime) {
+    private void createWeeklyNewsletter(Long subscriberId, LocalDateTime scheduledTime) {
         // 주간 뉴스레터 템플릿으로 생성
-        log.info("주간 뉴스레터 생성: {}, 예약시간: {}", subscriberEmail, scheduledTime);
+        log.info("주간 뉴스레터 생성: {}, 예약시간: {}", subscriberId, scheduledTime);
     }
 
-    private void createMonthlyNewsletter(String subscriberEmail, LocalDateTime scheduledTime) {
+    private void createMonthlyNewsletter(Long subscriberId, LocalDateTime scheduledTime) {
         // 월간 뉴스레터 템플릿으로 생성
-        log.info("월간 뉴스레터 생성: {}, 예약시간: {}", subscriberEmail, scheduledTime);
+        log.info("월간 뉴스레터 생성: {}, 예약시간: {}", subscriberId, scheduledTime);
     }
 
     private void sendEmail(NewsletterDelivery delivery) {
         // 실제 이메일 발송
-        log.info("이메일 발송: {}", delivery.getRecipientEmail());
+        log.info("이메일 발송: userId={}", delivery.getUserId());
     }
 
     private void sendSms(NewsletterDelivery delivery) {
         // 실제 SMS 발송
-        log.info("SMS 발송: {}", delivery.getRecipientEmail());
+        log.info("SMS 발송: userId={}", delivery.getUserId());
     }
 
     private void sendPushNotification(NewsletterDelivery delivery) {
         // 실제 푸시 알림 발송
-        log.info("푸시 알림 발송: {}", delivery.getRecipientEmail());
+        log.info("푸시 알림 발송: userId={}", delivery.getUserId());
     }
 }
