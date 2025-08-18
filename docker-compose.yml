@@ -77,7 +77,7 @@ services:
       # JWT
       - JWT_SECRET=${JWT_SECRET}
 
-#  # 6. Flask API (새로운 서비스 추가)
+# 6. Flask API (새로운 서비스 추가)
   flaskapi:
     build: ./services/flaskapi
     container_name: flaskapi
