@@ -53,8 +53,8 @@ eureka:
     service-url:
       # localhost 대신 Docker 서비스 이름 사용
       defaultZone: http://discovery-service:8761/eureka/
-#    initial-instance-info-replication-interval-seconds: 40
-#    instance-info-replication-interval-seconds: 30
+    initial-instance-info-replication-interval-seconds: 40
+    instance-info-replication-interval-seconds: 30
     register-with-eureka: true
     fetch-registry: true
   instance:
