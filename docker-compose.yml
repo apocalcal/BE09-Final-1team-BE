@@ -32,7 +32,9 @@ services:
       - msa-network
     depends_on:
       - discovery-service
+
     environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka
         # JWT
       - jwt.secret=${JWT_SECRET}
       - jwt.expiration=${JWT_EXPIRATION}
