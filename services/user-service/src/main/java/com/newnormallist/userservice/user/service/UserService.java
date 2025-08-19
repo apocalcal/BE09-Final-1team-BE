@@ -1,6 +1,7 @@
 package com.newnormallist.userservice.user.service;
 
 import com.newnormallist.userservice.auth.repository.RefreshTokenRepository;
+import com.newnormallist.userservice.clients.NewsServiceClient;
 import com.newnormallist.userservice.common.ErrorCode;
 import com.newnormallist.userservice.history.entity.UserReadHistory;
 import com.newnormallist.userservice.history.repository.UserReadHistoryRepository;
@@ -24,6 +25,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -35,6 +37,7 @@ public class UserService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserReadHistoryRepository userReadHistoryRepository;
+    private final NewsServiceClient newsServiceClient; // Feign Client 의존성 주입
 
     /**
      * 회원가입 로직
@@ -229,5 +232,23 @@ public class UserService {
             userReadHistoryRepository.save(history);
             log.info("뉴스 읽음 기록 추가 완료 - 사용자 ID: {}, 뉴스 ID: {}", userId, newsId);
         }
+    }
+
+    /**
+     * 스크랩된 뉴스 목록 조회 로직
+     * @param userId 사용자 ID
+     * @param pageable 페이지 정보
+     * @return Page<ScrappedNewsResponse> 스크랩된 뉴스 목록
+     */
+    public Page<ScrappedNewsResponse> getScrappedNews(Long userId, Pageable pageable) {
+        String sort = pageable.getSort().stream()
+                .map(order -> order.getProperty() + "," + order.getDirection())
+                .collect(Collectors.joining());
+        return newsServiceClient.getScrappedNews(
+                userId,
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                sort
+        );
     }
 }

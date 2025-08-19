@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/users")
@@ -121,5 +120,17 @@ public class UserController {
         Long userId = Long.parseLong(userIdStr);
         userService.addReadHistory(userId, newsId);
         return ResponseEntity.ok(ApiResponse.success("읽은 뉴스 목록에 추가됨!"));
+    }
+
+    /**
+     * 마이페이지 - 스크랩한 뉴스 목록 조회 API
+     */
+    @GetMapping("/mypage/scraps")
+    public ResponseEntity<ApiResponse<Page<ScrappedNewsResponse>>> getMyScraps(
+            @AuthenticationPrincipal String userIdStr,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Long userId = Long.parseLong(userIdStr);
+        Page<ScrappedNewsResponse> scrappedNews = userService.getScrappedNews(userId, pageable);
+        return ResponseEntity.ok(ApiResponse.success(scrappedNews));
     }
 }
