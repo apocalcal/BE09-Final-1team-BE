@@ -22,6 +22,8 @@ services:
       timeout: 3s
       retries: 10
     restart: unless-stopped
+    networks:
+      - msa-network
 
 # 2. Discovery Service (Eureka)
   discovery-service:
@@ -51,6 +53,8 @@ services:
       timeout: 3s
       retries: 10
     restart: unless-stopped
+    networks:
+      - msa-network
 
 # 3. Gateway Service
   gateway-service:
@@ -76,6 +80,8 @@ services:
       timeout: 3s
       retries: 10
     restart: unless-stopped
+    networks:
+      - msa-network
 
   # 4. User Service
   user-service:

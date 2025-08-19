@@ -18,10 +18,10 @@ RUN ./gradlew bootJar
 # =================
 FROM openjdk:17-slim
 
-RUN apt-get update && apt-get install -y curl
-
 # 작업 디렉토리 설정
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y curl
 
 # 빌드 단계(builder)에서 생성된 jar 파일만 복사
 # Gradle 경로: build/libs/*.jar
