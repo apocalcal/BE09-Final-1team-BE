@@ -1,20 +1,20 @@
-version: "3.9"
-
 services:
   config-server:
     build: ./config/config-server
     container_name: config-server
     ports:
       - "8888:8888"
+    dns:
+      - 8.8.8.8
     environment:
       - TZ=Asia/Seoul
       - SPRING_APPLICATION_NAME=config-server
-      # (선택) native 모드 사용 시: config 파일 경로 지정
-      # - SPRING_PROFILES_ACTIVE=native
-      # - SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS=file:/workspace/config
-    # (선택) native 모드면 로컬 설정 디렉토리 마운트
-    # volumes:
-    #   - ./config-files:/workspace/config:ro
+      - SPRING_PROFILES_ACTIVE=git # Git 프로필 활성화
+      - SPRING_CLOUD_CONFIG_SERVER_GIT_URI=https://github.com/backend20250319/BE09-Final-1team-BE.git
+      - SPRING_CLOUD_CONFIG_SERVER_GIT_DEFAULT_LABEL=feature/chaehee
+      - SPRING_CLOUD_CONFIG_SERVER_GIT_SEARCH_PATHS=config/config-files
+      - SPRING_CLOUD_CONFIG_SERVER_GIT_CLONE_ON_START=true
+      - SPRING_CLOUD_CONFIG_SERVER_GIT_TIMEOUT=60
     healthcheck:
       # 컨테이너 이미지에 curl이 없을 수 있으니 CMD-SHELL로 처리
       test: ["CMD-SHELL", "curl -fsS http://localhost:8888/actuator/health || wget -qO- http://localhost:8888/actuator/health > /dev/null"]
@@ -29,6 +29,8 @@ services:
     container_name: discovery-service
     ports:
       - "8761:8761"
+    dns:
+      - 8.8.8.8
     environment:
       - TZ=Asia/Seoul
       - SPRING_APPLICATION_NAME=discovery-service
@@ -56,7 +58,10 @@ services:
     container_name: gateway-service
     ports:
       - "8000:8000"
+    dns:
+      - 8.8.8.8
     environment:
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
       - jwt.secret=${JWT_SECRET} # JWT 비밀키 설정
       - jwt.expiration=${JWT_EXPIRATION} # JWT 만료 시간 설정
       # (선택) Gateway 라우팅/보안 등은 Config Server 리포지토리(yml)에서 관리 권장
@@ -76,11 +81,16 @@ services:
   user-service:
     build: ./services/user-service # ⭐️ 경로 수정
     container_name: user-service
+    ports:
+      - "8081:8081"
+    dns:
+      - 8.8.8.8
     networks:
       - msa-network
     depends_on:
       - discovery-service
     environment:
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
       # DB 연결 설정
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
@@ -98,11 +108,16 @@ services:
   news-service:
     build: ./services/news-service # ⭐️ 경로 수정
     container_name: news-service
+    ports:
+      - "8082:8082"
+    dns:
+      - 8.8.8.8
     networks:
       - msa-network
     depends_on:
       - discovery-service
     environment:
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
       # DB 연결 설정
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
@@ -117,6 +132,8 @@ services:
     container_name: flaskapi
     ports:
       - "5000:5000"                     # 외부에서 직접 확인도 가능하도록 노출
+    dns:
+      - 8.8.8.8
     networks:
       - msa-network
     depends_on:
