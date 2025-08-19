@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -31,9 +32,17 @@ public class UserReadHistory {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
     @Builder
     public UserReadHistory(User user, Long newsId) {
         this.user = user;
         this.newsId = newsId;
+    }
+
+    public void updateReadTime() {
+        this.updatedAt = LocalDateTime.now();
     }
 }

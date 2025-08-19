@@ -50,3 +50,7 @@ out/
 # target directory
 news-service/target/
 target/
+
+# env files
+.env
+.env.local

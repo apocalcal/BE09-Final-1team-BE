@@ -1,8 +1,11 @@
 # app/__init__.py
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, current_app
 import os
 from pathlib import Path
 from sqlalchemy.exc import OperationalError
+# 핵심: 오직 extensions.db만 초기화에 사용
+from .extensions import db  # ← 여기! (원래 .models import db 였다면 교체)
+
 
 def _normalize_sqlite_uri(app, uri: str) -> str:
     """SQLite URI를 절대경로/정상형식으로 정규화."""
@@ -38,7 +41,11 @@ def create_app():
         from .config import DevConfig as ActiveConfig
     app.config.from_object(ActiveConfig)
 
-    # 2) DB URI 확정 (우선순위: 환경변수 DATABASE_URL > Config의 URI > instance/summary.db)
+    # (개발 편의) SQL 로그 보고 싶으면 Dev에서만 켜기
+    if env != "production":
+        app.config.setdefault("SQLALCHEMY_ECHO", True)
+
+    # 2) DB URI 확정
     db_uri = os.getenv("DATABASE_URL") or app.config.get("SQLALCHEMY_DATABASE_URI")
     if not db_uri:
         db_file = Path(app.instance_path) / "summary.db"
@@ -49,7 +56,6 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
     app.config.setdefault("SQLALCHEMY_TRACK_MODIFICATIONS", False)
 
-    # SQLite일 때만 스레드 옵션(필요 시)
     engine_opts = app.config.get("SQLALCHEMY_ENGINE_OPTIONS", {})
     if db_uri.startswith("sqlite"):
         connect_args = engine_opts.get("connect_args", {})
@@ -59,11 +65,11 @@ def create_app():
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_opts
 
     # 4) DB init & 테이블 생성
-    from .models import db  # db = SQLAlchemy()
-    db.init_app(app)
+    db.init_app(app)  # extensions.db 를 초기화
     with app.app_context():
         try:
-            from .models import News, NewsSummary
+            # 모델을 '정의만' 임포트해서 메타데이터를 로딩
+            from . import models  # (models 내부에서는 반드시 from .extensions import db 사용)
             db.create_all()
         except OperationalError as e:
             print("[DB][OperationalError]", e)
@@ -87,6 +93,20 @@ def create_app():
             "db_uri": app.config.get("SQLALCHEMY_DATABASE_URI"),
             "routes": [{"rule": r.rule, "methods": sorted(list(r.methods))} for r in app.url_map.iter_rules()],
         }
+
+    # 추가: 실제 SQLite 파일이 무엇인지 확인 (혼선 방지)
+    @app.get("/__db")
+    def __db():
+        try:
+            uri = str(db.engine.url)
+            info = {"engine_url": uri}
+            if uri.startswith("sqlite"):
+                rows = db.session.execute(db.text("PRAGMA database_list")).mappings().all()
+                info["sqlite_database_list"] = [dict(r) for r in rows]
+            return info
+        except Exception as e:
+            current_app.logger.exception("__db failed")
+            return {"error": str(e)}, 500
 
     @app.before_request
     def _log_req():

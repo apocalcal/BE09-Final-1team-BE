@@ -1,6 +1,7 @@
 package com.newnormallist.userservice.user.controller;
 
 import com.newnormallist.userservice.common.ApiResponse;
+import com.newnormallist.userservice.history.dto.ReadHistoryResponse;
 import com.newnormallist.userservice.user.dto.*;
 import com.newnormallist.userservice.user.entity.UserStatus;
 import com.newnormallist.userservice.user.service.UserService;
@@ -121,6 +122,19 @@ public class UserController {
         userService.addReadHistory(userId, newsId);
         return ResponseEntity.ok(ApiResponse.success("읽은 뉴스 목록에 추가됨!"));
     }
+    /**
+     * 마이페이지 - 읽은 뉴스 목록 조회 API
+     */
+    @GetMapping("/mypage/history/index")
+    public ResponseEntity<ApiResponse<Page<ReadHistoryResponse>>> getReadHistory(
+        @AuthenticationPrincipal String userIdStr,
+        @PageableDefault(size = 10, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Long userId = Long.parseLong(userIdStr);
+        Page<ReadHistoryResponse> historyNewsIds = userService.getReadHistory(userId, pageable);
+        return ResponseEntity.ok(ApiResponse.success(historyNewsIds));
+    }
+
+
 
     /**
      * 마이페이지 - 스크랩한 뉴스 목록 조회 API

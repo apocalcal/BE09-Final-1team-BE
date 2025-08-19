@@ -3,6 +3,7 @@ package com.newnormallist.userservice.user.service;
 import com.newnormallist.userservice.auth.repository.RefreshTokenRepository;
 import com.newnormallist.userservice.clients.NewsServiceClient;
 import com.newnormallist.userservice.common.ErrorCode;
+import com.newnormallist.userservice.history.dto.ReadHistoryResponse;
 import com.newnormallist.userservice.history.entity.UserReadHistory;
 import com.newnormallist.userservice.history.repository.UserReadHistoryRepository;
 import com.newnormallist.userservice.user.dto.*;
@@ -25,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -216,10 +218,16 @@ public class UserService {
     public void addReadHistory(Long userId, Long newsId) {
         // 이미 읽은 기록이 있는지 확인
         synchronized (this) { // 동기화 블록으로 중복 방지
-            if (userReadHistoryRepository.existsByUser_IdAndNewsId(userId, newsId)) {
-                log.info("이미 읽은 뉴스 기록이 존재합니다 - 사용자 ID: {}, 뉴스 ID: {}", userId, newsId);
+            Optional<UserReadHistory> existingHistory = userReadHistoryRepository.findByUser_IdAndNewsId(userId, newsId);
+
+            if (existingHistory.isPresent()) {
+                // 기존 기록이 있으면 updated_at만 갱신
+                existingHistory.get().updateReadTime();
+                userReadHistoryRepository.save(existingHistory.get());
+                log.info("뉴스 읽음 기록 갱신 완료 - 사용자 ID: {}, 뉴스 ID: {}", userId, newsId);
                 return;
             }
+
             // 기록을 저장하기 위해 User 엔티티 조회
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
@@ -232,6 +240,18 @@ public class UserService {
             userReadHistoryRepository.save(history);
             log.info("뉴스 읽음 기록 추가 완료 - 사용자 ID: {}, 뉴스 ID: {}", userId, newsId);
         }
+    }
+    /**
+     * 사용자가 읽은 뉴스 기록 조회 로직 (updated_at 포함)
+     * @param userId 사용자 ID
+     * @param pageable 페이징 정보
+     * @return Page<ReadHistoryResponse> 읽은 뉴스 기록 목록 (updated_at 포함)
+     */
+    @Transactional(readOnly = true)
+    public Page<ReadHistoryResponse> getReadHistory(Long userId, Pageable pageable) {
+        // updated_at 기준 내림차순으로 정렬된 기록 조회 후 DTO로 변환
+        return userReadHistoryRepository.findByUserIdOrderByUpdatedAtDesc(userId, pageable)
+                .map(ReadHistoryResponse::new);
     }
 
     /**
