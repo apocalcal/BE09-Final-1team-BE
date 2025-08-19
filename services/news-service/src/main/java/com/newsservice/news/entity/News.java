@@ -66,4 +66,9 @@ public class News {
     // 뉴스레터와의 N:N 연결
     @OneToMany(mappedBy = "news")
     private List<NewsletterNews> newsletterNewsList;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    @Builder.Default
+    private NewsStatus status = NewsStatus.PUBLISHED;
 }
