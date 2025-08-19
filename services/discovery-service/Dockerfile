@@ -18,6 +18,8 @@ RUN ./gradlew bootJar
 # =================
 FROM openjdk:17-slim
 
+RUN apt-get update && apt-get install -y curl
+
 # 작업 디렉토리 설정
 WORKDIR /app
 
