@@ -34,7 +34,8 @@ services:
       - discovery-service
 
     environment:
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - eureka.client.serviceUrl.defaultZone=http://discovery-service:8761/eureka
         # JWT
       - jwt.secret=${JWT_SECRET}
       - jwt.expiration=${JWT_EXPIRATION}
@@ -47,9 +48,10 @@ services:
       - msa-network
     depends_on:
       - discovery-service
+      - config-server
     environment:
-      - SPRING_CONFIG_URI=http://config-server:8888
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - eureka.client.serviceUrl.defaultZone=http://discovery-service:8761/eureka
       # DB 연결 설정
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
@@ -70,9 +72,10 @@ services:
     networks:
       - msa-network
     depends_on:
+      - config-server
       - discovery-service
     environment:
-      - SPRING_CONFIG_URI=http://config-server:8888
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka
       # DB 연결 설정
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
