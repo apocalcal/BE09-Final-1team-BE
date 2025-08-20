@@ -42,6 +42,9 @@ out/
 /config/config-files/*-secrets.yml
 .DS_Store
 
+#application-local 설정#
+*-local.yml
+
 # 터미널 및 IDE 히스토리
 .history
 .bash_history
@@ -50,3 +53,6 @@ out/
 # target directory
 news-service/target/
 target/
+
+# env files
+.env
