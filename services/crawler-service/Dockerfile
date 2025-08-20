@@ -10,25 +10,51 @@ WORKDIR /app
 COPY . .
 
 # Gradle을 사용하여 프로젝트를 빌드 (jar 파일 생성)
-# 만약 Maven을 사용하신다면 RUN ./mvnw package 로 변경하세요.
 RUN ./gradlew bootJar
 
 # =================
-# 2단계: 실행 환경 구성 (JRE만 포함된 가벼운 이미지 사용)
+# 2단계: 실행 환경 구성 (Chrome + JRE 포함)
 # =================
 FROM openjdk:17-slim
 
 # 작업 디렉토리 설정
 WORKDIR /app
 
+# Chrome과 ChromeDriver 설치 (Selenium 크롤링용)
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    curl \
+    unzip \
+    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
+
+# ChromeDriver 설치
+RUN CHROME_VERSION=$(google-chrome --version | cut -d " " -f3 | cut -d "." -f1) \
+    && CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}") \
+    && wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip" \
+    && unzip /tmp/chromedriver.zip -d /tmp/ \
+    && mv /tmp/chromedriver /usr/local/bin/chromedriver \
+    && chmod +x /usr/local/bin/chromedriver \
+    && rm /tmp/chromedriver.zip
+
 # 빌드 단계(builder)에서 생성된 jar 파일만 복사
-# Gradle 경로: build/libs/*.jar
-# Maven 경로: target/*.jar
 COPY --from=builder /app/build/libs/*.jar ./app.jar
+
+# Chrome이 headless 모드에서 실행되도록 환경 변수 설정
+ENV DISPLAY=:99
+ENV CHROME_BIN=/usr/bin/google-chrome
+ENV CHROME_PATH=/usr/bin/google-chrome
+
+# 포트 노출
+EXPOSE 8083
+
+# 헬스체크 추가
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8083/api/crawler/health || exit 1
 
 # 컨테이너 실행 시 이 명령어가 실행됨
 ENTRYPOINT ["java", "-jar", "app.jar"]
-
-# 서비스가 사용하는 포트 명시 (문서화 목적)
-# 각 서비스의 실제 포트로 변경해주세요 (예: Gateway는 8000, User-service는 8081 등)
-EXPOSE 8083

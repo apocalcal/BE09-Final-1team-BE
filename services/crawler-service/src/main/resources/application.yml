@@ -16,6 +16,11 @@ spring:
       ddl-auto: update
     show-sql: true
 
+# =================
+# 크롤링 서비스 고유 설정
+# (Config Server: 인프라 설정, Local: 비즈니스 로직 설정)
+# =================
+
 # 크롤러 스케줄링 설정 (개발 중에는 비활성화)
 crawler:
   scheduling:
@@ -31,4 +36,4 @@ services:
   dedup:
     url: http://localhost:8084
     timeout: 300 # 5분 타임아웃
-    fileserver-path: http://dev.macacolabs.site:8008/1 # Python 서비스도 같은 경로 사용
+    fileserver-path: http://dev.macacolabs.site:8008/1
