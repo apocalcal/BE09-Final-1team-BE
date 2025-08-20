@@ -1,0 +1,55 @@
+# 1. 서버 포트 설정
+server:
+  port: 8083
+
+# 2. Eureka 클라이언트 설정
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+# 3. Redis 설정
+spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+      maxmemory: 512mb
+      maxmemory-policy: allkeys-lru
+
+# 4. 크롤링 설정
+crawler:
+
+  # 스케줄링 설정
+  scheduling:
+    enabled: true # 프로덕션: true, 개발: false
+    test-enabled: false # 테스트용 10분 간격 실행 (개발 환경용)
+
+# 5. Actuator 엔드포인트 노출 설정
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+# 6. 로깅 레벨 설정
+logging:
+  level:
+    com.newnormallist.crawlerservice: INFO
+    org.springframework.web: INFO
+    org.hibernate: OFF
+    org.springframework.orm: OFF
+    org.springframework.transaction: OFF
+    org.springframework.data: OFF
+    com.zaxxer.hikari: WARN
+    org.openqa.selenium: OFF
+    org.seleniumhq.selenium: OFF
+    root: WARN

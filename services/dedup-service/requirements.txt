@@ -1,0 +1,27 @@
+# FastAPI 및 웹 프레임워크
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.10.0
+
+# 머신러닝 및 NLP - Windows 호환 버전
+sentence-transformers==2.7.0
+torch==2.8.0
+transformers==4.44.0
+konlpy==0.6.0
+scikit-learn  # 최신 안정 버전 자동 선택
+numpy  # 최신 안정 버전 자동 선택
+pandas  # 최신 안정 버전 자동 선택
+
+# 유틸리티
+python-multipart==0.0.6
+python-json-logger==2.0.7
+httpx==0.25.2
+
+# 모니터링 및 로깅
+prometheus-client==0.19.0
+structlog==23.2.0
+
+# 개발 도구
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
