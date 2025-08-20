@@ -1,4 +1,6 @@
+# 실행하려는 서비스(컨테이너)들을 정의
 services:
+  # 1. Config Server
   config-server:
     build: ./config/config-server
     container_name: config-server
@@ -162,10 +164,78 @@ services:
       # 프런트에서 직접 5000 호출할 경우를 대비한 CORS
       - CORS_ALLOWED_ORIGINS=http://localhost:3000
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:5000/"]
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:5000/']
       interval: 15s
       timeout: 3s
       retries: 10
+
+  # 7. Crawler Service
+  crawler-service:
+    build: ./services/crawler-service
+    container_name: crawler-service
+    ports:
+      - '8083:8083'
+    networks:
+      - msa-network
+    depends_on:
+      - discovery-service
+      - dedup-service
+    environment:
+      - SPRING_CONFIG_URI=http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka
+      # DB 연결 설정
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      # 파일서버 설정
+      - FILESERVER_BASE_PATH=http://dev.macacolabs.site:8008/1
+      # Python 중복제거 서비스 설정
+      - SERVICES_DEDUP_URL=http://dedup-service:8084
+      - SERVICES_DEDUP_FILESERVER_PATH=http://dev.macacolabs.site:8008/1
+      # Chrome 환경 설정 (Selenium)
+      - DISPLAY=:99
+      - CHROME_BIN=/usr/bin/google-chrome
+      - CHROME_PATH=/usr/bin/google-chrome
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8083/api/crawler/health']
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+  # 8. Deduplication Service
+  dedup-service:
+    build: ./services/dedup-service
+    container_name: dedup-service
+    ports:
+      - '8084:8084'
+    networks:
+      - msa-network
+    environment:
+      # 서비스 설정
+      - SERVICE_NAME=dedup-service
+      - PORT=8084
+      - DEBUG=false
+      - ENVIRONMENT=docker
+      # 파일서버 설정
+      - FILESERVER_PATH=http://dev.macacolabs.site:8008/1
+      # SBERT 모델 설정
+      - SBERT_MODEL_NAME=snunlp/KR-SBERT-V40K-klueNLI-augSTS
+      - SBERT_DEVICE=cpu
+      - SBERT_BATCH_SIZE=32
+      # 중복제거 임계값
+      - THRESHOLD_TITLE=0.3
+      - THRESHOLD_CONTENT=0.8
+      - THRESHOLD_RELATED_MIN=0.4
+      # 성능 설정
+      - MAX_CONCURRENT_REQUESTS=10
+      - REQUEST_TIMEOUT_SECONDS=300
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8084/health']
+      interval: 30s
+      timeout: 10s
+      start_period: 120s # SBERT 모델 로딩 시간 고려
+      retries: 3
 
 # 서비스들이 사용할 공용 네트워크 정의
 networks:
