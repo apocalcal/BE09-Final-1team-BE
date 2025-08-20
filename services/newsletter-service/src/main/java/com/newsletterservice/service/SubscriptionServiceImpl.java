@@ -1,7 +1,11 @@
 package com.newsletterservice.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.newsletterservice.dto.SubscriptionRequest;
 import com.newsletterservice.dto.SubscriptionResponse;
+import com.newsletterservice.entity.NewsCategory;
 import com.newsletterservice.entity.Subscription;
 import com.newsletterservice.entity.SubscriptionFrequency;
 import com.newsletterservice.entity.SubscriptionStatus;
@@ -12,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,11 +25,12 @@ import java.util.stream.Collectors;
 public class SubscriptionServiceImpl implements SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
+    private final ObjectMapper objectMapper;
 
     @Override
     public SubscriptionResponse subscribe(SubscriptionRequest request, String userId) {
         try {
-            log.info("뉴스레터 구독 요청 - 사용자: {}, 카테고리: {}", userId, request.getPreferredCategories());
+            log.info("Newsletter subscription request - user: {}, categories: {}", userId, request.getPreferredCategories());
             
             // 기존 구독이 있는지 확인
             subscriptionRepository.findByUserId(Long.valueOf(userId));
@@ -33,10 +39,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             Subscription subscription = Subscription.builder()
                     .userId(Long.valueOf(userId))
                     .email(request.getEmail())
-                    .preferredCategories(request.getPreferredCategories() != null ? 
-                        request.getPreferredCategories().toString() : "[]")
-                    .keywords(request.getKeywords() != null ? 
-                        request.getKeywords().toString() : "[]")
+                    .preferredCategories(convertCategoriesToJson(request.getPreferredCategories()))
+                    .keywords(convertToJson(request.getKeywords()))
                     .frequency(request.getFrequency())
                     .sendTime(request.getSendTime() != null ? request.getSendTime() : 9)
                     .isPersonalized(request.isPersonalized())
@@ -45,7 +49,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             
             Subscription savedSubscription = subscriptionRepository.save(subscription);
             
-            log.info("뉴스레터 구독 성공 - 구독 ID: {}", savedSubscription.getId());
+            log.info("Newsletter subscription successful - subscription ID: {}", savedSubscription.getId());
             
             return SubscriptionResponse.builder()
                     .id(savedSubscription.getId())
@@ -63,25 +67,25 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                     .build();
                     
         } catch (Exception e) {
-            log.error("뉴스레터 구독 실패 - 사용자: {}", userId, e);
-            throw new RuntimeException("뉴스레터 구독 중 오류가 발생했습니다: " + e.getMessage());
+            log.error("Newsletter subscription failed - user: {}", userId, e);
+            throw new RuntimeException("Error occurred during newsletter subscription: " + e.getMessage());
         }
     }
 
     @Override
     public SubscriptionResponse getSubscription(Long id) {
         try {
-            log.info("구독 정보 조회 - 구독 ID: {}", id);
+            log.info("Fetching subscription information - subscription ID: {}", id);
             
             Subscription subscription = subscriptionRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("구독을 찾을 수 없습니다: " + id));
+                    .orElseThrow(() -> new RuntimeException("Subscription not found: " + id));
             
             return SubscriptionResponse.builder()
                     .id(subscription.getId())
                     .userId(subscription.getUserId())
                     .email(subscription.getEmail())
-                    .preferredCategories(null) // TODO: JSON 파싱 필요
-                    .keywords(null) // TODO: JSON 파싱 필요
+                    .preferredCategories(parseJsonToCategories(subscription.getPreferredCategories()))
+                    .keywords(parseJsonToList(subscription.getKeywords()))
                     .frequency(subscription.getFrequency())
                     .status(subscription.getStatus())
                     .sendTime(subscription.getSendTime())
@@ -92,49 +96,65 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                     .build();
                     
         } catch (Exception e) {
-            log.error("구독 정보 조회 실패 - 구독 ID: {}", id, e);
-            throw new RuntimeException("구독 정보 조회 중 오류가 발생했습니다: " + e.getMessage());
+            log.error("Failed to fetch subscription information - subscription ID: {}", id, e);
+            throw new RuntimeException("Error occurred while fetching subscription information: " + e.getMessage());
         }
     }
 
     @Override
     public List<SubscriptionResponse> getSubscriptionsByUser(String userId) {
         try {
-            log.info("사용자 구독 목록 조회 - 사용자: {}", userId);
+            log.info("Fetching user subscription list - user: {}", userId);
             
-            // Repository에서 findByUserId는 Optional을 반환하므로 수정 필요
-            // 임시로 빈 리스트 반환
+            Optional<Subscription> subscription = subscriptionRepository.findByUserId(Long.valueOf(userId));
+            if (subscription.isPresent()) {
+                Subscription sub = subscription.get();
+                return List.of(SubscriptionResponse.builder()
+                        .id(sub.getId())
+                        .userId(sub.getUserId())
+                        .email(sub.getEmail())
+                        .preferredCategories(parseJsonToCategories(sub.getPreferredCategories()))
+                        .keywords(parseJsonToList(sub.getKeywords()))
+                        .frequency(sub.getFrequency())
+                        .status(sub.getStatus())
+                        .sendTime(sub.getSendTime())
+                        .isPersonalized(sub.isPersonalized())
+                        .subscribedAt(sub.getSubscribedAt())
+                        .lastSentAt(sub.getLastSentAt())
+                        .createdAt(sub.getCreatedAt())
+                        .build());
+            }
             return List.of();
                     
         } catch (Exception e) {
-            log.error("사용자 구독 목록 조회 실패 - 사용자: {}", userId, e);
-            throw new RuntimeException("사용자 구독 목록 조회 중 오류가 발생했습니다: " + e.getMessage());
+            log.error("Failed to fetch user subscription list - user: {}", userId, e);
+            throw new RuntimeException("Error occurred while fetching user subscription list: " + e.getMessage());
         }
     }
 
     @Override
     public void unsubscribe(Long id) {
         try {
-            log.info("뉴스레터 구독 해지 - 구독 ID: {}", id);
+            log.info("Unsubscribing from newsletter - subscription ID: {}", id);
             
             Subscription subscription = subscriptionRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("구독을 찾을 수 없습니다: " + id));
+                    .orElseThrow(() -> new RuntimeException("Subscription not found: " + id));
             
             subscription.setStatus(SubscriptionStatus.UNSUBSCRIBED);
             subscriptionRepository.save(subscription);
             
-            log.info("뉴스레터 구독 해지 성공 - 구독 ID: {}", id);
+            log.info("Newsletter unsubscription successful - subscription ID: {}", id);
             
         } catch (Exception e) {
-            log.error("뉴스레터 구독 해지 실패 - 구독 ID: {}", id, e);
-            throw new RuntimeException("뉴스레터 구독 해지 중 오류가 발생했습니다: " + e.getMessage());
+            log.error("Newsletter unsubscription failed - subscription ID: {}", id, e);
+            throw new RuntimeException("Error occurred during newsletter unsubscription: " + e.getMessage());
         }
     }
 
     @Override
     public List<SubscriptionResponse> getActiveSubscriptions() {
         try {
-            log.info("활성 구독 목록 조회");
+            log.info("Fetching active subscription list");
             
             List<Subscription> activeSubscriptions = subscriptionRepository.findByStatus(SubscriptionStatus.ACTIVE);
             
@@ -143,8 +163,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                             .id(subscription.getId())
                             .userId(subscription.getUserId())
                             .email(subscription.getEmail())
-                            .preferredCategories(null) // TODO: JSON 파싱 필요
-                            .keywords(null) // TODO: JSON 파싱 필요
+                            .preferredCategories(parseJsonToCategories(subscription.getPreferredCategories()))
+                            .keywords(parseJsonToList(subscription.getKeywords()))
                             .frequency(subscription.getFrequency())
                             .status(subscription.getStatus())
                             .sendTime(subscription.getSendTime())
@@ -156,8 +176,56 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                     .collect(Collectors.toList());
                     
         } catch (Exception e) {
-            log.error("활성 구독 목록 조회 실패", e);
-            throw new RuntimeException("활성 구독 목록 조회 중 오류가 발생했습니다: " + e.getMessage());
+            log.error("Failed to fetch active subscription list", e);
+            throw new RuntimeException("Error occurred while fetching active subscription list: " + e.getMessage());
+        }
+    }
+
+    private String convertToJson(List<String> list) {
+        if (list == null || list.isEmpty()) {
+            return "[]";
+        }
+        try {
+            return objectMapper.writeValueAsString(list);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to convert list to JSON", e);
+            return "[]";
+        }
+    }
+
+    private String convertCategoriesToJson(List<NewsCategory> categories) {
+        if (categories == null || categories.isEmpty()) {
+            return "[]";
+        }
+        try {
+            return objectMapper.writeValueAsString(categories);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to convert categories to JSON", e);
+            return "[]";
+        }
+    }
+
+    private List<String> parseJsonToList(String json) {
+        if (json == null || json.trim().isEmpty() || json.equals("[]")) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+        } catch (JsonProcessingException e) {
+            log.error("Failed to parse JSON to list: {}", json, e);
+            return List.of();
+        }
+    }
+
+    private List<NewsCategory> parseJsonToCategories(String json) {
+        if (json == null || json.trim().isEmpty() || json.equals("[]")) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<NewsCategory>>() {});
+        } catch (JsonProcessingException e) {
+            log.error("Failed to parse JSON to categories: {}", json, e);
+            return List.of();
         }
     }
 }

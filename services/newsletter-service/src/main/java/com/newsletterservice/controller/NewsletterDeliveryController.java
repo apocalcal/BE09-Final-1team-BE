@@ -3,12 +3,13 @@ package com.newsletterservice.controller;
 import com.newsletterservice.client.dto.UserResponse;
 import com.newsletterservice.common.ApiResponse;
 import com.newsletterservice.dto.NewsletterCreateRequest;
-import com.newsletterservice.dto.NewsletterDeliveryResponse;
 import com.newsletterservice.dto.DeliveryStats;
 import com.newsletterservice.entity.NewsletterDelivery;
 import com.newsletterservice.entity.DeliveryStatus;
-import com.newsletterservice.entity.DeliveryMethod;
+import com.newsletterservice.entity.NewsCategory;
 import com.newsletterservice.service.NewsletterDeliveryService;
+import com.newsletterservice.service.ContentGenerationService;
+import com.newsletterservice.client.dto.NewsResponse;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,9 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -34,6 +37,144 @@ import java.util.stream.Collectors;
 public class NewsletterDeliveryController {
 
     private final NewsletterDeliveryService deliveryService;
+    private final ContentGenerationService contentGenerationService;
+
+    // ===== Newsletter Content API Endpoints =====
+
+    /**
+     * Get latest news data for newsletter
+     */
+    @GetMapping("/content/latest")
+    public ResponseEntity<ApiResponse<List<NewsResponse>>> getLatestNewsContent(
+            @RequestParam(required = false) Long newsletterId) {
+        
+        log.info("Fetching latest news content for newsletterId: {}", newsletterId);
+        
+        try {
+            NewsletterCreateRequest request = NewsletterCreateRequest.builder()
+                    .newsletterId(newsletterId != null ? newsletterId : 1L)
+                    .build();
+            
+            List<NewsResponse> newsData = contentGenerationService.getLatestNewsData(request);
+            
+            return ResponseEntity.ok(
+                    ApiResponse.success(newsData, "Latest news data retrieved successfully."));
+                    
+        } catch (Exception e) {
+            log.error("Failed to fetch latest news content", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("CONTENT_FETCH_ERROR", "Failed to fetch latest news content: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get personalized news data for specific users
+     */
+    @GetMapping("/content/personalized")
+    public ResponseEntity<ApiResponse<List<NewsResponse>>> getPersonalizedNewsContent(
+            @RequestParam(required = false) Long newsletterId,
+            @RequestParam(required = false) List<Long> userIds) {
+        
+        log.info("Fetching personalized news content for newsletterId: {}, userIds: {}", newsletterId, userIds);
+        
+        try {
+            NewsletterCreateRequest request = NewsletterCreateRequest.builder()
+                    .newsletterId(newsletterId != null ? newsletterId : 1L)
+                    .isPersonalized(true)
+                    .build();
+            
+            List<NewsResponse> newsData = contentGenerationService.getPersonalizedNewsData(request, userIds);
+            
+            return ResponseEntity.ok(
+                    ApiResponse.success(newsData, "Personalized news data retrieved successfully."));
+                    
+        } catch (Exception e) {
+            log.error("Failed to fetch personalized news content", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("CONTENT_FETCH_ERROR", "Failed to fetch personalized news content: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get news data by specific categories
+     */
+    @GetMapping("/content/categories")
+    public ResponseEntity<ApiResponse<List<NewsResponse>>> getCategoryNewsContent(
+            @RequestParam(required = false) Long newsletterId,
+            @RequestParam(required = false) Set<NewsCategory> categories) {
+        
+        log.info("Fetching category news content for newsletterId: {}, categories: {}", newsletterId, categories);
+        
+        try {
+            NewsletterCreateRequest request = NewsletterCreateRequest.builder()
+                    .newsletterId(newsletterId != null ? newsletterId : 1L)
+                    .build();
+            
+            Set<NewsCategory> targetCategories = categories != null ? categories : 
+                    Set.of(NewsCategory.POLITICS, NewsCategory.ECONOMY, NewsCategory.SOCIETY);
+            
+            List<NewsResponse> newsData = contentGenerationService.getCategoryNewsData(request, targetCategories);
+            
+            return ResponseEntity.ok(
+                    ApiResponse.success(newsData, "Category news data retrieved successfully."));
+                    
+        } catch (Exception e) {
+            log.error("Failed to fetch category news content", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("CONTENT_FETCH_ERROR", "Failed to fetch category news content: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get subscriber information
+     */
+    @GetMapping("/content/subscribers")
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getSubscriberInfo(
+            @RequestParam List<Long> userIds) {
+        
+        log.info("Fetching subscriber information for userIds: {}", userIds);
+        
+        try {
+            List<UserResponse> subscriberInfo = contentGenerationService.getSubscriberInfo(userIds);
+            
+            return ResponseEntity.ok(
+                    ApiResponse.success(subscriberInfo, "Subscriber information retrieved successfully."));
+                    
+        } catch (Exception e) {
+            log.error("Failed to fetch subscriber information", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("SUBSCRIBER_FETCH_ERROR", "Failed to fetch subscriber information: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get available categories
+     */
+    @GetMapping("/content/categories/available")
+    public ResponseEntity<ApiResponse<Object>> getAvailableCategories() {
+        
+        log.info("Fetching available categories");
+        
+        try {
+            List<NewsCategory> defaultCategories = contentGenerationService.getDefaultCategories();
+            List<NewsCategory> personalizedCategories = contentGenerationService.getPersonalizedCategories();
+            
+            var response = Map.of(
+                "defaultCategories", defaultCategories,
+                "personalizedCategories", personalizedCategories
+            );
+            
+            return ResponseEntity.ok(
+                    ApiResponse.success(response, "Available categories retrieved successfully."));
+                    
+        } catch (Exception e) {
+            log.error("Failed to fetch available categories", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("CATEGORY_FETCH_ERROR", "Failed to fetch available categories: " + e.getMessage()));
+        }
+    }
+
+    // ===== Existing Newsletter Delivery Endpoints =====
 
     /**
      * 뉴스레터 예약 발송
@@ -42,7 +183,7 @@ public class NewsletterDeliveryController {
     public ResponseEntity<ApiResponse<List<NewsletterDelivery>>> scheduleDelivery(
             @Valid @RequestBody NewsletterCreateRequest request) {
 
-        log.info("뉴스레터 예약 발송 요청: newsletterId={}, targetUserIds={}",
+        log.info("Newsletter scheduling request: newsletterId={}, targetUserIds={}",
                 request.getNewsletterId(), request.getTargetUserIds());
 
         try {
@@ -52,7 +193,6 @@ public class NewsletterDeliveryController {
                                 .newsletterId(request.getNewsletterId())
                                 .userId(userId)
                                 .deliveryMethod(request.getDeliveryMethod())
-                                .personalizedContent(request.isPersonalized() ? "개인화된 내용" : "일반 내용")
                                 .scheduledAt(parseScheduledAt(request.getScheduledAt()))
                                 .build();
                         
@@ -61,12 +201,12 @@ public class NewsletterDeliveryController {
                     .collect(Collectors.toList());
 
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success(responses, "뉴스레터 예약이 완료되었습니다."));
+                    .body(ApiResponse.success(responses, "Newsletter scheduling completed."));
 
         } catch (Exception e) {
-            log.error("뉴스레터 예약 실패: {}", e.getMessage());
+            log.error("Newsletter scheduling failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error("SCHEDULE_FAILED", "뉴스레터 예약에 실패했습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("SCHEDULE_FAILED", "Newsletter scheduling failed: " + e.getMessage()));
         }
     }
 
@@ -77,7 +217,7 @@ public class NewsletterDeliveryController {
     public ResponseEntity<ApiResponse<List<NewsletterDelivery>>> sendImmediately(
             @Valid @RequestBody NewsletterCreateRequest request) {
 
-        log.info("뉴스레터 즉시 발송 요청: newsletterId={}, targetUserIds={}",
+        log.info("Immediate newsletter delivery request: newsletterId={}, targetUserIds={}",
                 request.getNewsletterId(), request.getTargetUserIds());
 
         try {
@@ -86,7 +226,6 @@ public class NewsletterDeliveryController {
                         NewsletterDelivery requestEntity = NewsletterDelivery.builder()
                                 .newsletterId(request.getNewsletterId())
                                 .userId(userId)
-                                .personalizedContent(request.isPersonalized() ? "개인화된 내용" : "일반 내용")
                                 .deliveryMethod(request.getDeliveryMethod())
                                 .sentAt(LocalDateTime.now())
                                 .build();
@@ -96,12 +235,12 @@ public class NewsletterDeliveryController {
                     .collect(Collectors.toList());
 
             return ResponseEntity.ok(
-                    ApiResponse.success(responses, "뉴스레터가 즉시 발송되었습니다."));
+                    ApiResponse.success(responses, "Newsletter sent immediately."));
 
         } catch (Exception e) {
-            log.error("뉴스레터 즉시 발송 실패: {}", e.getMessage());
+            log.error("Immediate newsletter delivery failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error("SEND_FAILED", "뉴스레터 발송에 실패했습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("SEND_FAILED", "Newsletter delivery failed: " + e.getMessage()));
         }
     }
 
@@ -113,19 +252,19 @@ public class NewsletterDeliveryController {
             @PathVariable DeliveryStatus status,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        log.info("발송 상태별 조회 요청: status={}, page={}", status, pageable.getPageNumber());
+        log.info("Fetching deliveries by status: status={}, page={}", status, pageable.getPageNumber());
 
         try {
             Page<NewsletterDelivery> deliveries =
                     deliveryService.getDeliveriesByStatus(status, pageable);
 
             return ResponseEntity.ok(
-                    ApiResponse.success(deliveries, "발송 목록 조회가 완료되었습니다."));
+                    ApiResponse.success(deliveries, "Delivery list retrieval completed."));
 
         } catch (Exception e) {
-            log.error("발송 상태별 조회 실패: {}", e.getMessage());
+            log.error("Failed to fetch deliveries by status: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("QUERY_FAILED", "발송 목록 조회에 실패했습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("QUERY_FAILED", "Failed to retrieve delivery list: " + e.getMessage()));
         }
     }
 
@@ -134,21 +273,23 @@ public class NewsletterDeliveryController {
      */
     @GetMapping("/user/{userId}")
     public ResponseEntity<ApiResponse<List<NewsletterDelivery>>> getDeliveriesByUser(
-             @PathVariable Long userId) {
+             @PathVariable Long userId,
+             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        log.info("사용자별 발송 이력 조회: userId={}", userId);
+        log.info("Fetching delivery history by user: userId={}", userId);
 
         try {
-            List<NewsletterDelivery> deliveries =
-                    deliveryService.getDeliveryRepository().findByUserIdOrderByCreatedAtDesc(userId);
+            Page<NewsletterDelivery> deliveriesPage =
+                    deliveryService.getDeliveriesByRecipient(userId, pageable);
+            List<NewsletterDelivery> deliveries = deliveriesPage.getContent();
 
             return ResponseEntity.ok(
-                    ApiResponse.success(deliveries, "발송 이력 조회가 완료되었습니다."));
+                    ApiResponse.success(deliveries, "Delivery history retrieval completed."));
 
         } catch (Exception e) {
-            log.error("사용자별 발송 이력 조회 실패: {}", e.getMessage());
+            log.error("Failed to fetch delivery history by user: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("USER_QUERY_FAILED", "발송 이력 조회에 실패했습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("USER_QUERY_FAILED", "Failed to retrieve delivery history: " + e.getMessage()));
         }
     }
 
@@ -159,19 +300,18 @@ public class NewsletterDeliveryController {
     public ResponseEntity<ApiResponse<List<NewsletterDelivery>>> getDeliveriesByNewsletter(
              @PathVariable Long newsletterId) {
 
-        log.info("뉴스레터별 발송 이력 조회: newsletterId={}", newsletterId);
+        log.info("Fetching delivery history by newsletter: newsletterId={}", newsletterId);
 
         try {
-            List<NewsletterDelivery> deliveries =
-                    deliveryService.getDeliveryRepository().findByNewsletterIdOrderByCreatedAtDesc(newsletterId);
+            List<NewsletterDelivery> deliveries = deliveryService.getDeliveriesByNewsletter(newsletterId);
 
             return ResponseEntity.ok(
-                    ApiResponse.success(deliveries, "뉴스레터별 발송 이력 조회가 완료되었습니다."));
+                    ApiResponse.success(deliveries, "Newsletter delivery history retrieval completed."));
 
         } catch (Exception e) {
-            log.error("뉴스레터별 발송 이력 조회 실패: {}", e.getMessage());
+            log.error("Failed to fetch newsletter delivery history: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("NEWSLETTER_QUERY_FAILED", "뉴스레터별 발송 이력 조회에 실패했습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("NEWSLETTER_QUERY_FAILED", "Failed to retrieve newsletter delivery history: " + e.getMessage()));
         }
     }
 
@@ -181,18 +321,18 @@ public class NewsletterDeliveryController {
     @GetMapping("/scheduled")
     public ResponseEntity<ApiResponse<List<NewsletterDelivery>>> getScheduledDeliveries() {
 
-        log.info("예약된 발송 목록 조회 요청");
+        log.info("Fetching scheduled deliveries request");
 
         try {
             List<NewsletterDelivery> scheduled = deliveryService.getScheduledDeliveries();
 
             return ResponseEntity.ok(
-                    ApiResponse.success(scheduled, "예약된 발송 목록 조회가 완료되었습니다."));
+                    ApiResponse.success(scheduled, "Scheduled delivery list retrieval completed."));
 
         } catch (Exception e) {
-            log.error("예약된 발송 목록 조회 실패: {}", e.getMessage());
+            log.error("Failed to fetch scheduled deliveries: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("SCHEDULED_QUERY_FAILED", "예약된 발송 목록 조회에 실패했습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("SCHEDULED_QUERY_FAILED", "Failed to retrieve scheduled delivery list: " + e.getMessage()));
         }
     }
 
@@ -203,23 +343,23 @@ public class NewsletterDeliveryController {
     public ResponseEntity<ApiResponse<NewsletterDelivery>> cancelDelivery(
             @PathVariable Long deliveryId) {
 
-        log.info("발송 취소 요청: deliveryId={}", deliveryId);
+        log.info("Delivery cancellation request: deliveryId={}", deliveryId);
 
         try {
             NewsletterDelivery response = deliveryService.cancelDelivery(deliveryId);
 
             return ResponseEntity.ok(
-                    ApiResponse.success(response, "뉴스레터 발송이 취소되었습니다."));
+                    ApiResponse.success(response, "Newsletter delivery cancelled."));
 
         } catch (IllegalStateException e) {
-            log.warn("발송 취소 불가: {}", e.getMessage());
+            log.warn("Delivery cancellation not allowed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error("CANCEL_NOT_ALLOWED", e.getMessage()));
 
         } catch (Exception e) {
-            log.error("발송 취소 실패: {}", e.getMessage());
+            log.error("Delivery cancellation failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("CANCEL_FAILED", "발송 취소에 실패했습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("CANCEL_FAILED", "Delivery cancellation failed: " + e.getMessage()));
         }
     }
 
@@ -230,23 +370,23 @@ public class NewsletterDeliveryController {
     public ResponseEntity<ApiResponse<NewsletterDelivery>> retryDelivery(
              @PathVariable Long deliveryId) {
 
-        log.info("발송 재시도 요청: deliveryId={}", deliveryId);
+        log.info("Delivery retry request: deliveryId={}", deliveryId);
 
         try {
             NewsletterDelivery response = deliveryService.retryDelivery(deliveryId);
 
             return ResponseEntity.ok(
-                    ApiResponse.success(response, "뉴스레터 발송을 재시도했습니다."));
+                    ApiResponse.success(response, "Newsletter delivery retry attempted."));
 
         } catch (IllegalStateException e) {
-            log.warn("발송 재시도 불가: {}", e.getMessage());
+            log.warn("Delivery retry not allowed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error("RETRY_NOT_ALLOWED", e.getMessage()));
 
         } catch (Exception e) {
-            log.error("발송 재시도 실패: {}", e.getMessage());
+            log.error("Delivery retry failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("RETRY_FAILED", "발송 재시도에 실패했습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("RETRY_FAILED", "Delivery retry failed: " + e.getMessage()));
         }
     }
 
@@ -257,20 +397,18 @@ public class NewsletterDeliveryController {
     public ResponseEntity<ApiResponse<NewsletterDelivery>> getDeliveryDetail(
              @PathVariable Long deliveryId) {
 
-        log.info("발송 상세 조회: deliveryId={}", deliveryId);
+        log.info("Fetching delivery detail: deliveryId={}", deliveryId);
 
         try {
-            NewsletterDelivery delivery = deliveryService.getDeliveryRepository()
-                    .findById(deliveryId)
-                    .orElseThrow(() -> new RuntimeException("발송 정보를 찾을 수 없습니다."));
+            NewsletterDelivery delivery = deliveryService.getDeliveryDetail(deliveryId);
 
             return ResponseEntity.ok(
-                    ApiResponse.success(delivery, "발송 상세 정보 조회가 완료되었습니다."));
+                    ApiResponse.success(delivery, "Delivery detail retrieval completed."));
 
         } catch (Exception e) {
-            log.error("발송 상세 조회 실패: {}", e.getMessage());
+            log.error("Failed to fetch delivery detail: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error("DELIVERY_NOT_FOUND", "발송 정보를 찾을 수 없습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("DELIVERY_NOT_FOUND", "Delivery not found: " + e.getMessage()));
         }
     }
 
@@ -282,18 +420,18 @@ public class NewsletterDeliveryController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
 
-        log.info("발송 통계 조회: {} ~ {}", startDate, endDate);
+        log.info("Fetching delivery statistics: {} ~ {}", startDate, endDate);
 
         try {
             DeliveryStats stats = deliveryService.getDeliveryStats(startDate, endDate);
 
             return ResponseEntity.ok(
-                    ApiResponse.success(stats, "발송 통계 조회가 완료되었습니다."));
+                    ApiResponse.success(stats, "Delivery statistics retrieval completed."));
 
         } catch (Exception e) {
-            log.error("발송 통계 조회 실패: {}", e.getMessage());
+            log.error("Failed to fetch delivery statistics: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("STATS_QUERY_FAILED", "발송 통계 조회에 실패했습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("STATS_QUERY_FAILED", "Failed to retrieve delivery statistics: " + e.getMessage()));
         }
     }
 
@@ -305,19 +443,18 @@ public class NewsletterDeliveryController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
 
-        log.info("기간별 발송 기록 조회: {} ~ {}", startDate, endDate);
+        log.info("Fetching deliveries by period: {} ~ {}", startDate, endDate);
 
         try {
-            List<NewsletterDelivery> deliveries = deliveryService.getDeliveryRepository()
-                    .findBySentAtBetween(startDate, endDate);
+            List<NewsletterDelivery> deliveries = deliveryService.getDeliveriesByPeriod(startDate, endDate);
 
             return ResponseEntity.ok(
-                    ApiResponse.success(deliveries, "기간별 발송 기록 조회가 완료되었습니다."));
+                    ApiResponse.success(deliveries, "Period-based delivery record retrieval completed."));
 
         } catch (Exception e) {
-            log.error("기간별 발송 기록 조회 실패: {}", e.getMessage());
+            log.error("Failed to fetch deliveries by period: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("PERIOD_QUERY_FAILED", "기간별 발송 기록 조회에 실패했습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("PERIOD_QUERY_FAILED", "Failed to retrieve period-based delivery records: " + e.getMessage()));
         }
     }
 
@@ -328,27 +465,28 @@ public class NewsletterDeliveryController {
     public ResponseEntity<ApiResponse<UserResponse>> getUserOpenRate(
              @PathVariable Long userId) {
 
-        log.info("사용자 열람률 조회: userId={}", userId);
+        log.info("Fetching user open rate: userId={}", userId);
 
         try {
-            Long totalSent = deliveryService.getDeliveryRepository()
-                    .findByUserIdOrderByCreatedAtDesc(userId).stream()
+            Page<NewsletterDelivery> deliveriesPage = deliveryService.getDeliveriesByRecipient(userId, Pageable.unpaged());
+            List<NewsletterDelivery> deliveries = deliveriesPage.getContent();
+            
+            Long totalSent = deliveries.stream()
                     .filter(d -> d.getStatus() == DeliveryStatus.SENT)
                     .count();
 
-            Long totalOpened = deliveryService.getDeliveryRepository()
-                    .countOpenedByUserId(userId);
+            Long totalOpened = deliveryService.countOpenedByUserId(userId);
 
             double openRate = totalSent > 0 ? (double) totalOpened / totalSent * 100 : 0.0;
 
             UserResponse response = new UserResponse();
             return ResponseEntity.ok(
-                    ApiResponse.success(response, "사용자 열람률 조회가 완료되었습니다."));
+                    ApiResponse.success(response, "User open rate retrieval completed."));
 
         } catch (Exception e) {
-            log.error("사용자 열람률 조회 실패: {}", e.getMessage());
+            log.error("Failed to fetch user open rate: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("OPEN_RATE_QUERY_FAILED", "사용자 열람률 조회에 실패했습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("OPEN_RATE_QUERY_FAILED", "Failed to retrieve user open rate: " + e.getMessage()));
         }
     }
 
@@ -358,18 +496,18 @@ public class NewsletterDeliveryController {
     @GetMapping("/performance-stats")
     public ResponseEntity<ApiResponse<List<Object[]>>> getPerformanceStats() {
 
-        log.info("뉴스레터 성과 통계 조회 요청");
+        log.info("Fetching newsletter performance statistics request");
 
         try {
-            List<Object[]> stats = deliveryService.getDeliveryRepository().getNewsletterPerformanceStats();
+            List<Object[]> stats = deliveryService.getNewsletterPerformanceStats();
 
             return ResponseEntity.ok(
-                    ApiResponse.success(stats, "뉴스레터 성과 통계 조회가 완료되었습니다."));
+                    ApiResponse.success(stats, "Newsletter performance statistics retrieval completed."));
 
         } catch (Exception e) {
-            log.error("뉴스레터 성과 통계 조회 실패: {}", e.getMessage());
+            log.error("Failed to fetch newsletter performance statistics: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("PERFORMANCE_STATS_FAILED", "뉴스레터 성과 통계 조회에 실패했습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("PERFORMANCE_STATS_FAILED", "Failed to retrieve newsletter performance statistics: " + e.getMessage()));
         }
     }
 
@@ -380,18 +518,18 @@ public class NewsletterDeliveryController {
     public ResponseEntity<ApiResponse<Long>> getFailedCount(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate) {
 
-        log.info("최근 실패 건수 조회: fromDate={}", fromDate);
+        log.info("Fetching recent failure count: fromDate={}", fromDate);
 
         try {
-            Long failedCount = deliveryService.getDeliveryRepository().countFailedDeliveriesAfter(fromDate);
+            Long failedCount = deliveryService.countFailedDeliveriesAfter(fromDate);
 
             return ResponseEntity.ok(
-                    ApiResponse.success(failedCount, "실패 건수 조회가 완료되었습니다."));
+                    ApiResponse.success(failedCount, "Failure count retrieval completed."));
 
         } catch (Exception e) {
-            log.error("실패 건수 조회 실패: {}", e.getMessage());
+            log.error("Failed to fetch failure count: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("FAILED_COUNT_QUERY_FAILED", "실패 건수 조회에 실패했습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("FAILED_COUNT_QUERY_FAILED", "Failed to retrieve failure count: " + e.getMessage()));
         }
     }
 
@@ -406,7 +544,7 @@ public class NewsletterDeliveryController {
         try {
             return LocalDateTime.parse(scheduledAt, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         } catch (Exception e) {
-            log.warn("예약 시간 파싱 실패: {}, 기본값 사용", scheduledAt);
+            log.warn("Failed to parse scheduled time: {}, using default value", scheduledAt);
             return LocalDateTime.now().plusHours(1);
         }
     }

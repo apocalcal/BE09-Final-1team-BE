@@ -63,13 +63,14 @@ public class Subscription {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        subscribedAt = LocalDateTime.now();
-        if (status == null) {
-            status = SubscriptionStatus.ACTIVE;
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
         }
-        if (frequency == null) {
-            frequency = SubscriptionFrequency.DAILY;
+        if (subscribedAt == null) {
+            subscribedAt = LocalDateTime.now();
+        }
+        if (updatedAt == null) {
+            updatedAt = LocalDateTime.now();
         }
     }
 
@@ -77,4 +78,5 @@ public class Subscription {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
 }

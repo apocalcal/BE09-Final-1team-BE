@@ -23,9 +23,6 @@ public class NewsletterDelivery {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "personalized_content", columnDefinition = "TEXT")
-    private String personalizedContent; // 개인화된 뉴스레터 내용
-
     @Column(name = "sent_at")
     private LocalDateTime sentAt;
 
@@ -34,7 +31,8 @@ public class NewsletterDelivery {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private DeliveryStatus status;
+    @Builder.Default
+    private DeliveryStatus status = DeliveryStatus.PENDING;
 
     @Column(name = "delivery_method")
     @Enumerated(EnumType.STRING)
@@ -51,21 +49,12 @@ public class NewsletterDelivery {
     private String errorMessage; // 에러 메시지
 
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        if (status == null) {
-            status = DeliveryStatus.PENDING;
-        }
-        if (retryCount == null) {
-            retryCount = 0;
-        }
-    }
+    @Builder.Default
+    private LocalDateTime updatedAt = LocalDateTime.now();
 
     @PreUpdate
     protected void onUpdate() {
@@ -75,18 +64,10 @@ public class NewsletterDelivery {
     // 상태 업데이트 메서드
     public void updateStatus(DeliveryStatus newStatus) {
         this.status = newStatus;
-        this.updatedAt = LocalDateTime.now();
     }
 
     // 재시도 횟수 증가 메서드
     public void incrementRetryCount() {
         this.retryCount = (this.retryCount == null) ? 1 : this.retryCount + 1;
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    // 에러 메시지 설정 메서드
-    public void setErrorMessage(String errorMessage) {
-        this.errorMessage = errorMessage;
-        this.updatedAt = LocalDateTime.now();
     }
 }

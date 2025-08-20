@@ -244,7 +244,6 @@ public class NewsletterSchedulerService {
         NewsletterDelivery nextDelivery = NewsletterDelivery.builder()
                 .newsletterId(originalDelivery.getNewsletterId())
                 .userId(originalDelivery.getUserId())
-                .personalizedContent(originalDelivery.getPersonalizedContent())
                 .deliveryMethod(originalDelivery.getDeliveryMethod())
                 .scheduledAt(nextScheduledTime)
                 .status(DeliveryStatus.PENDING)

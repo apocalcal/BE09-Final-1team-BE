@@ -2,6 +2,7 @@ package com.newsletterservice.service;
 
 
 import com.newsletterservice.dto.DeliveryStats;
+import com.newsletterservice.dto.NewsletterContent;
 import com.newsletterservice.entity.NewsletterDelivery;
 import com.newsletterservice.entity.DeliveryStatus;
 import com.newsletterservice.entity.DeliveryMethod;
@@ -27,48 +28,44 @@ import java.util.List;
 public class NewsletterDeliveryService {
 
     private final NewsletterDeliveryRepository deliveryRepository;
+    private final NewsletterContentService contentService;
+    private final EmailNewsletterRenderer emailRenderer;
 
     /**
      * 뉴스레터 발송 예약
      */
     public NewsletterDelivery scheduleDelivery(NewsletterDelivery requestDTO) {
-        log.info("뉴스레터 발송 예약 시작: {}", requestDTO.getId());
+        log.info("Newsletter delivery scheduling started: {}", requestDTO.getId());
 
         NewsletterDelivery delivery = NewsletterDelivery.builder()
                 .newsletterId(requestDTO.getNewsletterId())
                 .userId(requestDTO.getUserId())
-                .personalizedContent(requestDTO.getPersonalizedContent())
                 .sentAt(requestDTO.getSentAt())
                 .openedAt(requestDTO.getOpenedAt())
                 .status(DeliveryStatus.PENDING)
                 .deliveryMethod(requestDTO.getDeliveryMethod())
                 .scheduledAt(requestDTO.getScheduledAt())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
                 .build();
 
         NewsletterDelivery saved = deliveryRepository.save(delivery);
-        log.info("뉴스레터 발송 예약 완료: ID={}", saved.getId());
+        log.info("Newsletter delivery scheduling completed: ID={}", saved.getId());
 
-        return convertToResponseDTO(saved);
+        return saved;
     }
 
     /**
      * 즉시 발송
      */
     public NewsletterDelivery sendImmediately(NewsletterDelivery requestDTO) {
-        log.info("즉시 뉴스레터 발송 시작: {}", requestDTO.getId());
+        log.info("Immediate newsletter delivery started: {}", requestDTO.getId());
 
         NewsletterDelivery delivery = NewsletterDelivery.builder()
                 .newsletterId(requestDTO.getNewsletterId())
                 .userId(requestDTO.getUserId())
-                .personalizedContent(requestDTO.getPersonalizedContent())
                 .sentAt(requestDTO.getSentAt())
                 .openedAt(requestDTO.getOpenedAt())
                 .status(DeliveryStatus.PENDING)
                 .deliveryMethod(requestDTO.getDeliveryMethod())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
                 .build();
 
         NewsletterDelivery saved = deliveryRepository.save(delivery);
@@ -76,7 +73,7 @@ public class NewsletterDeliveryService {
         // 실제 발송 로직 수행
         performDelivery(saved);
 
-        return convertToResponseDTO(saved);
+        return saved;
     }
 
     /**
@@ -86,10 +83,9 @@ public class NewsletterDeliveryService {
     public Page<NewsletterDelivery> getDeliveriesByStatus(
             DeliveryStatus status, Pageable pageable) {
 
-        log.info("발송 상태별 조회: status={}", status);
+        log.info("Fetching deliveries by status: status={}", status);
 
-        Page<NewsletterDelivery> deliveries = deliveryRepository.findByStatus(status, pageable);
-        return deliveries.map(this::convertToResponseDTO);
+        return deliveryRepository.findByStatus(status, pageable);
     }
 
     /**
@@ -99,11 +95,9 @@ public class NewsletterDeliveryService {
     public Page<NewsletterDelivery> getDeliveriesByRecipient(
             Long userId, Pageable pageable) {
 
-        log.info("수신자별 발송 이력 조회: userId={}", userId);
+        log.info("Fetching delivery history by recipient: userId={}", userId);
 
-        Page<NewsletterDelivery> deliveries =
-                deliveryRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
-        return deliveries.map(this::convertToResponseDTO);
+        return deliveryRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
     }
 
     /**
@@ -111,48 +105,43 @@ public class NewsletterDeliveryService {
      */
     @Transactional(readOnly = true)
     public List<NewsletterDelivery> getScheduledDeliveries() {
-        log.info("예약된 발송 목록 조회");
+        log.info("Fetching scheduled deliveries");
 
-        List<NewsletterDelivery> scheduled =
-                deliveryRepository.findByStatusAndScheduledAtBefore(
-                        DeliveryStatus.PENDING, LocalDateTime.now());
-
-        return scheduled.stream()
-                .map(this::convertToResponseDTO)
-                .toList();
+        return deliveryRepository.findByStatusAndScheduledAtBefore(
+                DeliveryStatus.PENDING, LocalDateTime.now());
     }
 
     /**
      * 발송 취소
      */
     public NewsletterDelivery cancelDelivery(Long deliveryId) {
-        log.info("발송 취소: ID={}", deliveryId);
+        log.info("Canceling delivery: ID={}", deliveryId);
 
         NewsletterDelivery delivery = deliveryRepository.findById(deliveryId)
-                .orElseThrow(() -> new EntityNotFoundException("발송 정보를 찾을 수 없습니다: " + deliveryId));
+                .orElseThrow(() -> new EntityNotFoundException("Delivery not found: " + deliveryId));
 
         if (delivery.getStatus() == DeliveryStatus.SENT) {
-            throw new IllegalStateException("이미 발송된 뉴스레터는 취소할 수 없습니다.");
+            throw new IllegalStateException("Cannot cancel already sent newsletter.");
         }
 
         delivery.updateStatus(DeliveryStatus.BOUNCED);
         NewsletterDelivery updated = deliveryRepository.save(delivery);
 
-        log.info("발송 취소 완료: ID={}", deliveryId);
-        return convertToResponseDTO(updated);
+        log.info("Delivery cancellation completed: ID={}", deliveryId);
+        return updated;
     }
 
     /**
      * 발송 재시도
      */
     public NewsletterDelivery retryDelivery(Long deliveryId) {
-        log.info("발송 재시도: ID={}", deliveryId);
+        log.info("Retrying delivery: ID={}", deliveryId);
 
         NewsletterDelivery delivery = deliveryRepository.findById(deliveryId)
-                .orElseThrow(() -> new EntityNotFoundException("발송 정보를 찾을 수 없습니다: " + deliveryId));
+                .orElseThrow(() -> new EntityNotFoundException("Delivery not found: " + deliveryId));
 
         if (delivery.getStatus() != DeliveryStatus.FAILED) {
-            throw new IllegalStateException("실패한 발송만 재시도할 수 있습니다.");
+            throw new IllegalStateException("Only failed deliveries can be retried.");
         }
 
         delivery.updateStatus(DeliveryStatus.PENDING);
@@ -162,7 +151,7 @@ public class NewsletterDeliveryService {
         // 재발송 수행
         performDelivery(updated);
 
-        return convertToResponseDTO(updated);
+        return updated;
     }
 
     /**
@@ -170,7 +159,7 @@ public class NewsletterDeliveryService {
      */
     @Transactional(readOnly = true)
     public DeliveryStats getDeliveryStats(LocalDateTime startDate, LocalDateTime endDate) {
-        log.info("발송 통계 조회: {} ~ {}", startDate, endDate);
+        log.info("Fetching delivery statistics: {} ~ {}", startDate, endDate);
 
         long totalSent = deliveryRepository.countByStatusAndCreatedAtBetween(
                 DeliveryStatus.SENT, startDate, endDate);
@@ -189,11 +178,62 @@ public class NewsletterDeliveryService {
     }
 
     /**
+     * 뉴스레터별 발송 기록 조회
+     */
+    @Transactional(readOnly = true)
+    public List<NewsletterDelivery> getDeliveriesByNewsletter(Long newsletterId) {
+        log.info("Fetching delivery history by newsletter: newsletterId={}", newsletterId);
+        return deliveryRepository.findByNewsletterIdOrderByCreatedAtDesc(newsletterId);
+    }
+
+    /**
+     * 특정 기간 발송 기록 조회
+     */
+    @Transactional(readOnly = true)
+    public List<NewsletterDelivery> getDeliveriesByPeriod(LocalDateTime startDate, LocalDateTime endDate) {
+        log.info("Fetching deliveries by period: {} ~ {}", startDate, endDate);
+        return deliveryRepository.findBySentAtBetween(startDate, endDate);
+    }
+
+    /**
+     * 사용자별 열람률 계산
+     */
+    @Transactional(readOnly = true)
+    public Long countOpenedByUserId(Long userId) {
+        return deliveryRepository.countOpenedByUserId(userId);
+    }
+
+    /**
+     * 뉴스레터 성과 통계 조회
+     */
+    @Transactional(readOnly = true)
+    public List<Object[]> getNewsletterPerformanceStats() {
+        return deliveryRepository.getNewsletterPerformanceStats();
+    }
+
+    /**
+     * 최근 실패 건수 조회
+     */
+    @Transactional(readOnly = true)
+    public Long countFailedDeliveriesAfter(LocalDateTime date) {
+        return deliveryRepository.countFailedDeliveriesAfter(date);
+    }
+
+    /**
+     * 발송 상세 조회
+     */
+    @Transactional(readOnly = true)
+    public NewsletterDelivery getDeliveryDetail(Long deliveryId) {
+        return deliveryRepository.findById(deliveryId)
+                .orElseThrow(() -> new EntityNotFoundException("Delivery not found: " + deliveryId));
+    }
+
+    /**
      * 실제 발송 수행 (내부 메소드)
      */
     private void performDelivery(NewsletterDelivery delivery) {
         try {
-            log.info("뉴스레터 발송 수행: ID={}, Method={}",
+            log.info("Performing newsletter delivery: ID={}, Method={}",
                     delivery.getId(), delivery.getDeliveryMethod());
 
             // 발송 방법에 따른 처리
@@ -207,7 +247,7 @@ public class NewsletterDeliveryService {
             delivery.setSentAt(LocalDateTime.now());
 
         } catch (Exception e) {
-            log.error("뉴스레터 발송 실패: ID={}, Error={}", delivery.getId(), e.getMessage());
+            log.error("Newsletter delivery failed: ID={}, Error={}", delivery.getId(), e.getMessage());
             delivery.updateStatus(DeliveryStatus.FAILED);
             delivery.setErrorMessage(e.getMessage());
         }
@@ -216,39 +256,37 @@ public class NewsletterDeliveryService {
     }
 
     private void sendByEmail(NewsletterDelivery delivery) {
-        // 실제 이메일 발송 로직
-        log.info("이메일 발송: {} -> {}", delivery.getDeliveryMethod(), delivery.getDeliveryMethod());
-        // EmailService 호출
+        try {
+            log.info("Sending email newsletter: userId={}, newsletterId={}", 
+                    delivery.getUserId(), delivery.getNewsletterId());
+            
+            // 새로운 구조를 사용하여 개인화된 콘텐츠 생성
+            NewsletterContent content = contentService.buildPersonalizedContent(
+                delivery.getUserId(), delivery.getNewsletterId());
+            
+            // 이메일용 HTML 렌더링
+            String htmlContent = emailRenderer.renderToHtml(content);
+            
+            // TODO: 실제 이메일 발송 서비스 호출
+            // emailService.sendHtmlEmail(delivery.getUserId(), content.getTitle(), htmlContent);
+            
+            log.info("Email newsletter content generated successfully for user: {}", delivery.getUserId());
+            
+        } catch (Exception e) {
+            log.error("Failed to generate email content for delivery: {}", delivery.getId(), e);
+            throw new RuntimeException("이메일 콘텐츠 생성 실패", e);
+        }
     }
 
     private void sendBySms(NewsletterDelivery delivery) {
         // 실제 SMS 발송 로직
-        log.info("SMS 발송: {}", delivery.getDeliveryMethod());
+        log.info("Sending SMS: {}", delivery.getDeliveryMethod());
         // SmsService 호출
     }
 
     private void sendByPushNotification(NewsletterDelivery delivery) {
         // 실제 푸시 알림 발송 로직
-        log.info("푸시 알림 발송: {}", delivery.getDeliveryMethod());
+        log.info("Sending push notification: {}", delivery.getDeliveryMethod());
         // PushNotificationService 호출
     }
-
-    private NewsletterDelivery convertToResponseDTO(NewsletterDelivery delivery) {
-        return NewsletterDelivery.builder()
-                .id(delivery.getId())
-                .newsletterId(delivery.getNewsletterId())
-                .userId(delivery.getUserId())
-                .personalizedContent(delivery.getPersonalizedContent())
-                .sentAt(delivery.getSentAt())
-                .openedAt(delivery.getOpenedAt())
-                .status(delivery.getStatus())
-                .deliveryMethod(delivery.getDeliveryMethod())
-                .scheduledAt(delivery.getScheduledAt())
-                .retryCount(delivery.getRetryCount())
-                .errorMessage(delivery.getErrorMessage())
-                .createdAt(delivery.getCreatedAt())
-                .updatedAt(delivery.getUpdatedAt())
-                .build();
-    }
-
 }

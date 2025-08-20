@@ -15,7 +15,7 @@ import java.util.List;
 public interface NewsletterDeliveryRepository extends JpaRepository<NewsletterDelivery, Long> {
 
     // 사용자별 발송 기록 조회(최신순)
-    List<NewsletterDelivery> findByUserIdOrderByCreatedAtDesc(Long userId);
+    Page<NewsletterDelivery> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
     // 뉴스레터별 발송 기록 조회
     List<NewsletterDelivery> findByNewsletterIdOrderByCreatedAtDesc(Long newsletterId);
@@ -57,9 +57,6 @@ public interface NewsletterDeliveryRepository extends JpaRepository<NewsletterDe
     List<NewsletterDelivery> findByStatusAndScheduledAtBefore(
             @Param("status") DeliveryStatus status, 
             @Param("now") LocalDateTime now);
-
-    // 수신자별 발송 이력 조회 (userId로 조회)
-    Page<NewsletterDelivery> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
     // 오래된 발송 기록 조회 (정리용)
     List<NewsletterDelivery> findByCreatedAtBeforeAndStatusIn(LocalDateTime cutoff, List<DeliveryStatus> statuses);
