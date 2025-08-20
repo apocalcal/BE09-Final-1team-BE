@@ -10,10 +10,11 @@ spring:
             locator:
               enabled: false
           routes:
-            - id: summary-flask
-              uri: lb://FLASKAPI
-              predicates:
-                - Path=/summary
+            # Eureka에 등록할 때만
+#            - id: summary-flask
+#              uri: lb://FLASKAPI
+#              predicates:
+#                - Path=/summary/**
             - id: user-service-route
               uri: lb://USER-SERVICE
               predicates:

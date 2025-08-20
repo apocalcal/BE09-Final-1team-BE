@@ -9,4 +9,4 @@ PyMySQL
 openai
 py-eureka-client
 # psycopg2-binary   # PostgreSQL driver (optional)
-# gunicorn          # Production WSGI server (optional)
+gunicorn # Production WSGI server (optional)
