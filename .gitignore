@@ -54,6 +54,9 @@ out/
 news-service/target/
 target/
 
+# app-local files
+*-local.yml
+
 # env files
 .env
 .env.local
