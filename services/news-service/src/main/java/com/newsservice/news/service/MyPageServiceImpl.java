@@ -67,7 +67,7 @@ public class MyPageServiceImpl implements MyPageService {
                         .build();
             }
 
-            String categoryName = (news.getCategoryName() != null) ? news.getCategoryName().name() : "기타";
+            String categoryName = (news.getCategoryName() != null) ? news.getCategoryName().getCategoryName() : "기타";
 
             return NewsListResponse.builder()
                     .newsId(news.getNewsId())
