@@ -113,7 +113,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(Map.of("deleted", deleted, "before", before.toString())));
     }
     /**
-     * 마이페이지 - 읽은 뉴스 목록 조회 API
+     * 마이페이지 - 읽은 뉴스 목록 저장 API
      */
     @PostMapping("/mypage/history/{newsId}")
     public ResponseEntity<ApiResponse<String>> addReadHistory(
