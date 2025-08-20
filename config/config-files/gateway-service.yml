@@ -1,0 +1,66 @@
+server:
+  port: 8000
+
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: false
+          routes:
+            - id: summary-flask
+              uri: lb://FLASKAPI
+              predicates:
+                - Path=/summary
+            - id: user-service-route
+              uri: lb://USER-SERVICE
+              predicates:
+                - Path=/api/users/**, /api/auth/**
+            - id: news-service-route
+              uri: lb://NEWS-SERVICE
+              predicates:
+                - Path=/api/news/**
+            - id: admin-service-route
+              uri: lb://ADMIN-SERVICE
+              predicates:
+                - Path=/api/admin/**
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins:
+                - 'be09-final-1team-fe.vercel.app'
+                - 'http://localhost:3000'
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - PATCH
+                  - OPTIONS
+                allowedHeaders: '*'
+                allowCredentials: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+
+eureka:
+  client:
+    service-url:
+      # localhost 대신 Docker 서비스 이름 사용
+      defaultZone: http://discovery-service:8761/eureka/
+    initial-instance-info-replication-interval-seconds: 40
+    instance-info-replication-interval-seconds: 30
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    # Docker 환경에서 중요한 설정
+    prefer-ip-address: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
