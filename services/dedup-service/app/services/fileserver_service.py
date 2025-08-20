@@ -85,7 +85,7 @@ class FileServerService:
             base_pattern = file_pattern.replace("*", "")  # politics_detail_.csv
             category_stage = base_pattern.replace(".csv", "")  # politics_detail_
             
-            for i in range(10):  # 최대 10분 전까지
+            for i in range(30):  # 최대 10분 전까지
                 try_time = datetime.now() - timedelta(minutes=i)
                 timestamp = try_time.strftime("%Y-%m-%d-%H-%M")
                 filename = f"{category_stage}{timestamp}.csv"
