@@ -104,3 +104,6 @@ env/
 *.swp
 *~
 .DS_Store
+
+#application-local 설정#
+*-local.yml
