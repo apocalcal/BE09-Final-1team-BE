@@ -8,7 +8,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@FeignClient(name = "news-service-client", url = "${services.news-service.url:http://localhost:8082}")
+@FeignClient(
+        name = "news-service",
+        url = "${NEWS_SERVICE_URL:http://localhost:8082}",
+        contextId = "newsletterNewsServiceClient")
 public interface NewsServiceClient {
 
     /**

@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @SpringBootApplication
 @EnableDiscoveryClient
 @EnableJpaRepositories
-@EnableFeignClients
+@EnableFeignClients(basePackages = "com.newsletterservice.client")
 public class NewsletterServiceApplication {
 
     public static void main(String[] args) {

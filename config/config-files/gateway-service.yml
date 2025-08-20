@@ -22,6 +22,10 @@ spring:
               uri: lb://NEWS-SERVICE
               predicates:
                 - Path=/api/news/**
+            - id: newsletter-service-route
+              uri: lb://NEWSLETTER-SERVICE
+              predicates:
+                - Path=/api/newsletter/**
             - id: admin-service-route
               uri: lb://ADMIN-SERVICE
               predicates:

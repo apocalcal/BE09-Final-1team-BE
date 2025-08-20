@@ -9,3 +9,7 @@ eureka:
     service-url:
       # Eureka Server의 주소를 localhost로 변경
       defaultZone: http://192.168.0.38:8761/eureka/
+
+services:
+  news-service:
+    url: http://192.168.0.38:8082
