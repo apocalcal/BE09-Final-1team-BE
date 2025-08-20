@@ -26,7 +26,7 @@ public class SubscriptionController {
             @Valid @RequestBody SubscriptionRequest request,
             HttpServletRequest httpRequest) {
         
-        String userId = extractUserIdFromToken(httpRequest);
+        String userId = String.valueOf(request.getUserId());
         SubscriptionResponse subscription = subscriptionService.subscribe(request, userId);
         return ApiResponse.success(subscription, "구독이 완료되었습니다.");
     }
