@@ -1,5 +1,9 @@
 package com.newnormallist.newsservice.recommendation.service;
 
+import java.util.List;
+import com.newnormallist.newsservice.recommendation.entity.UserPrefVector;
+import com.newnormallist.newsservice.recommendation.entity.User;
+
 /* 사용자 벡터 계산기 인터페이스.
 
     구현체(예: VectorBuilderImpl)는 한 유저에 대해:
@@ -13,5 +17,5 @@ package com.newnormallist.newsservice.recommendation.service;
 
 */
 public interface VectorBuilder {
-    
+    List<UserPrefVector> recomputeForUser(User user);
 }

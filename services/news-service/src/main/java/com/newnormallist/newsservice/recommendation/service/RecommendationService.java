@@ -1,12 +1,12 @@
 package com.newnormallist.newsservice.recommendation.service;
 
+import java.util.List;
+import com.newnormallist.newsservice.recommendation.dto.FeedItemDto;
+
 // 피드 조립 서비스 인터페이스.
-// 구현체(예: RecommendationServiceImpl)는:
-// UserPrefVectorRepository.findTop3ByUserId(userId)로 top3 카테고리 확보
-// 각 카테고리에서 최신 7/5/3 ID 수집
-// findByIds로 뉴스 메타 일괄 조회
-// DTO로 매핑해 반환
+// 첫 페이지: 개인화 추천 (상위 3개 카테고리에서 7/5/3개씩)
+// 나머지 페이지: 전체 뉴스 최신순 (published_at 기준)
 
 public interface RecommendationService {
-    
+    List<FeedItemDto> getFeed(Long userId);
 }

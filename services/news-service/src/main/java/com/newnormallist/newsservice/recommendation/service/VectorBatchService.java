@@ -11,5 +11,5 @@ package com.newnormallist.newsservice.recommendation.service;
     stale 정책(최종 업데이트 10분 경과, 마지막 계산 이후 조회≥5 등) 관리.
 */
 public interface VectorBatchService {
-    
+    void upsert(Long userId); // stale 판단/일괄 갱신은 구현에서
 }
