@@ -23,7 +23,26 @@ logging:
     com.newnormallist.newsservice: DEBUG
     org.springframework.security: WARN
 
-# 5. 추천 시스템 설정
+# 5. Swagger(OpenAPI) 기본 설정
+springdoc:
+  api-docs:
+    enabled: true # /v3/api-docs 활성화
+    path: /v3/api-docs # 문서 JSON 경로
+  swagger-ui:
+    enabled: true # Swagger UI 활성화
+    path: /swagger-ui # UI 접속 경로(예: http://localhost:8082/swagger-ui)
+    display-request-duration: true
+    operations-sorter: method # 메서드명 순 정렬(get/post/…)
+    tags-sorter: alpha # 태그 알파벳 정렬
+  # 스캔 범위 제한(선택) — 뉴스 서비스 컨트롤러만 문서화
+  packages-to-scan: com.newnormallist.newsservice.news.controller
+  paths-to-match: /api/news/**
+
+# (추가) 요약 기능 추가 설정
+summarizer:
+  base-url: http://flaskapi:5000 # 도커 브리지 네트워크 서비스명
+
+# 6. 추천 시스템 설정
 reco:
   quotas: [7, 5, 3] # 상위 3개 카테고리에서 각각 가져올 뉴스 수
   read-threshold: 10 # 조회 수 임계값

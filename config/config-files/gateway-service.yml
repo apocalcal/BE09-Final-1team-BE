@@ -10,28 +10,20 @@ spring:
             locator:
               enabled: false
           routes:
-            - id: summary-flask
-              uri: lb://FLASKAPI
-              predicates:
-                - Path=/summary
             - id: user-service-route
               uri: lb://USER-SERVICE
               predicates:
-                - Path=/api/users/**, /api/auth/**
+                - Path=/api/users/**, /api/auth/**, /user-api-docs/**
             - id: news-service-route
               uri: lb://NEWS-SERVICE
               predicates:
-                - Path=/api/news/**
-            - id: admin-service-route
-              uri: lb://ADMIN-SERVICE
-              predicates:
-                - Path=/api/admin/**
+                - Path=/api/news/**, /news-api-docs/**
           globalcors:
             cors-configurations:
               '[/**]':
                 allowedOrigins:
-                - 'be09-final-1team-fe.vercel.app'
                 - 'http://localhost:3000'
+                - 'https://be09-final-1team-fe.vercel.app'
                 allowedMethods:
                   - GET
                   - POST
@@ -64,3 +56,14 @@ eureka:
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: "user-service"
+        url: /user-api-docs
+      - name: "news-service"
+        url: /news-api-docs
+
+
+
