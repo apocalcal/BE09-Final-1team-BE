@@ -21,16 +21,12 @@ spring:
             - id: news-service-route
               uri: lb://NEWS-SERVICE
               predicates:
-                - Path=/api/news/**
-            - id: admin-service-route
-              uri: lb://ADMIN-SERVICE
-              predicates:
-                - Path=/api/admin/**
+                - Path=/api/news/**, /news-api-docs/**
           globalcors:
             cors-configurations:
               '[/**]':
                 allowedOrigins:
-                - 'be09-final-1team-fe.vercel.app'
+                - 'https://be09-final-1team-fe.vercel.app'
                 - 'http://localhost:3000'
                 allowedMethods:
                   - GET
@@ -64,3 +60,14 @@ eureka:
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: "user-service"
+        url: /user-api-docs
+      - name: "news-service"
+        url: /news-api-docs
+
+
+
