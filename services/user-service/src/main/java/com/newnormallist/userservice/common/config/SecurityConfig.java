@@ -6,6 +6,7 @@ import com.newnormallist.userservice.auth.jwt.RestAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -30,6 +31,26 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Order(1) // Swagger 관련 설정은 우선순위를 높게 설정합니다.
+    public SecurityFilterChain swaggerChain(HttpSecurity http) throws Exception {
+        http
+                // Swagger 관련 URL에 대한 접근 허용
+                .securityMatcher(
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/swagger-resources/**",
+                        "/webjars/**"
+                )
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth ->
+                        // Swagger 관련 URL은 모두 허용
+                        auth.anyRequest().permitAll());
+        return http.build();
+    }
+
+    @Bean
+    @Order(2) // 사용자 서비스 관련 설정은 Swagger보다 낮은 우선순위로 설정합니다.
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 // 1. 기본적인 stateless 설정 (CSRF, 폼 로그인 비활성화)
