@@ -6,12 +6,11 @@ import com.newnormallist.userservice.user.dto.*;
 import com.newnormallist.userservice.user.entity.UserStatus;
 import com.newnormallist.userservice.user.service.UserService;
 
+// Swagger 어노테이션 import
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -19,21 +18,15 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-
 import org.springdoc.core.annotations.ParameterObject;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-
 import org.springframework.format.annotation.DateTimeFormat;
-
 import org.springframework.http.ResponseEntity;
-
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -41,7 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 @Tag(name = "User", description = "사용자 회원/마이페이지/관리 기능 API")
-@SecurityRequirement(name = "bearerAuth") // OpenAPI 설정에 bearerAuth 보안 스키마가 등록되어 있어야 합니다.
+@SecurityRequirement(name = "bearerAuth") // 모든 API에 전역적으로 인증 요구 설정
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -55,12 +48,8 @@ public class UserController {
     @Operation(
             summary = "회원가입",
             description = "새로운 사용자를 등록합니다.",
-            operationId = "signup",
-            requestBody = @RequestBody(
-                    required = true,
-                    description = "회원가입 요청 데이터",
-                    content = @Content(schema = @Schema(implementation = SignupRequest.class))
-            )
+            operationId = "signup"
+            // requestBody 속성은 springdoc이 자동으로 생성해주므로 제거
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "회원가입 성공"),
@@ -68,7 +57,7 @@ public class UserController {
             @ApiResponse(responseCode = "409", description = "이미 존재하는 사용자")
     })
     @PostMapping("/signup")
-    public ResponseEntity<ApiResult<String>> signup(@Valid @org.springframework.web.bind.annotation.RequestBody SignupRequest signupRequest) {
+    public ResponseEntity<ApiResult<String>> signup(@Valid @RequestBody SignupRequest signupRequest) {
         userService.signup(signupRequest);
         return ResponseEntity.ok(ApiResult.success("회원가입이 성공적으로 완료되었습니다."));
     }
@@ -88,7 +77,7 @@ public class UserController {
     })
     @GetMapping("/mypage")
     public ResponseEntity<ApiResult<MyPageResponse>> getMyPage(
-            @Parameter(hidden = true, description = "인증된 사용자 식별자") @AuthenticationPrincipal String userIdStr
+            @Parameter(hidden = true) @AuthenticationPrincipal String userIdStr
     ) {
         Long userId = Long.parseLong(userIdStr);
         MyPageResponse myPageResponse = userService.getMyPage(userId);
@@ -101,12 +90,8 @@ public class UserController {
     @Operation(
             summary = "마이페이지 수정",
             description = "닉네임/관심사 등 마이페이지 정보를 수정합니다.",
-            operationId = "updateMyPage",
-            requestBody = @RequestBody(
-                    required = true,
-                    description = "마이페이지 수정 요청",
-                    content = @Content(schema = @Schema(implementation = UserUpdateRequest.class))
-            )
+            operationId = "updateMyPage"
+            // requestBody 속성은 springdoc이 자동으로 생성해주므로 제거
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "마이페이지 정보 수정 성공"),
@@ -116,8 +101,8 @@ public class UserController {
     })
     @PutMapping("/myupdate")
     public ResponseEntity<ApiResult<String>> updateMyPage(
-            @Parameter(hidden = true, description = "인증된 사용자 식별자") @AuthenticationPrincipal String userIdStr,
-            @Valid @org.springframework.web.bind.annotation.RequestBody UserUpdateRequest userUpdateRequest
+            @Parameter(hidden = true) @AuthenticationPrincipal String userIdStr,
+            @Valid @RequestBody UserUpdateRequest userUpdateRequest
     ) {
         Long userId = Long.parseLong(userIdStr);
         userService.updateMyPage(userId, userUpdateRequest);
@@ -139,7 +124,7 @@ public class UserController {
     })
     @DeleteMapping("/delete")
     public ResponseEntity<ApiResult<String>> deleteUser(
-            @Parameter(hidden = true, description = "인증된 사용자 식별자") @AuthenticationPrincipal String userIdStr
+            @Parameter(hidden = true) @AuthenticationPrincipal String userIdStr
     ) {
         Long userId = Long.parseLong(userIdStr);
         userService.deleteUser(userId);
@@ -195,7 +180,7 @@ public class UserController {
     /**
      * (내부) 특정 사용자 하드 삭제 API
      */
-    @Hidden // 문서 비노출(내부 운영용). 노출하려면 제거하세요.
+    @Hidden // 문서는 비노출(내부 운영용). 노출하려면 제거하세요.
     @Operation(
             summary = "[내부] 사용자 하드 삭제",
             description = "지정한 사용자 데이터를 영구 삭제합니다.",
@@ -219,18 +204,11 @@ public class UserController {
     /**
      * (내부) 배치 하드 삭제 API
      */
-    @Hidden // 문서 비노출(내부 운영용). 노출하려면 제거하세요.
+    @Hidden // 문서는 비노출(내부 운영용). 노출하려면 제거하세요.
     @Operation(
             summary = "[내부] 배치 하드 삭제",
             description = "지정한 시각 이전에 삭제 처리된 계정을 일괄 영구 삭제합니다.",
-            operationId = "adminPurgeDeleted",
-            parameters = {
-                    @Parameter(
-                            name = "before",
-                            description = "이 시각 이전 삭제 데이터 일괄 영구 삭제 (ISO-8601)",
-                            example = "2025-08-01T00:00:00"
-                    )
-            }
+            operationId = "adminPurgeDeleted"
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "배치 하드 삭제 성공"),
@@ -240,6 +218,7 @@ public class UserController {
     @DeleteMapping("/internal/admin/batch")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResult<Map<String, Object>>> purge(
+            @Parameter(description = "이 시각 이전 삭제 데이터 일괄 영구 삭제 (ISO-8601)", example = "2025-08-01T00:00:00")
             @RequestParam("before")
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime before
     ) {
@@ -257,12 +236,11 @@ public class UserController {
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "읽은 뉴스 저장 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 필요"),
-            @ApiResponse(responseCode = "404", description = "뉴스를 찾을 수 없음")
+            @ApiResponse(responseCode = "401", description = "인증 필요")
     })
     @PostMapping("/mypage/history/{newsId}")
     public ResponseEntity<ApiResult<String>> addReadHistory(
-            @Parameter(hidden = true, description = "인증된 사용자 식별자") @AuthenticationPrincipal String userIdStr,
+            @Parameter(hidden = true) @AuthenticationPrincipal String userIdStr,
             @Parameter(description = "뉴스 ID", example = "98765") @PathVariable Long newsId
     ) {
         Long userId = Long.parseLong(userIdStr);
@@ -284,12 +262,12 @@ public class UserController {
     })
     @GetMapping("/mypage/history/index")
     public ResponseEntity<ApiResult<Page<ReadHistoryResponse>>> getReadHistory(
-            @Parameter(hidden = true, description = "인증된 사용자 식별자") @AuthenticationPrincipal String userIdStr,
+            @Parameter(hidden = true) @AuthenticationPrincipal String userIdStr,
             @ParameterObject
             @PageableDefault(size = 10, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         Long userId = Long.parseLong(userIdStr);
-        Page<ReadHistoryResponse> historyNewsIds = userService.getReadHistory(userId, pageable);
-        return ResponseEntity.ok(ApiResult.success(historyNewsIds));
+        Page<ReadHistoryResponse> historyPage = userService.getReadHistory(userId, pageable);
+        return ResponseEntity.ok(ApiResult.success(historyPage));
     }
 }
