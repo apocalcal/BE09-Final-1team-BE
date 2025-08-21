@@ -8,7 +8,7 @@ import lombok.Getter;
 public enum DedupState {
         REPRESENTATIVE("대표"),
         RELATED("관련"),
-        KEPT("보관");
+        KEPT("유지");
 
         private final String description;
 }

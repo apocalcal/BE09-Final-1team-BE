@@ -1,32 +1,35 @@
-package com.newnormallist.newsservice.news.dto;
+package com.newnormallist.newsservice.recommendation.dto;
 
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import com.newnormallist.newsservice.news.entity.Category;
 
-import java.time.LocalDateTime;
+// 뉴스 피드에 노출될 뉴스 정보
 
-@Getter
-@Builder
+@Getter 
+@Setter 
 @NoArgsConstructor
-@AllArgsConstructor
-public class NewsResponse {
+@AllArgsConstructor 
+@Builder
+public class FeedItemDto {
     private Long newsId;
     private String title;
-    private String content;
     private String press;
     private String link;
-    private String summary;
     private Integer trusted;
     private LocalDateTime publishedAt;
     private LocalDateTime createdAt;
     private String reporterName;
-    private String categoryName;
+    private Integer viewCount;
+    private Category categoryName;
     private String categoryDescription;
     private String dedupState;
     private String dedupStateDescription;
     private String imageUrl;
     private String oidAid;
     private LocalDateTime updatedAt;
-} 
+}
