@@ -8,7 +8,7 @@ import com.newnormallist.userservice.history.repository.UserReadHistoryRepositor
 import com.newnormallist.userservice.user.dto.*;
 import com.newnormallist.userservice.user.entity.NewsCategory;
 import com.newnormallist.userservice.user.entity.User;
-import com.newnormallist.userservice.user.entity.Gender;
+
 import com.newnormallist.userservice.common.exception.UserException;
 import com.newnormallist.userservice.user.entity.UserStatus;
 import com.newnormallist.userservice.user.repository.UserRepository;
@@ -58,7 +58,7 @@ public class UserService {
                 .password(encodedPassword)
                 .name(signupRequest.getName())
                 .birthYear(signupRequest.getBirthYear())
-                .gender(Gender.valueOf(signupRequest.getGender()))
+                .gender(signupRequest.getGender())
                 .hobbies(signupRequest.getHobbies() != null ? signupRequest.getHobbies() : new HashSet<>())
                 .build();
         // 4. 사용자 저장

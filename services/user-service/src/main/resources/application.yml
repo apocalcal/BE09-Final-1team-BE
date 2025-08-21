@@ -7,3 +7,7 @@ spring:
     bootstrap:
       enabled: false
 
+server:
+  compression:
+    enabled: false
+
