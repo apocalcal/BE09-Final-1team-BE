@@ -22,3 +22,7 @@ logging:
   level:
     com.newnormallist.newsservice: DEBUG
     org.springframework.security: WARN
+
+# (추가) 요약 기능 추가 설정
+summarizer:
+  base-url: http://flaskapi:5000   # 도커 브리지 네트워크 서비스명

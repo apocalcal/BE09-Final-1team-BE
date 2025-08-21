@@ -41,28 +41,28 @@ else:
     DEFAULT_EUREKA = "http://localhost:8761/eureka/"
     DEFAULT_HOST = "localhost"
 
-EUREKA_SERVER = os.getenv("EUREKA_SERVER", DEFAULT_EUREKA)
-INSTANCE_HOST = os.getenv("INSTANCE_HOST", DEFAULT_HOST)
+# EUREKA_SERVER = os.getenv("EUREKA_SERVER", DEFAULT_EUREKA)
+# INSTANCE_HOST = os.getenv("INSTANCE_HOST", DEFAULT_HOST)
 
-# --- Eureka 등록 (옵션⭐) ---
-if EUREKA_ENABLED and EUREKA_SERVER:
-    try:
-        import py_eureka_client.eureka_client as eureka_client
-        # 필요 시 should_register/fetch, heartbeat 등 옵션 추가 가능
-        eureka_client.init(
-            eureka_server=EUREKA_SERVER,
-            app_name=APP_NAME,
-            instance_host=INSTANCE_HOST,
-            instance_port=PORT,
-            should_register=True,
-            should_fetch=False,
-        )
-        print(f"[Eureka] 등록 완료 server={EUREKA_SERVER} app={APP_NAME} host={INSTANCE_HOST}:{PORT}")
-    except Exception as e:
-        # 등록 실패해도 API 자체는 동작하도록 조용히 처리
-        print("[Eureka] 등록 실패:", e)
-else:
-    print("[Eureka] 비활성화됨(EUREKA_ENABLED=false) 또는 서버 미지정")
+# # --- Eureka 등록 (옵션⭐) ---
+# if EUREKA_ENABLED and EUREKA_SERVER:
+#     try:
+#         import py_eureka_client.eureka_client as eureka_client
+#         # 필요 시 should_register/fetch, heartbeat 등 옵션 추가 가능
+#         eureka_client.init(
+#             eureka_server=EUREKA_SERVER,
+#             app_name=APP_NAME,
+#             instance_host=INSTANCE_HOST,
+#             instance_port=PORT,
+#             should_register=True,
+#             should_fetch=False,
+#         )
+#         print(f"[Eureka] 등록 완료 server={EUREKA_SERVER} app={APP_NAME} host={INSTANCE_HOST}:{PORT}")
+#     except Exception as e:
+#         # 등록 실패해도 API 자체는 동작하도록 조용히 처리
+#         print("[Eureka] 등록 실패:", e)
+# else:
+#     print("[Eureka] 비활성화됨(EUREKA_ENABLED=false) 또는 서버 미지정")
 
 if __name__ == "__main__":
     # 로컬 실행용(개발 서버). 운영은 gunicorn 사용.

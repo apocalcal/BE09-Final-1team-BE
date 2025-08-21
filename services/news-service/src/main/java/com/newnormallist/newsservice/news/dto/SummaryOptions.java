@@ -1,25 +1,21 @@
-package com.newsservice.news.dto;
+package com.newnormallist.newsservice.news.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.Getter;
-import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.*;
 
-@Getter
-@Setter
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class SummaryOptions {
+    /* newsId 또는 text 중 하나 */
+    private Long newsId;
+    private String text;
 
-    private Integer lines;  // null이면 기본 3
-    private Boolean force;  // null이면 false
+    private String type;    // PromptManager에 전달할 타입
+    private Integer lines;  // 기본값 3은 Client에서 보정
 
-    @JsonIgnore
-    public int safeLines() {
-        int v = (lines == null) ? 3 : lines;
-        return Math.max(1, Math.min(10, v));
-    }
-
-    @JsonIgnore
-    public boolean isForce() {
-        return Boolean.TRUE.equals(force);
-    }
-
+    private String promptOverride;  // 실제 필드명에 맞춰 위 from에서 매핑
 }
