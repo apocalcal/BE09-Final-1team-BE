@@ -37,8 +37,9 @@ public class User {
     @Column(name = "birth_year", nullable = false)
     private Integer birthYear;
 
+
     @Column(name = "gender", nullable = false)
-    private Gender gender;
+    private String gender;
 
     @Column(name = "letter_ok", nullable = false)
     @Builder.Default
