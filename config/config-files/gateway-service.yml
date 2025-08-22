@@ -9,6 +9,8 @@ spring:
           discovery:
             locator:
               enabled: false
+          default-filters:
+            - ForwardedHeaders
           routes:
             - id: user-service-route
               uri: lb://USER-SERVICE

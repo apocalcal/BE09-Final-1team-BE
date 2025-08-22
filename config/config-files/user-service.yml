@@ -1,6 +1,7 @@
 # 1. 서버 포트 설정
 server:
   port: 8081
+  forward-headers-strategy: framework
 
 # 2. Eureka 클라이언트 설정
 eureka:
@@ -25,6 +26,7 @@ logging:
 
 # 5. swagger 설정
 springdoc:
+  forward-headers-enabled: true # 게이트웨이에서 전달된 헤더를 사용
   # 이 서비스의 API 문서(JSON 파일)를 어떤 경로에 만들지 결정
   api-docs:
     path: /user-api-docs
