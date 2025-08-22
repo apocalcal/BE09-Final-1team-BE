@@ -12,6 +12,7 @@ import com.newnormallist.newsservice.recommendation.util.MathUtils;
 import com.newnormallist.newsservice.recommendation.config.RecommendationProperties;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -131,8 +132,19 @@ public class VectorBuilderImpl implements VectorBuilder {
     private Map<Category, Double> buildScrapVector(Long userId) {
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
         
-        List<NewsScrap> scraps = newsScrapRepository.findRecentScrapsByUserId(userId, thirtyDaysAgo);
-        
+        try {
+            // 먼저 JPA 방식 시도
+            List<NewsScrap> scraps = newsScrapRepository.findRecentScrapsByUserId(userId, thirtyDaysAgo);
+            return calculateScrapWeights(scraps);
+        } catch (Exception e) {
+            // 날짜 파싱 오류 시 Native Query 사용
+            String sinceStr = thirtyDaysAgo.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            List<Object[]> scrapData = newsScrapRepository.findRecentScrapsByUserIdNative(userId, sinceStr);
+            return calculateScrapWeightsFromNative(scrapData);
+        }
+    }
+    
+    private Map<Category, Double> calculateScrapWeights(List<NewsScrap> scraps) {
         Map<Category, Double> categoryWeights = new HashMap<>();
         double totalWeight = 0.0;
         
@@ -142,6 +154,40 @@ public class VectorBuilderImpl implements VectorBuilder {
             
             categoryWeights.merge(scrap.getNewsEntity().getCategoryName(), weight, Double::sum);
             totalWeight += weight;
+        }
+        
+        // 정규화
+        final double finalTotalWeight = totalWeight;
+        if (finalTotalWeight > 0) {
+            categoryWeights.replaceAll((k, v) -> v / finalTotalWeight);
+        }
+        
+        return categoryWeights;
+    }
+    
+    private Map<Category, Double> calculateScrapWeightsFromNative(List<Object[]> scrapData) {
+        Map<Category, Double> categoryWeights = new HashMap<>();
+        double totalWeight = 0.0;
+        
+        for (Object[] row : scrapData) {
+            try {
+                // Object[]에서 필요한 데이터 추출 (SELECT ns.created_at, n.category 순서)
+                String createdAtStr = row[0].toString(); // created_at 컬럼
+                String categoryStr = row[1].toString();  // category 컬럼
+                
+                LocalDateTime createdAt = LocalDateTime.parse(createdAtStr, 
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS"));
+                Category category = Category.valueOf(categoryStr);
+                
+                long daysDiff = java.time.Duration.between(createdAt, LocalDateTime.now()).toDays();
+                double weight = MathUtils.dayWeight(daysDiff, properties.getScrapHalfLifeDays());
+                
+                categoryWeights.merge(category, weight, Double::sum);
+                totalWeight += weight;
+            } catch (Exception e) {
+                // 개별 레코드 파싱 실패 시 건너뛰기
+                continue;
+            }
         }
         
         // 정규화

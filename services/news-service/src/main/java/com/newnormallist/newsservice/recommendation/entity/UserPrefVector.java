@@ -40,11 +40,11 @@ public class UserPrefVector {
     private double wScrap;
 
     @CreationTimestamp
-    @Column(nullable=false, updatable=false)
+    @Column(nullable=false, updatable=false, columnDefinition = "DATETIME(6)")
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
-    @Column(nullable=false)
+    @Column(nullable=false, columnDefinition = "DATETIME(6)")
     private LocalDateTime updatedAt;
 
     @Data
