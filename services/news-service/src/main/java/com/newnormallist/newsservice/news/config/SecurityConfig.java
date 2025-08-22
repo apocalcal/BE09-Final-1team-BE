@@ -17,6 +17,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()   // swagger 시큐리티 설정
                 .requestMatchers("/api/**", "/actuator/**", "/health", "/error").permitAll()
                 .anyRequest().authenticated()
             );

@@ -12,11 +12,10 @@ print("DATABASE_URL =", os.getenv("DATABASE_URL"))
 def root():
     return {"ok": True, "msg": "alive"}, 200
 
-@app.get("/health")
-def health():
-    # 필요하면 여기서 필수 ENV, DB 접근 등 점검 후 500 반환 로직 추가
-    return {"status": "ok"}, 200
-
+# @app.get("/health")
+# def health():
+#     # 필요하면 여기서 필수 ENV, DB 접근 등 점검 후 500 반환 로직 추가
+#     return {"status": "ok"}, 200
 
 # --- 실행 환경 감지 (도커 여부) ---
 def running_in_docker() -> bool:
