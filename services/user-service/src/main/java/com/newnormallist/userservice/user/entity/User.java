@@ -49,6 +49,7 @@ public class User {
     @Enumerated(EnumType.STRING)
     @CollectionTable(name = "user_categories", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "category")
+    @Builder.Default
     private Set<NewsCategory> hobbies = new HashSet<>();
 
     @Enumerated(EnumType.STRING)
