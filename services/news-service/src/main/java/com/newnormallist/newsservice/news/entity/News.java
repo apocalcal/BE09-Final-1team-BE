@@ -57,6 +57,9 @@ public class News {
     @Column(name = "oid_aid", length=255, unique=true)
     private String oidAid;
 
+    @Column(name = "link", nullable = false, columnDefinition = "TEXT")
+    private String link;
+
     // 뉴스레터와의 N:N 연결
     @OneToMany(mappedBy = "news")
     private List<NewsletterNews> newsletterNewsList;

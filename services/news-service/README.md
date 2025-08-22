@@ -5,11 +5,13 @@
 ## 🚀 API 엔드포인트
 
 ### 1. 뉴스 크롤링 데이터 저장
+
 크롤러에서 수집한 뉴스 데이터를 저장하는 API입니다.
 
 **POST** `/api/news/crawl`
 
 **Request Body:**
+
 ```json
 {
   "link": "https://example.com/news/article/12345",
@@ -23,16 +25,19 @@
 ```
 
 **Response:**
+
 ```
 HTTP 200 OK
 ```
 
 ### 2. 뉴스 승격 (관리자용)
+
 크롤링된 뉴스를 승격하여 프론트엔드에 노출할 뉴스로 전환합니다.
 
 **POST** `/api/news/promote/{newsCrawlId}`
 
 **Response:**
+
 ```json
 {
   "message": "뉴스가 성공적으로 승격되었습니다."
@@ -40,20 +45,24 @@ HTTP 200 OK
 ```
 
 ### 3. 커스텀 요약으로 뉴스 승격 (관리자용)
+
 요약과 신뢰도를 직접 지정하여 뉴스를 승격합니다.
 
 **POST** `/api/news/promote/{newsCrawlId}/custom?summary=요약내용&trusted=85`
 
 **Parameters:**
+
 - `summary`: 뉴스 요약 (필수)
 - `trusted`: 신뢰도 점수 0-100 (필수)
 
 ### 4. 승격 대기 뉴스 목록 조회 (관리자용)
+
 아직 승격되지 않은 크롤링 뉴스 목록을 조회합니다.
 
 **GET** `/api/news/pending`
 
 **Response:**
+
 ```json
 [
   {
@@ -70,29 +79,36 @@ HTTP 200 OK
 ```
 
 ### 5. 뉴스 조회 (프론트엔드용)
+
 승격된 뉴스만 조회합니다.
 
 **GET** `/api/news`
 
 **Query Parameters:**
+
 - `category`: 뉴스 카테고리 (선택사항)
 - `keyword`: 검색 키워드 (선택사항)
 - `page`: 페이지 번호 (기본값: 0)
 - `size`: 페이지 크기 (기본값: 20)
 
 ### 6. 특정 뉴스 조회
+
 **GET** `/api/news/{newsId}`
 
 ### 7. 개인화 뉴스 조회
+
 **GET** `/api/news/personalized`
 
 **Headers:**
+
 - `X-User-Id`: 사용자 ID
 
 ### 8. 인기 뉴스 조회
+
 **GET** `/api/news/trending`
 
 ### 9. 조회수 증가
+
 **POST** `/api/news/{newsId}/view`
 
 ## 📊 전체 데이터 흐름
@@ -100,11 +116,13 @@ HTTP 200 OK
 ### 단계별 처리 과정
 
 1. **크롤링 단계**
+
    ```
    크롤러 → POST /api/news/crawl → news_crawl 테이블 저장
    ```
 
 2. **승격 단계** (관리자 또는 자동화)
+
    ```
    GET /api/news/pending → 승격 대기 목록 확인
    POST /api/news/promote/{id} → news 테이블로 승격
@@ -176,6 +194,7 @@ public class NewsCrawlDto {
 ## 📊 데이터베이스 스키마
 
 ### news_crawl 테이블
+
 - `raw_id`: 기본키 (자동 생성)
 - `link_id`: 링크 ID
 - `link`: 뉴스 링크 (TEXT)
@@ -205,11 +224,13 @@ cd news-service
 ## 📝 테스트
 
 테스트 데이터 생성:
+
 ```bash
 curl -X POST http://localhost:8082/api/news/test-data
 ```
 
 크롤링 데이터 전송 테스트:
+
 ```bash
 curl -X POST http://localhost:8082/api/news/crawl \
   -H "Content-Type: application/json" \
@@ -227,9 +248,11 @@ curl -X POST http://localhost:8082/api/news/crawl \
 ## 📧 뉴스레터 API
 
 ### 1. 뉴스레터 구독
+
 **POST** `/api/newsletter/subscribe`
 
 **Request Body:**
+
 ```json
 {
   "email": "user@example.com"
@@ -237,6 +260,7 @@ curl -X POST http://localhost:8082/api/news/crawl \
 ```
 
 **Response:**
+
 ```json
 {
   "message": "구독 확인 메일을 발송했습니다."
@@ -244,9 +268,11 @@ curl -X POST http://localhost:8082/api/news/crawl \
 ```
 
 ### 2. 구독 확인
+
 **GET** `/api/newsletter/confirm?token={token}`
 
 **Response:**
+
 ```json
 {
   "message": "구독이 완료되었습니다."
@@ -254,9 +280,11 @@ curl -X POST http://localhost:8082/api/news/crawl \
 ```
 
 ### 3. 구독자 수 조회
+
 **GET** `/api/newsletter/count`
 
 **Response:**
+
 ```json
 {
   "count": 1234
@@ -264,6 +292,7 @@ curl -X POST http://localhost:8082/api/news/crawl \
 ```
 
 ### 뉴스레터 테스트
+
 ```bash
 # 구독 요청
 curl -X POST http://localhost:8082/api/newsletter/subscribe \
@@ -277,6 +306,7 @@ curl -X GET http://localhost:8082/api/newsletter/count
 ## 📊 카테고리 시스템
 
 ### 지원하는 카테고리
+
 - `POLITICS`: 정치 🏛️
 - `ECONOMY`: 경제 💰
 - `SOCIETY`: 사회 👥
@@ -285,10 +315,12 @@ curl -X GET http://localhost:8082/api/newsletter/count
 - `IT_SCIENCE`: IT/과학 💻
 
 ### 카테고리별 뉴스 조회
+
 **GET** `/api/news?category={category}&page={page}&size={size}`
 
 **예시:**
+
 ```bash
 # 사회 카테고리 뉴스 조회
 curl -X GET "http://localhost:8082/api/news?category=SOCIETY&page=0&size=10"
-``` 
+```

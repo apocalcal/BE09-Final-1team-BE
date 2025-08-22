@@ -1,0 +1,32 @@
+package com.newnormallist.newsservice.recommendation.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
+import java.util.List;
+import java.util.Collection;
+
+import com.newnormallist.newsservice.recommendation.entity.NewsEntity;
+import com.newnormallist.newsservice.recommendation.entity.Category;
+
+
+// findLatestIdsByCategory(cat, limit) : 카테고리 최신 뉴스 ID 가져오기.
+// findByIdIn(ids) : 메타 정보 일괄 조회.
+// findCategoryById(id) : 조회 로그 저장 시 newsId → category 팝업용.
+public interface RecommendationNewsRepository extends JpaRepository<NewsEntity, Long> {
+
+    @Query("SELECT n.newsId FROM NewsEntity n WHERE n.categoryName = :cat ORDER BY n.publishedAt DESC")
+    List<Long> findLatestIdsByCategory(@Param("cat") Category category, Pageable pageable);
+
+    @Query("SELECT n FROM NewsEntity n WHERE n.newsId IN :ids")
+    List<NewsEntity> findByIdIn(@Param("ids") Collection<Long> ids);
+
+    @Query("SELECT n.categoryName FROM NewsEntity n WHERE n.newsId = :id")
+    Category findCategoryById(@Param("id") Long id);
+    
+    // published_at 기준 최신순 정렬 (전체 뉴스 피드용)
+    @Query("SELECT n FROM NewsEntity n ORDER BY n.publishedAt DESC")
+    Page<NewsEntity> findAllByOrderByPublishedAtDesc(Pageable pageable);
+}

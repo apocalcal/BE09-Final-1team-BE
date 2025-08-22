@@ -37,6 +37,7 @@ public class User {
     @Column(name = "birth_year", nullable = false)
     private Integer birthYear;
 
+
     @Column(name = "gender", nullable = false)
     private String gender;
 

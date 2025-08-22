@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class NewsListResponse {
     private Long newsId;
-    private Long originalNewsId;
     private String title;
     private String summary;
     private String press;
