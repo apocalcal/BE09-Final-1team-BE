@@ -20,7 +20,7 @@ management:
 # 4. 로깅 레벨 설정
 logging:
   level:
-<<<<<<<< HEAD:config/config-files/newsletter-service.yml
+
     com.newnormallist.newsservice: DEBUG
     org.springframework.security: WARN
 
@@ -30,7 +30,7 @@ services:
     url: http://localhost:8081
   news-service:
     url: http://localhost:8082
-========
+
     com.newnormallist.crawlerservice: INFO
     org.springframework.web: INFO
     org.hibernate: OFF
@@ -41,4 +41,4 @@ services:
     org.openqa.selenium: OFF
     org.seleniumhq.selenium: OFF
     root: WARN
->>>>>>>> develop:config/config-files/crawler-service.yml
+

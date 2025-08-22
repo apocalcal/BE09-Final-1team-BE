@@ -81,8 +81,8 @@ public class NewsServiceImpl implements NewsService {
             return newsRepository.findByCategory(category, pageable)
                     .map(this::convertToNewsResponse);
         } else {
-            // 전체 뉴스
-            return newsRepository.findAll(pageable)
+            // 전체 뉴스 (최신순 정렬)
+            return newsRepository.findAllByOrderByPublishedAtDesc(pageable)
                     .map(this::convertToNewsResponse);
         }
     }
@@ -273,7 +273,10 @@ public class NewsServiceImpl implements NewsService {
     
     @Override
     public List<NewsListResponse> getNewsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
-        return newsRepository.findByCreatedAtBetween(startDate, endDate)
+        // LocalDateTime을 String으로 변환하여 전달
+        String startDateStr = startDate.toString();
+        String endDateStr = endDate.toString();
+        return newsRepository.findByPublishedAtBetween(startDateStr, endDateStr)
                 .stream()
                 .map(this::convertToNewsListResponse)
                 .collect(Collectors.toList());
