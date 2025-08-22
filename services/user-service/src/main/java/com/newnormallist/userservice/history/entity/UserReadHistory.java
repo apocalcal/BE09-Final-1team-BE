@@ -52,7 +52,5 @@ public class UserReadHistory {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public void updateReadTime() {
-        this.updatedAt = LocalDateTime.now();
-    }
+
 }
