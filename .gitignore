@@ -51,7 +51,7 @@ out/
 .zsh_history
 
 # target directory
-news-service/target/
+newsEntity-service/target/
 target/
 
 # app-local files

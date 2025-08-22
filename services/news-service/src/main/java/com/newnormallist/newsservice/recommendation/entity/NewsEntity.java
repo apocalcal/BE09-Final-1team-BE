@@ -1,4 +1,4 @@
-package com.newnormallist.newsservice.news.entity;
+package com.newnormallist.newsservice.recommendation.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -6,17 +6,21 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
+
+// 뉴스 마스터 테이블 매핑
+// 핵심 인덱스 : (category, published_at DESC) -> 카테고리별 최신 기사 추출\
 @Entity
-@Table(name = "news")
+@Table(name = "news", indexes = {
+    @Index(name = "idx_news_cat_pub", columnList = "category_name, published_at")
+})
+// WHERE category_name = ? ORDER BY published_at DESC 같은 쿼리에서 효율적으로 최신 기사를 뽑을 수 있음
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class News {
-
+public class NewsEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "news_id")
@@ -59,14 +63,10 @@ public class News {
     @Column(name = "trusted", nullable = false)
     @Builder.Default
     private Boolean trusted = true;
-
-    @Column(name = "oid_aid")
-    private String oidAid;
-
+    
     @Column(name = "link", nullable = false, columnDefinition = "TEXT")
     private String link;
 
-    // 뉴스레터와의 N:N 연결
-    @OneToMany(mappedBy = "news")
-    private List<NewsletterNews> newsletterNewsList;
+    @Column(name = "oid_aid")
+    private String oidAid;
 }

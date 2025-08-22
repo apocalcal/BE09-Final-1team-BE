@@ -35,7 +35,7 @@
 **응답:** 200 OK
 
 ### 1.3 사용자 키워드 구독 목록 조회
-**GET** `/api/keywords/user/{userId}`
+**GET** `/api/keywords/userEntity/{userId}`
 
 특정 사용자의 활성화된 키워드 구독 목록을 조회합니다.
 
@@ -183,7 +183,7 @@ GET /api/search?query=AI&sortBy=date&sortOrder=desc&category=IT_SCIENCE&press=�
 curl -X POST "http://localhost:8080/api/keywords/subscribe?userId=1&keyword=AI"
 
 # 2. 구독 목록 확인
-curl -X GET "http://localhost:8080/api/keywords/user/1"
+curl -X GET "http://localhost:8080/api/keywords/userEntity/1"
 
 # 3. 구독 해제
 curl -X DELETE "http://localhost:8080/api/keywords/unsubscribe?userId=1&keyword=AI"

@@ -29,7 +29,7 @@ Java Crawler Service ──→ Python Dedup Service ──→ Java DB Service
 pip install -r requirements.txt
 
 # 2. 파일서버 디렉터리 생성
-mkdir -p /data/news-fileserver
+mkdir -p /data/newsEntity-fileserver
 
 # 3. 서비스 시작
 ./start.sh
@@ -118,12 +118,12 @@ GET /stats
 
 ```
 # 입력 데이터 (Java에서 저장)
-crawled:news:{category}:{timestamp}
-news:list:{category}:{timestamp}
+crawled:newsEntity:{category}:{timestamp}
+newsEntity:list:{category}:{timestamp}
 
 # 출력 데이터 (Python에서 저장)
-deduplicated:news:{category}:{timestamp}
-related:news:{category}:{timestamp}
+deduplicated:newsEntity:{category}:{timestamp}
+related:newsEntity:{category}:{timestamp}
 ```
 
 ## 🔄 **Java 연동**

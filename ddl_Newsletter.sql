@@ -20,8 +20,8 @@ DROP COLUMN IF EXISTS category_id,
 ADD COLUMN category VARCHAR(20) NOT NULL DEFAULT 'SOCIETY' 
 COMMENT '카테고리 enum: POLITICS, ECONOMY, SOCIETY, CULTURE, INTERNATIONAL, IT_SCIENCE';
 
--- news 테이블의 category_id 컬럼을 category enum 컬럼으로 변경
-ALTER TABLE news 
+-- newsEntity 테이블의 category_id 컬럼을 category enum 컬럼으로 변경
+ALTER TABLE newsEntity
 DROP FOREIGN KEY IF EXISTS fk_news_category,
 DROP COLUMN IF EXISTS category_id,
 ADD COLUMN category VARCHAR(20) NOT NULL DEFAULT 'SOCIETY' 

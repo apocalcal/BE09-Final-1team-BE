@@ -9,7 +9,7 @@
 | 컨트롤러 | 역할 | 새로운 URL 패턴 |
 |---------|------|----------------|
 | `SystemController` | 시스템 관리 | `/api/system/*` |
-| `NewsController` | 핵심 뉴스 CRUD | `/api/news/*` |
+| `NewsController` | 핵심 뉴스 CRUD | `/api/newsEntity/*` |
 | `CategoryController` | 카테고리 관리 | `/api/categories/*` |
 | `TrendingController` | 트렌딩/인기 뉴스 | `/api/trending/*` |
 | `PersonalizationController` | 개인화/추천 | `/api/personalization/*` |
@@ -22,19 +22,19 @@
 
 | 기존 URL | 새로운 URL | 설명 |
 |----------|------------|------|
-| `GET /api/news/health` | `GET /api/system/health` | 헬스체크 |
-| `GET /api/news/test-db` | `GET /api/system/test-db` | DB 연결 테스트 |
-| `GET /api/news/categories` | `GET /api/categories` | 카테고리 목록 |
-| `GET /api/news/category/{name}` | `GET /api/categories/{name}/news` | 카테고리별 뉴스 |
-| `GET /api/news/trending` | `GET /api/trending` | 트렌딩 뉴스 |
-| `GET /api/news/trending/list` | `GET /api/trending/list` | 트렌딩 뉴스 리스트 |
-| `GET /api/news/popular` | `GET /api/trending/popular` | 인기 뉴스 |
-| `GET /api/news/latest` | `GET /api/trending/latest` | 최신 뉴스 |
-| `GET /api/news/personalized` | `GET /api/personalization/news` | 개인화 뉴스 |
-| `GET /api/news/recommendations` | `GET /api/personalization/recommendations` | 추천 뉴스 |
-| `GET /api/news/search` | `GET /api/search` | 키워드 검색 |
-| `GET /api/news/press/{press}` | `GET /api/search/press/{press}` | 언론사별 뉴스 |
-| `POST /api/news/promote/{id}` | `POST /api/admin/promote/{id}` | 뉴스 승격 |
+| `GET /api/newsEntity/health` | `GET /api/system/health` | 헬스체크 |
+| `GET /api/newsEntity/test-db` | `GET /api/system/test-db` | DB 연결 테스트 |
+| `GET /api/newsEntity/categories` | `GET /api/categories` | 카테고리 목록 |
+| `GET /api/newsEntity/category/{name}` | `GET /api/categories/{name}/newsEntity` | 카테고리별 뉴스 |
+| `GET /api/newsEntity/trending` | `GET /api/trending` | 트렌딩 뉴스 |
+| `GET /api/newsEntity/trending/list` | `GET /api/trending/list` | 트렌딩 뉴스 리스트 |
+| `GET /api/newsEntity/popular` | `GET /api/trending/popular` | 인기 뉴스 |
+| `GET /api/newsEntity/latest` | `GET /api/trending/latest` | 최신 뉴스 |
+| `GET /api/newsEntity/personalized` | `GET /api/personalization/newsEntity` | 개인화 뉴스 |
+| `GET /api/newsEntity/recommendations` | `GET /api/personalization/recommendations` | 추천 뉴스 |
+| `GET /api/newsEntity/search` | `GET /api/search` | 키워드 검색 |
+| `GET /api/newsEntity/press/{press}` | `GET /api/search/press/{press}` | 언론사별 뉴스 |
+| `POST /api/newsEntity/promote/{id}` | `POST /api/admin/promote/{id}` | 뉴스 승격 |
 
 ## 🚀 마이그레이션 전략
 
@@ -59,18 +59,18 @@ GET /api/system/health          # 헬스체크
 GET /api/system/test-db         # DB 연결 테스트
 ```
 
-### NewsController (`/api/news`)
+### NewsController (`/api/newsEntity`)
 ```http
-GET /api/news                   # 뉴스 목록 (페이징)
-GET /api/news/{newsId}          # 뉴스 상세 조회
-GET /api/news/count             # 뉴스 개수
-POST /api/news/{newsId}/view    # 조회수 증가
+GET /api/newsEntity                   # 뉴스 목록 (페이징)
+GET /api/newsEntity/{newsId}          # 뉴스 상세 조회
+GET /api/newsEntity/count             # 뉴스 개수
+POST /api/newsEntity/{newsId}/view    # 조회수 증가
 ```
 
 ### CategoryController (`/api/categories`)
 ```http
 GET /api/categories                    # 카테고리 목록
-GET /api/categories/{name}/news        # 카테고리별 뉴스
+GET /api/categories/{name}/newsEntity        # 카테고리별 뉴스
 GET /api/categories/{name}/count       # 카테고리별 뉴스 개수
 ```
 
@@ -84,7 +84,7 @@ GET /api/trending/latest       # 최신 뉴스
 
 ### PersonalizationController (`/api/personalization`)
 ```http
-GET /api/personalization/news           # 개인화 뉴스
+GET /api/personalization/newsEntity           # 개인화 뉴스
 GET /api/personalization/recommendations # 추천 뉴스
 ```
 

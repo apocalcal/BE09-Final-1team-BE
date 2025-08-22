@@ -6,7 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import com.newnormallist.newsservice.news.entity.Category;
+import com.newnormallist.newsservice.recommendation.entity.Category;
+import com.newnormallist.newsservice.recommendation.entity.DedupState;
 
 // 뉴스 피드에 노출될 뉴스 정보
 
@@ -20,15 +21,13 @@ public class FeedItemDto {
     private String title;
     private String press;
     private String link;
-    private Integer trusted;
+    private Boolean trusted;
     private LocalDateTime publishedAt;
     private LocalDateTime createdAt;
-    private String reporterName;
+    private String reporter;
     private Integer viewCount;
     private Category categoryName;
-    private String categoryDescription;
-    private String dedupState;
-    private String dedupStateDescription;
+    private DedupState dedupState;
     private String imageUrl;
     private String oidAid;
     private LocalDateTime updatedAt;
