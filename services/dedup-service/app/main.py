@@ -208,7 +208,7 @@ async def get_deduplicated_news(category: str):
         return {
             "category": category,
             "count": len(news_list),
-            "newsEntity": news_list
+            "news": news_list
         }
     except Exception as e:
         logger.error(f"중복제거된 뉴스 조회 실패: {e}")
