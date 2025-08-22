@@ -1,5 +1,6 @@
 server:
   port: 8000
+  forward-headers-strategy: framework
 
 spring:
   cloud:
@@ -9,8 +10,6 @@ spring:
           discovery:
             locator:
               enabled: false
-          default-filters:
-            - ForwardedHeaders
           routes:
             - id: user-service-route
               uri: lb://USER-SERVICE
