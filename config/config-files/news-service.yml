@@ -27,7 +27,7 @@ logging:
 springdoc:
   api-docs:
     enabled: true # /v3/api-docs 활성화
-    path: /v3/api-docs # 문서 JSON 경로
+    path: /news-api-docs # 문서 JSON 경로
   swagger-ui:
     enabled: true # Swagger UI 활성화
     path: /swagger-ui # UI 접속 경로(예: http://localhost:8082/swagger-ui)

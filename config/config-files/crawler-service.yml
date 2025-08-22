@@ -20,6 +20,17 @@ management:
 # 4. 로깅 레벨 설정
 logging:
   level:
+
+    com.newnormallist.newsservice: DEBUG
+    org.springframework.security: WARN
+
+# 5. 서비스 간 통신을 위한 URL 설정
+services:
+  user-service:
+    url: http://localhost:8081
+  news-service:
+    url: http://localhost:8082
+
     com.newnormallist.crawlerservice: INFO
     org.springframework.web: INFO
     org.hibernate: OFF
@@ -30,3 +41,4 @@ logging:
     org.openqa.selenium: OFF
     org.seleniumhq.selenium: OFF
     root: WARN
+

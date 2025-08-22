@@ -88,9 +88,9 @@ public class RelatedNewsServiceImpl implements RelatedNewsService {
      * KEPT 상태의 뉴스에 대한 연관뉴스 조회
      */
     private List<News> getRelatedNewsForKept(News news) {
-        // 같은 created_at, 같은 category_name인 뉴스를 랜덤으로 4개 조회 (해당 뉴스 제외)
-        List<News> sameTimeCategoryNews = newsRepository.findByCreatedAtAndCategoryNameAndNewsIdNot(
-                news.getCreatedAt(), news.getCategoryName(), news.getNewsId());
+        // 같은 published_at, 같은 category_name인 뉴스를 랜덤으로 4개 조회 (해당 뉴스 제외)
+        List<News> sameTimeCategoryNews = newsRepository.findByPublishedAtAndCategoryNameAndNewsIdNot(
+                news.getPublishedAt(), news.getCategoryName(), news.getNewsId());
 
         if (sameTimeCategoryNews.size() >= MAX_RELATED_NEWS) {
             Collections.shuffle(sameTimeCategoryNews);
@@ -147,19 +147,19 @@ public class RelatedNewsServiceImpl implements RelatedNewsService {
         excludeNewsIds.add(news.getNewsId()); // 현재 뉴스도 제외
 
         // 같은 날짜, 같은 카테고리, 같은 시간대(오전/오후)인 뉴스 조회
-        LocalDateTime startOfDay = news.getCreatedAt().toLocalDate().atStartOfDay();
+        LocalDateTime startOfDay = LocalDateTime.parse(news.getPublishedAt()).toLocalDate().atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         
-        List<News> sameDayCategoryNews = newsRepository.findByCreatedAtBetweenAndCategoryNameAndNewsIdNotIn(
-                startOfDay, endOfDay, news.getCategoryName(), excludeNewsIds);
+        List<News> sameDayCategoryNews = newsRepository.findByPublishedAtBetweenAndCategoryNameAndNewsIdNotIn(
+                startOfDay.toString(), endOfDay.toString(), news.getCategoryName(), excludeNewsIds);
 
         // 오전/오후 시간대 필터링
-        LocalTime newsTime = news.getCreatedAt().toLocalTime();
+        LocalTime newsTime = LocalDateTime.parse(news.getPublishedAt()).toLocalTime();
         boolean isMorning = newsTime.isBefore(LocalTime.NOON);
         
         List<News> filteredNews = sameDayCategoryNews.stream()
                 .filter(n -> {
-                    LocalTime time = n.getCreatedAt().toLocalTime();
+                    LocalTime time = LocalDateTime.parse(n.getPublishedAt()).toLocalTime();
                     boolean newsIsMorning = time.isBefore(LocalTime.NOON);
                     return isMorning == newsIsMorning;
                 })

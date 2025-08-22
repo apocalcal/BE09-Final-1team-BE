@@ -65,3 +65,7 @@ springdoc:
         url: /user-api-docs
       - name: 'news-service'
         url: /news-api-docs
+
+api-docs:
+  groups:
+    enabled: true
