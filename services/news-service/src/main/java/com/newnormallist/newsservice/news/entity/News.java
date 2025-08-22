@@ -3,7 +3,6 @@ package com.newnormallist.newsservice.news.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -42,12 +41,8 @@ public class News {
     private String reporter;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = true)
     private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "dedup_state", nullable = false)
@@ -56,11 +51,10 @@ public class News {
     @Column(name = "image_url", columnDefinition = "TEXT")
     private String imageUrl;
 
-    @Column(name = "trusted", nullable = false)
-    @Builder.Default
-    private Boolean trusted = true;
+    @Column(name = "trusted", columnDefinition="bit(1)", nullable = true)
+    private Boolean trusted;
 
-    @Column(name = "oid_aid")
+    @Column(name = "oid_aid", length=255, unique=true)
     private String oidAid;
 
     @Column(name = "link", nullable = false, columnDefinition = "TEXT")
