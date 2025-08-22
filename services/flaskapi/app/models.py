@@ -78,9 +78,16 @@ class NewsSummary(db.Model):
     __tablename__ = "news_summary"
 
     # MySQL: BIGINT AUTO_INCREMENT
-    id = db.Column(
-        db.BigInteger().with_variant(db.Integer, "sqlite"),
-        primary_key=True, autoincrement=True
+    id = db.Column(db.Integer, primary_key=True)
+    news_id = db.Column(db.String(255), nullable=False, index=True)
+    summary_type = db.Column(db.String(50), nullable=False)
+    lines = db.Column(db.Integer, nullable=False, default=3)
+    summary_text = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('news_id', 'summary_type', 'lines',
+                            name='uq_news_summary_key'),
     )
 
     news_id = db.Column(

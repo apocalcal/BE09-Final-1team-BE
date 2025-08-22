@@ -1,7 +1,6 @@
 # main.py
 from app import create_app
 import os
-import socket
 
 app = create_app()
 
