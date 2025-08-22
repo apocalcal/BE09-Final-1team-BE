@@ -51,4 +51,6 @@ public class UserReadHistory {
     public void updateReadTime() {
         this.updatedAt = LocalDateTime.now();
     }
+
+
 }
