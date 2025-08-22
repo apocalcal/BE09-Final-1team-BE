@@ -8,7 +8,6 @@ import com.newnormallist.userservice.history.repository.UserReadHistoryRepositor
 import com.newnormallist.userservice.user.dto.*;
 import com.newnormallist.userservice.user.entity.NewsCategory;
 import com.newnormallist.userservice.user.entity.User;
-
 import com.newnormallist.userservice.common.exception.UserException;
 import com.newnormallist.userservice.user.entity.UserStatus;
 import com.newnormallist.userservice.user.repository.UserRepository;
