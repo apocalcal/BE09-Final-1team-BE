@@ -227,7 +227,6 @@ public class UserService {
                 log.info("뉴스 읽음 기록 갱신 완료 - 사용자 ID: {}, 뉴스 ID: {}", userId, newsId);
                 return;
             }
-
             // 기록을 저장하기 위해 User 엔티티 조회
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
