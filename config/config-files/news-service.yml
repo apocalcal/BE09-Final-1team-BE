@@ -1,6 +1,7 @@
 # 1. 서버 포트 설정
 server:
   port: 8082
+  forward-headers-strategy: framework
 
 # 2. Eureka 클라이언트 설정
 eureka:
@@ -25,6 +26,7 @@ logging:
 
 # 5. Swagger(OpenAPI) 기본 설정
 springdoc:
+  forward-headers-enabled: true # 게이트웨이에서 전달된 헤더를 사용
   api-docs:
     enabled: true # /v3/api-docs 활성화
     path: /news-api-docs # 문서 JSON 경로
@@ -74,4 +76,6 @@ reco:
 # scheduling:
 #   vector-update:
 #     daily-cron: '0 0 2 * * ?' # 매일 새벽 2시
-#     hourly-cron: '0 0 * * * ?' # 매시간 정각
+#     hourly-cron: '0 0 * * * ?' # 매시간 정각\
+app:
+  gateway-url: http://localhost:8000 # 게이트웨이 URL (개발/테스트용)
