@@ -41,14 +41,14 @@ class FileServerService:
     """
     
     def __init__(self):
-        self.base_path = getattr(settings, 'FILESERVER_PATH', '/data/newsEntity-fileserver')
+        self.base_path = getattr(settings, 'FILESERVER_PATH', '/data/news-fileserver')
         self.time_format = "%Y-%m-%d"
         self.hour_format = "%H"
         
     def _get_current_time_path(self) -> str:
         """
         현재 시간 기반 디렉터리 경로 생성
-        예: /data/newsEntity-fileserver/am/2025-08-19_am/ 또는 /data/newsEntity-fileserver/pm/2025-08-19_pm/
+        예: /data/news-fileserver/am/2025-08-19_am/ 또는 /data/news-fileserver/pm/2025-08-19_pm/
         """
         now = datetime.now()
         date_str = now.strftime(self.time_format)
@@ -200,20 +200,20 @@ class FileServerService:
             writer.writeheader()
             
             # 데이터 쓰기
-            for newsEntity in news_list:
+            for news in news_list:
                 row = {
-                    'title': newsEntity.title or '',
-                    'press': newsEntity.press or '',
-                    'reporter': newsEntity.reporter or '',
-                    'date': newsEntity.date or '',
-                    'link': newsEntity.link or '',
-                    'imageUrl': newsEntity.image_url or '',
-                    'oidAid': newsEntity.oid_aid or '',
-                    'trusted': newsEntity.trusted or 0,
-                    'content': newsEntity.content or '',
-                    'dedupState': newsEntity.dedup_state or '',
-                    'categoryName': newsEntity.category_name or category,  # 카테고리명 보존
-                    'createdAt': newsEntity.created_at or datetime.now().isoformat()  # 생성시간 보존
+                    'title': news.title or '',
+                    'press': news.press or '',
+                    'reporter': news.reporter or '',
+                    'date': news.date or '',
+                    'link': news.link or '',
+                    'imageUrl': news.image_url or '',
+                    'oidAid': news.oid_aid or '',
+                    'trusted': news.trusted or 0,
+                    'content': news.content or '',
+                    'dedupState': news.dedup_state or '',
+                    'categoryName': news.category_name or category,  # 카테고리명 보존
+                    'createdAt': news.created_at or datetime.now().isoformat()  # 생성시간 보존
                 }
                 writer.writerow(row)
             
@@ -275,7 +275,7 @@ class FileServerService:
                         except (ValueError, TypeError):
                             trusted_value = 0
                     
-                    newsEntity = NewsDetail(
+                    news = NewsDetail(
                         title=row.get('title', ''),
                         press=row.get('press', ''),
                         reporter=row.get('reporter', ''),
@@ -290,7 +290,7 @@ class FileServerService:
                         category_name=row.get('categoryName', category),
                         created_at=row.get('createdAt', '')
                     )
-                    news_list.append(newsEntity)
+                    news_list.append(news)
             
             logger.info(f"📁 파일서버 조회 완료: {file_path} - 카테고리: {category}, 개수: {len(news_list)}")
             return news_list
