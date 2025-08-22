@@ -10,8 +10,10 @@ import java.util.List;
 
 @FeignClient(
         name = "news-service",
-        url = "${NEWS_SERVICE_URL:http://localhost:8082}",
-        contextId = "newsletterNewsServiceClient")
+        url  = "${NEWS_SERVICE_URL:http://news-service:8082}", // ✅ Compose DNS
+        contextId = "newsletterNewsServiceClient",
+        path = "/api/news"
+)
 public interface NewsServiceClient {
 
     /**

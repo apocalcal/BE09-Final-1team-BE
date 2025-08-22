@@ -11,9 +11,11 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @FeignClient(
-        name = "user-service-client", 
-        url = "${services.user-service.url:http://localhost:8081}",
-        contextId = "newsletterUserServiceClient")
+        name = "user-service",
+        url = "${USER_SERVICE_URL:http://user-service:8081}",
+        contextId = "newsletterUserServiceClient",
+        path = "/api/users"
+)
 public interface UserServiceClient {
     
     /**
