@@ -8,24 +8,25 @@ import org.springframework.data.domain.Page;
 import java.util.List;
 import java.util.Collection;
 
-import com.newnormallist.newsservice.recommendation.entity.News;
+import com.newnormallist.newsservice.recommendation.entity.NewsEntity;
 import com.newnormallist.newsservice.recommendation.entity.Category;
 
 
 // findLatestIdsByCategory(cat, limit) : 카테고리 최신 뉴스 ID 가져오기.
 // findByIdIn(ids) : 메타 정보 일괄 조회.
 // findCategoryById(id) : 조회 로그 저장 시 newsId → category 팝업용.
-public interface NewsRepository extends JpaRepository<News, Long> {
+public interface RecommendationNewsRepository extends JpaRepository<NewsEntity, Long> {
 
-    @Query("select n.id from News n where n.category = :cat order by n.publishedAt desc")
+    @Query("SELECT n.newsId FROM NewsEntity n WHERE n.categoryName = :cat ORDER BY n.publishedAt DESC")
     List<Long> findLatestIdsByCategory(@Param("cat") Category category, Pageable pageable);
 
-    List<News> findByIdIn(Collection<Long> ids);
+    @Query("SELECT n FROM NewsEntity n WHERE n.newsId IN :ids")
+    List<NewsEntity> findByIdIn(@Param("ids") Collection<Long> ids);
 
-    @Query("select n.category from News n where n.id = :id")
+    @Query("SELECT n.categoryName FROM NewsEntity n WHERE n.newsId = :id")
     Category findCategoryById(@Param("id") Long id);
     
     // published_at 기준 최신순 정렬 (전체 뉴스 피드용)
-    @Query("select n from News n order by n.publishedAt desc")
-    Page<News> findAllByOrderByPublishedAtDesc(Pageable pageable);
+    @Query("SELECT n FROM NewsEntity n ORDER BY n.publishedAt DESC")
+    Page<NewsEntity> findAllByOrderByPublishedAtDesc(Pageable pageable);
 }

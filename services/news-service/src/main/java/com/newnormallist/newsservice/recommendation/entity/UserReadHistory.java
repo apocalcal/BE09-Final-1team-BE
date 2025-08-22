@@ -20,7 +20,7 @@ public class UserReadHistory {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private UserEntity userEntity;
 
     @Column(name = "news_id", nullable = false)
     private Long newsId;
@@ -38,8 +38,8 @@ public class UserReadHistory {
     private LocalDateTime updatedAt;
 
     @Builder
-    public UserReadHistory(User user, Long newsId, Category categoryName) {
-        this.user = user;
+    public UserReadHistory(UserEntity userEntity, Long newsId, Category categoryName) {
+        this.userEntity = userEntity;
         this.newsId = newsId;
         this.categoryName = categoryName;
     }

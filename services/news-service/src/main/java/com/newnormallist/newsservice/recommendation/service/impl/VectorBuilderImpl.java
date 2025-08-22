@@ -39,22 +39,22 @@ public class VectorBuilderImpl implements VectorBuilder {
     private final PrefVectorHelper prefVectorHelper;
 
     @Override
-    public List<UserPrefVector> recomputeForUser(User user) {
+    public List<UserPrefVector> recomputeForUser(UserEntity userEntity) {
         
         // 1. 사용자 연령/성별 정보 추출
-        AgeBucket ageBucket = calculateAgeBucket(user.getBirthYear());
+        AgeBucket ageBucket = calculateAgeBucket(userEntity.getBirthYear());
         
         // 2. D(c) - 인구통계학적 기본 분포
-        Map<Category, Double> D = demoBaseProvider.getBase(ageBucket, user.getGender());
+        Map<Category, Double> D = demoBaseProvider.getBase(ageBucket, userEntity.getGender());
         
         // 3. P(c) - 사용자 선호 카테고리 분포
-        Map<Category, Double> P = prefVectorHelper.buildP(user.getId());
+        Map<Category, Double> P = prefVectorHelper.buildP(userEntity.getId());
         
         // 4. R(c) - 최근 7일 조회 기록
-        Map<Category, Double> R = buildReadVector(user.getId());
+        Map<Category, Double> R = buildReadVector(userEntity.getId());
         
         // 5. S(c) - 최근 30일 스크랩 기록
-        Map<Category, Double> S = buildScrapVector(user.getId());
+        Map<Category, Double> S = buildScrapVector(userEntity.getId());
         
         // 6. 가중치 선택
         int readCount = (int) R.values().stream().mapToDouble(Double::doubleValue).sum();
@@ -70,7 +70,7 @@ public class VectorBuilderImpl implements VectorBuilder {
                          weights.getWScrap() * S.getOrDefault(category, 0.0);
             
             vectors.add(UserPrefVector.builder()
-                .userId(user.getId())
+                .userId(userEntity.getId())
                 .category(category)
                 .score(score)
                 .wDemo(weights.getWDemo())
@@ -131,7 +131,7 @@ public class VectorBuilderImpl implements VectorBuilder {
     private Map<Category, Double> buildScrapVector(Long userId) {
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
         
-        List<NewsScrap> scraps = newsScrapRepository.findRecentScrapsAcrossAllBoxes(userId, thirtyDaysAgo.toInstant(java.time.ZoneOffset.UTC));
+        List<NewsScrap> scraps = newsScrapRepository.findRecentScrapsByUserId(userId, thirtyDaysAgo.toInstant(java.time.ZoneOffset.UTC));
         
         Map<Category, Double> categoryWeights = new HashMap<>();
         double totalWeight = 0.0;
@@ -140,7 +140,7 @@ public class VectorBuilderImpl implements VectorBuilder {
             long daysDiff = java.time.Duration.between(scrap.getCreatedAt(), LocalDateTime.now()).toDays();
             double weight = MathUtils.dayWeight(daysDiff, properties.getScrapHalfLifeDays());
             
-            categoryWeights.merge(scrap.getNews().getCategoryName(), weight, Double::sum);
+            categoryWeights.merge(scrap.getNewsEntity().getCategoryName(), weight, Double::sum);
             totalWeight += weight;
         }
         

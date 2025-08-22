@@ -9,7 +9,7 @@ def summarize(text: str, prompt: str) -> str:
         model=Config.OPENAI_MODEL,
         messages=[
             {"role": "system", "content": "당신은 뉴스 요약 전문가입니다."},
-            {"role": "user", "content": f"{prompt}\n\n{text}"},
+            {"role": "userEntity", "content": f"{prompt}\n\n{text}"},
         ]
     )
     return resp.choices[0].message.content.strip()

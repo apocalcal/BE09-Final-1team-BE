@@ -44,7 +44,7 @@
 
 ```bash
 # 파일서버 설정
-export FILESERVER_BASE_PATH=/data/news-fileserver
+export FILESERVER_BASE_PATH=/data/newsEntity-fileserver
 
 # 데이터베이스 설정
 export DATABASE_URL=jdbc:mysql://your-mysql-host:3306/newsdb
@@ -206,7 +206,7 @@ docker stats crawler-service
 curl http://localhost:8083/api/crawler/deduplication/stats
 
 # Redis 데이터 확인
-redis-cli -h your-redis-host keys "crawled:news:*"
+redis-cli -h your-redis-host keys "crawled:newsEntity:*"
 ```
 
 ## 📈 성능 최적화

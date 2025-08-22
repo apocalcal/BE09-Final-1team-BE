@@ -1,26 +1,27 @@
 package com.newnormallist.newsservice.recommendation.mapper;
 
 import com.newnormallist.newsservice.recommendation.dto.FeedItemDto;
-import com.newnormallist.newsservice.recommendation.entity.News;
+import com.newnormallist.newsservice.recommendation.entity.NewsEntity;
+
 import java.time.LocalDateTime;
 
 // News 엔티티를 FeedItemDto로 변환하는 매퍼
 public class FeedMapper {
-    public static FeedItemDto toDto(News news) {
+    public static FeedItemDto toDto(NewsEntity newsEntity) {
         return FeedItemDto.builder()
-            .newsId(news.getNewsId())
-            .title(news.getTitle())
-            .press(news.getPress())
-            .link(news.getLink())
-            .trusted(news.getTrusted())
-            .publishedAt(LocalDateTime.parse(news.getPublishedAt()))
-            .createdAt(news.getCreatedAt())
-            .reporter(news.getReporter())   
-            .categoryName(news.getCategoryName())
-            .dedupState(news.getDedupState())
-            .imageUrl(news.getImageUrl())
-            .oidAid(news.getOidAid())
-            .updatedAt(news.getUpdatedAt())
+            .newsId(newsEntity.getNewsId())
+            .title(newsEntity.getTitle())
+            .press(newsEntity.getPress())
+            .link(newsEntity.getLink())
+            .trusted(newsEntity.getTrusted())
+            .publishedAt(LocalDateTime.parse(newsEntity.getPublishedAt()))
+            .createdAt(newsEntity.getCreatedAt())
+            .reporter(newsEntity.getReporter())
+            .categoryName(newsEntity.getCategoryName())
+            .dedupState(newsEntity.getDedupState())
+            .imageUrl(newsEntity.getImageUrl())
+            .oidAid(newsEntity.getOidAid())
+            .updatedAt(newsEntity.getUpdatedAt())
             .build();
     }
 }

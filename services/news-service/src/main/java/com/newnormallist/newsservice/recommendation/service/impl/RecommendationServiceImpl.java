@@ -26,7 +26,7 @@ public class RecommendationServiceImpl implements RecommendationService {
 
     private final VectorBatchService vectorBatchService;
     private final UserPrefVectorRepository userPrefVectorRepository;
-    private final NewsRepository newsRepository;
+    private final RecommendationNewsRepository newsRepository;
     private final RecommendationProperties properties;
 
     @Override
@@ -62,11 +62,11 @@ public class RecommendationServiceImpl implements RecommendationService {
         }
         
         // 4. 뉴스 메타 정보 일괄 조회
-        List<News> newsList = newsRepository.findByIdIn(newsIds);
+        List<NewsEntity> newsList = newsRepository.findByIdIn(newsIds);
         
         // 5. ID 순서대로 정렬 (원래 요청 순서 유지)
-        Map<Long, News> newsMap = newsList.stream()
-            .collect(Collectors.toMap(News::getNewsId, news -> news));
+        Map<Long, NewsEntity> newsMap = newsList.stream()
+            .collect(Collectors.toMap(NewsEntity::getNewsId, news -> news));
         
         List<FeedItemDto> feedItems = newsIds.stream()
             .map(newsId -> newsMap.get(newsId))

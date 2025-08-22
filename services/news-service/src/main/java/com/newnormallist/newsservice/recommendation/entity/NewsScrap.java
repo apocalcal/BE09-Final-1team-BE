@@ -26,7 +26,7 @@ public class NewsScrap {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "news_id", nullable = false)
-    private News news;
+    private NewsEntity newsEntity;
 
     @Column(name = "storage_id", nullable = false)
     private Integer storageId;

@@ -1,8 +1,9 @@
 package com.newnormallist.newsservice.recommendation.service;
 
 import java.util.List;
+
+import com.newnormallist.newsservice.recommendation.entity.UserEntity;
 import com.newnormallist.newsservice.recommendation.entity.UserPrefVector;
-import com.newnormallist.newsservice.recommendation.entity.User;
 
 /* 사용자 벡터 계산기 인터페이스.
 
@@ -17,5 +18,5 @@ import com.newnormallist.newsservice.recommendation.entity.User;
 
 */
 public interface VectorBuilder {
-    List<UserPrefVector> recomputeForUser(User user);
+    List<UserPrefVector> recomputeForUser(UserEntity userEntity);
 }
