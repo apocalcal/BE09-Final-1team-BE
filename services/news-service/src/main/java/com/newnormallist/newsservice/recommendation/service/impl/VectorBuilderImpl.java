@@ -131,7 +131,7 @@ public class VectorBuilderImpl implements VectorBuilder {
     private Map<Category, Double> buildScrapVector(Long userId) {
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
         
-        List<NewsScrap> scraps = newsScrapRepository.findRecentScrapsByUserId(userId, thirtyDaysAgo.toInstant(java.time.ZoneOffset.UTC));
+        List<NewsScrap> scraps = newsScrapRepository.findRecentScrapsByUserId(userId, thirtyDaysAgo);
         
         Map<Category, Double> categoryWeights = new HashMap<>();
         double totalWeight = 0.0;
