@@ -39,10 +39,8 @@ public class NewsletterDeliveryController {
     private final NewsletterDeliveryService deliveryService;
     private final ContentGenerationService contentGenerationService;
 
-    // ===== Newsletter Content API Endpoints =====
-
     /**
-     * Get latest news data for newsletter
+     * 뉴스레터 최신 뉴스 조회
      */
     @GetMapping("/content/latest")
     public ResponseEntity<ApiResponse<List<NewsResponse>>> getLatestNewsContent(
@@ -68,7 +66,7 @@ public class NewsletterDeliveryController {
     }
 
     /**
-     * Get personalized news data for specific users
+     * 개인화된 뉴스 데이터 조회
      */
     @GetMapping("/content/personalized")
     public ResponseEntity<ApiResponse<List<NewsResponse>>> getPersonalizedNewsContent(
@@ -96,7 +94,7 @@ public class NewsletterDeliveryController {
     }
 
     /**
-     * Get news data by specific categories
+     * 카테고리별 뉴스 데이터 조회
      */
     @GetMapping("/content/categories")
     public ResponseEntity<ApiResponse<List<NewsResponse>>> getCategoryNewsContent(
@@ -126,7 +124,7 @@ public class NewsletterDeliveryController {
     }
 
     /**
-     * Get subscriber information
+     * 구독자 정보 조회
      */
     @GetMapping("/content/subscribers")
     public ResponseEntity<ApiResponse<List<UserResponse>>> getSubscriberInfo(
@@ -148,7 +146,7 @@ public class NewsletterDeliveryController {
     }
 
     /**
-     * Get available categories
+     * 사용 가능한 카테고리 조회
      */
     @GetMapping("/content/categories/available")
     public ResponseEntity<ApiResponse<Object>> getAvailableCategories() {

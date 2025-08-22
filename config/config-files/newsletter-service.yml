@@ -28,4 +28,4 @@ services:
   user-service:
     url: http://localhost:8081
   news-service:
-    url: http://localhost:8083
+    url: http://localhost:8082
