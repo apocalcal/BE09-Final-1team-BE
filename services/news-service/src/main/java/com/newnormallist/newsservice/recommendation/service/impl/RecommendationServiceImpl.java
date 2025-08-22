@@ -30,14 +30,14 @@ public class RecommendationServiceImpl implements RecommendationService {
     private final RecommendationProperties properties;
 
     @Override
-    public List<FeedItemDto> getFeed(Long userId) {
+    public List<FeedItemDto> getFeed(Long id) {
         
         // 1. 사용자 벡터 업데이트 (필요시)
-        vectorBatchService.upsert(userId);
+        vectorBatchService.upsert(id);
         
         // 2. 상위 3개 카테고리 조회
         List<UserPrefVector> top3Vectors = userPrefVectorRepository
-            .findTop3ByUserId(userId, PageRequest.of(0, 3));
+            .findTopByUserIdOrderByScoreDesc(id, PageRequest.of(0, 3));
         
         if (top3Vectors.isEmpty()) {
             return Collections.emptyList();
