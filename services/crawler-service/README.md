@@ -103,10 +103,10 @@ crawler:
 ### News Service 연동
 
 ```java
-@FeignClient(name = "news-service")
+@FeignClient(name = "newsEntity-service")
 public interface NewsServiceClient {
-    @PostMapping("/api/news/crawl/batch")
-    ResponseEntity<String> saveNewsBatch(@RequestBody List<NewsDetail> newsList);
+    @PostMapping("/api/newsEntity/crawl/batch")
+    ResponseEntity<String> saveNewsBatch(@RequestBody List<NewsDetail> newsEntityList);
 }
 ```
 
@@ -114,10 +114,10 @@ public interface NewsServiceClient {
 
 ```java
 // 크롤링 결과 저장
-crawlerCacheService.saveCrawledNews(category, newsList);
+crawlerCacheService.saveCrawledNews(category, newsEntityList);
 
 // 크롤링 결과 조회
-List<NewsDetail> newsList = crawlerCacheService.getCrawledNews(category);
+List<NewsDetail> newsEntityList = crawlerCacheService.getCrawledNews(category);
 ```
 
 ## 🐍 Python 연동

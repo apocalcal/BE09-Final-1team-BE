@@ -9,7 +9,7 @@
 ### 연관뉴스 조회
 
 ```
-GET /api/news/{newsId}/related
+GET /api/newsEntity/{newsId}/related
 ```
 
 **요청 파라미터:**
@@ -81,13 +81,13 @@ chmod +x test_related_news_api.sh
 ### 수동 테스트
 
 ```bash
-curl -X GET "http://localhost:8083/api/news/1/related"
+curl -X GET "http://localhost:8083/api/newsEntity/1/related"
 ```
 
 ## 파일 구조
 
 ```
-services/news-service/src/main/java/com/newsservice/news/
+services/newsEntity-service/src/main/java/com/newsservice/newsEntity/
 ├── entity/
 │   └── RelatedNews.java              # RelatedNews 엔티티
 ├── repository/

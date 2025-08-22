@@ -110,7 +110,7 @@ class NewsListResponse(BaseModel):
     """뉴스 목록 응답"""
     category: str
     count: int
-    news: List[NewsDetail]
+    newsEntity: List[NewsDetail]
 
 # 연관뉴스 목록 응답
 class RelatedNewsResponse(BaseModel):

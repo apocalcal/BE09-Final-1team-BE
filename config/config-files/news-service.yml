@@ -26,19 +26,52 @@ logging:
 # 5. Swagger(OpenAPI) 기본 설정
 springdoc:
   api-docs:
-    enabled: true               # /v3/api-docs 활성화
-    path: /v3/api-docs          # 문서 JSON 경로
+    enabled: true # /v3/api-docs 활성화
+    path: /v3/api-docs # 문서 JSON 경로
   swagger-ui:
-    enabled: true               # Swagger UI 활성화
-    path: /swagger-ui           # UI 접속 경로(예: http://localhost:8082/swagger-ui)
+    enabled: true # Swagger UI 활성화
+    path: /swagger-ui # UI 접속 경로(예: http://localhost:8082/swagger-ui)
     display-request-duration: true
-    operations-sorter: method   # 메서드명 순 정렬(get/post/…)
-    tags-sorter: alpha          # 태그 알파벳 정렬
+    operations-sorter: method # 메서드명 순 정렬(get/post/…)
+    tags-sorter: alpha # 태그 알파벳 정렬
   # 스캔 범위 제한(선택) — 뉴스 서비스 컨트롤러만 문서화
   packages-to-scan: com.newnormallist.newsservice.news.controller
   paths-to-match: /api/news/**
 
-
 # (추가) 요약 기능 추가 설정
 summarizer:
-  base-url: http://flaskapi:5000   # 도커 브리지 네트워크 서비스명
+  base-url: http://flaskapi:5000 # 도커 브리지 네트워크 서비스명
+
+# 6. 추천 시스템 설정
+reco:
+  quotas: [7, 5, 3] # 상위 3개 카테고리에서 각각 가져올 뉴스 수
+  read-threshold: 10 # 조회 수 임계값
+  scrap-threshold: 10 # 스크랩 수 임계값
+  read-half-life-days: 3.0 # 조회 기록 반감기 (일)
+  scrap-half-life-days: 10.0 # 스크랩 기록 반감기 (일)
+
+  # 케이스별 기본 가중치 (정규화 전)
+  case1-demo: 0.70
+  case1-pref: 0.30
+  case1-read: 0.0
+  case1-scrap: 0.0
+
+  case2-demo: 0.40
+  case2-pref: 0.20
+  case2-read: 0.40
+  case2-scrap: 0.0
+
+  case3-demo: 0.35
+  case3-pref: 0.25
+  case3-read: 0.0
+  case3-scrap: 0.40
+
+  case4-demo: 0.20
+  case4-pref: 0.10
+  case4-read: 0.35
+  case4-scrap: 0.35
+# # 6. 스케줄러 설정
+# scheduling:
+#   vector-update:
+#     daily-cron: '0 0 2 * * ?' # 매일 새벽 2시
+#     hourly-cron: '0 0 * * * ?' # 매시간 정각
