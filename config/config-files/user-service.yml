@@ -39,3 +39,6 @@ springdoc:
       paths-to-match:
         - /api/users/**
         - /api/auth/** # auth API도 문서에 포함
+
+app:
+  gateway-url: http://localhost:8000 # 게이트웨이 URL (개발/테스트용)
