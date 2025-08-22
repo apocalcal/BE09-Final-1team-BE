@@ -12,7 +12,7 @@ DEDUP_ENUM = ("REPRESENTATIVE", "RELATED", "KEPT")
 
 
 class News(db.Model):
-    __tablename__ = "newsEntity"
+    __tablename__ = "news"
     __table_args__ = (
         Index("idx_dedup_state", "dedup_state"),
         Index("idx_published_at", "published_at"),
@@ -85,7 +85,7 @@ class NewsSummary(db.Model):
 
     news_id = db.Column(
         db.BigInteger().with_variant(db.Integer, "sqlite"),
-        db.ForeignKey("newsEntity.news_id"),
+        db.ForeignKey("news.news_id"),
         index=True,
         nullable=True
     )
@@ -106,7 +106,7 @@ class NewsSummary(db.Model):
         server_default=text("CURRENT_TIMESTAMP")
     )
 
-    newsEntity = db.relationship("News", backref=db.backref("summaries", lazy=True))
+    news = db.relationship("News", backref=db.backref("summaries", lazy=True))
 
 
 
