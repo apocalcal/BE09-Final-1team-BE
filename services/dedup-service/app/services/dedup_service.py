@@ -214,8 +214,8 @@ class DeduplicationService:
         """
         # 1. 제목 전처리 (파이썬: df['clean_title'] = df['title'].apply(preprocess_titles))
         clean_titles = []
-        for news in news_list:
-            clean_title = await self._preprocess_titles(news.title)
+        for newsEntity in news_list:
+            clean_title = await self._preprocess_titles(newsEntity.title)
             clean_titles.append(clean_title)
         
         # 2. 제목 유사도 계산 (파이썬: compute_title_similarity)
@@ -401,10 +401,10 @@ class DeduplicationService:
         for group in title_groups:
             if len(group) == 1:
                 # 단일 기사는 그대로 유지
-                news = original_news[group[0]]
+                newsEntity = original_news[group[0]]
 
-                news.dedup_state = "KEPT"
-                deduplicated_news.append(news)
+                newsEntity.dedup_state = "KEPT"
+                deduplicated_news.append(newsEntity)
                 processed_indices.add(group[0])
             else:
                 # 그룹 내 본문 기반 중복제거
@@ -435,18 +435,18 @@ class DeduplicationService:
                 else:
                     # 대표 기사 선정 실패 시 모든 기사 유지
                     for idx in group:
-                        news = original_news[idx]
-                        news.dedup_state = "KEPT"
-                        deduplicated_news.append(news)
+                        newsEntity = original_news[idx]
+                        newsEntity.dedup_state = "KEPT"
+                        deduplicated_news.append(newsEntity)
                         processed_indices.add(idx)
         
         # 그룹화되지 않은 독립 기사들 추가
         for i in range(len(original_news)):
             if i not in processed_indices:
-                news = original_news[i]
+                newsEntity = original_news[i]
 
-                news.dedup_state = "KEPT"
-                deduplicated_news.append(news)
+                newsEntity.dedup_state = "KEPT"
+                deduplicated_news.append(newsEntity)
         
         return deduplicated_news, all_related_news, total_removed
     
@@ -540,12 +540,12 @@ class DeduplicationService:
             # 최종 fallback: 단위행렬
             return np.eye(len(docs))
     
-    def _generate_oid_aid(self, news: NewsDetail) -> str:
+    def _generate_oid_aid(self, newsEntity: NewsDetail) -> str:
         """OID-AID 생성 (Java 로직과 동일)"""
-        if news.oid_aid:
-            return news.oid_aid
+        if newsEntity.oid_aid:
+            return newsEntity.oid_aid
         
-        url = news.link
+        url = newsEntity.link
         if url and "/article/" in url:
             try:
                 parts = url.split("/article/")[1].split("/")

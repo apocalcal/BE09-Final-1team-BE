@@ -7,12 +7,12 @@
 ### 1. 뉴스 크롤링 데이터 저장
 크롤러에서 수집한 뉴스 데이터를 저장하는 API입니다.
 
-**POST** `/api/news/crawl`
+**POST** `/api/newsEntity/crawl`
 
 **Request Body:**
 ```json
 {
-  "link": "https://example.com/news/article/12345",
+  "link": "https://example.com/newsEntity/article/12345",
   "title": "뉴스 제목",
   "press": "언론사명",
   "content": "뉴스 내용",
@@ -30,7 +30,7 @@ HTTP 200 OK
 ### 2. 뉴스 승격 (관리자용)
 크롤링된 뉴스를 승격하여 프론트엔드에 노출할 뉴스로 전환합니다.
 
-**POST** `/api/news/promote/{newsCrawlId}`
+**POST** `/api/newsEntity/promote/{newsCrawlId}`
 
 **Response:**
 ```json
@@ -42,7 +42,7 @@ HTTP 200 OK
 ### 3. 커스텀 요약으로 뉴스 승격 (관리자용)
 요약과 신뢰도를 직접 지정하여 뉴스를 승격합니다.
 
-**POST** `/api/news/promote/{newsCrawlId}/custom?summary=요약내용&trusted=85`
+**POST** `/api/newsEntity/promote/{newsCrawlId}/custom?summary=요약내용&trusted=85`
 
 **Parameters:**
 - `summary`: 뉴스 요약 (필수)
@@ -51,7 +51,7 @@ HTTP 200 OK
 ### 4. 승격 대기 뉴스 목록 조회 (관리자용)
 아직 승격되지 않은 크롤링 뉴스 목록을 조회합니다.
 
-**GET** `/api/news/pending`
+**GET** `/api/newsEntity/pending`
 
 **Response:**
 ```json
@@ -72,7 +72,7 @@ HTTP 200 OK
 ### 5. 뉴스 조회 (프론트엔드용)
 승격된 뉴스만 조회합니다.
 
-**GET** `/api/news`
+**GET** `/api/newsEntity`
 
 **Query Parameters:**
 - `category`: 뉴스 카테고리 (선택사항)
@@ -81,19 +81,19 @@ HTTP 200 OK
 - `size`: 페이지 크기 (기본값: 20)
 
 ### 6. 특정 뉴스 조회
-**GET** `/api/news/{newsId}`
+**GET** `/api/newsEntity/{newsId}`
 
 ### 7. 개인화 뉴스 조회
-**GET** `/api/news/personalized`
+**GET** `/api/newsEntity/personalized`
 
 **Headers:**
 - `X-User-Id`: 사용자 ID
 
 ### 8. 인기 뉴스 조회
-**GET** `/api/news/trending`
+**GET** `/api/newsEntity/trending`
 
 ### 9. 조회수 증가
-**POST** `/api/news/{newsId}/view`
+**POST** `/api/newsEntity/{newsId}/view`
 
 ## 📊 전체 데이터 흐름
 
@@ -101,24 +101,24 @@ HTTP 200 OK
 
 1. **크롤링 단계**
    ```
-   크롤러 → POST /api/news/crawl → news_crawl 테이블 저장
+   크롤러 → POST /api/newsEntity/crawl → news_crawl 테이블 저장
    ```
 
 2. **승격 단계** (관리자 또는 자동화)
    ```
-   GET /api/news/pending → 승격 대기 목록 확인
-   POST /api/news/promote/{id} → news 테이블로 승격
+   GET /api/newsEntity/pending → 승격 대기 목록 확인
+   POST /api/newsEntity/promote/{id} → newsEntity 테이블로 승격
    ```
 
 3. **노출 단계** (프론트엔드)
    ```
-   GET /api/news → 승격된 뉴스만 조회하여 사용자에게 제공
+   GET /api/newsEntity → 승격된 뉴스만 조회하여 사용자에게 제공
    ```
 
 ### 데이터베이스 구조
 
 - **`news_crawl`**: 크롤링된 원본 데이터 (승격 전)
-- **`news`**: 승격된 정제된 데이터 (사용자에게 노출)
+- **`newsEntity`**: 승격된 정제된 데이터 (사용자에게 노출)
 
 ## 🔧 크롤러 연동 방법
 
@@ -153,7 +153,7 @@ public class NewsSender {
             .build();
 
         RestTemplate restTemplate = new RestTemplate();
-        String apiUrl = "http://localhost:8082/api/news/crawl";
+        String apiUrl = "http://localhost:8082/api/newsEntity/crawl";
         restTemplate.postForObject(apiUrl, dto, Void.class);
     }
 }
@@ -196,7 +196,7 @@ public class NewsCrawlDto {
 ## 🚀 실행 방법
 
 ```bash
-cd news-service
+cd newsEntity-service
 ./gradlew bootRun
 ```
 
@@ -206,15 +206,15 @@ cd news-service
 
 테스트 데이터 생성:
 ```bash
-curl -X POST http://localhost:8082/api/news/test-data
+curl -X POST http://localhost:8082/api/newsEntity/test-data
 ```
 
 크롤링 데이터 전송 테스트:
 ```bash
-curl -X POST http://localhost:8082/api/news/crawl \
+curl -X POST http://localhost:8082/api/newsEntity/crawl \
   -H "Content-Type: application/json" \
   -d '{
-    "link": "https://example.com/news/article/12345",
+    "link": "https://example.com/newsEntity/article/12345",
     "title": "테스트 뉴스",
     "press": "테스트 언론사",
     "content": "테스트 뉴스 내용입니다.",
@@ -232,7 +232,7 @@ curl -X POST http://localhost:8082/api/news/crawl \
 **Request Body:**
 ```json
 {
-  "email": "user@example.com"
+  "email": "userEntity@example.com"
 }
 ```
 
@@ -285,10 +285,10 @@ curl -X GET http://localhost:8082/api/newsletter/count
 - `IT_SCIENCE`: IT/과학 💻
 
 ### 카테고리별 뉴스 조회
-**GET** `/api/news?category={category}&page={page}&size={size}`
+**GET** `/api/newsEntity?category={category}&page={page}&size={size}`
 
 **예시:**
 ```bash
 # 사회 카테고리 뉴스 조회
-curl -X GET "http://localhost:8082/api/news?category=SOCIETY&page=0&size=10"
+curl -X GET "http://localhost:8082/api/newsEntity?category=SOCIETY&page=0&size=10"
 ``` 

@@ -2,16 +2,16 @@ package com.newnormallist.newsservice.recommendation.util;
 
 import com.newnormallist.newsservice.recommendation.entity.Category;
 import com.newnormallist.newsservice.recommendation.repository.UserCategoryRepository;
+import org.springframework.stereotype.Component;
+import lombok.RequiredArgsConstructor;
 
 import java.util.*;
 
+@Component
+@RequiredArgsConstructor
 public class PrefVectorHelper {
 
     private final UserCategoryRepository userCategoryRepository;
-
-    public PrefVectorHelper(UserCategoryRepository repo) {
-        this.userCategoryRepository    = repo;
-    }
 
     /**
      * 선호 카테고리 분포 P(c) 생성: 선택된 카테고리만 1/k, 나머지는 0

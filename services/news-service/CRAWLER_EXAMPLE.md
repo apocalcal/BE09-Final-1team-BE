@@ -1,19 +1,19 @@
 # 크롤러에서 백엔드로 데이터 전송 예시
 
 ## 📋 개요
-크롤러(news_crawler)에서 백엔드(news-service)로 뉴스 데이터를 전송하는 방법을 설명합니다.
+크롤러(news_crawler)에서 백엔드(newsEntity-service)로 뉴스 데이터를 전송하는 방법을 설명합니다.
 
 ## 🔗 API 엔드포인트
 
 ### 1. 뉴스 저장 API
 ```
-POST http://localhost:8082/api/news/crawl
+POST http://localhost:8082/api/newsEntity/crawl
 Content-Type: application/json
 ```
 
 ### 2. 뉴스 미리보기 API
 ```
-POST http://localhost:8082/api/news/crawl/preview
+POST http://localhost:8082/api/newsEntity/crawl/preview
 Content-Type: application/json
 ```
 
@@ -21,7 +21,7 @@ Content-Type: application/json
 
 ```json
 {
-  "linkId": "https://example.com/news/123",
+  "linkId": "https://example.com/newsEntity/123",
   "title": "뉴스 제목",
   "press": "언론사명",
   "content": "뉴스 내용...",
@@ -59,7 +59,7 @@ class NewsCrawler:
         try:
             # 백엔드로 POST 요청
             response = requests.post(
-                f"{self.backend_url}/api/news/crawl",
+                f"{self.backend_url}/api/newsEntity/crawl",
                 json=dto,
                 headers={"Content-Type": "application/json"}
             )
@@ -90,7 +90,7 @@ class NewsCrawler:
         
         try:
             response = requests.post(
-                f"{self.backend_url}/api/news/crawl/preview",
+                f"{self.backend_url}/api/newsEntity/crawl/preview",
                 json=dto,
                 headers={"Content-Type": "application/json"}
             )
@@ -170,7 +170,7 @@ public class NewsCrawler {
             
             // 백엔드로 POST 요청
             ResponseEntity<String> response = restTemplate.postForEntity(
-                backendUrl + "/api/news/crawl",
+                backendUrl + "/api/newsEntity/crawl",
                 request,
                 String.class
             );

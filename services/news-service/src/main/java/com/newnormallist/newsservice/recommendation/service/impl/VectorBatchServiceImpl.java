@@ -35,11 +35,11 @@ public class VectorBatchServiceImpl implements VectorBatchService {
     public void upsert(Long userId) {
         
         // 1. 사용자 존재 확인
-        Optional<User> userOpt = userRepository.findById(userId);
+        Optional<UserEntity> userOpt = userRepository.findById(userId);
         if (userOpt.isEmpty()) {
             return; // 사용자가 존재하지 않으면 무시
         }
-        User user = userOpt.get();
+        UserEntity userEntity = userOpt.get();
         
         // 2. 현재 벡터 조회
         List<UserPrefVector> currentVectors = userPrefVectorRepository
@@ -51,7 +51,7 @@ public class VectorBatchServiceImpl implements VectorBatchService {
         }
         
         // 4. 새로운 벡터 계산
-        List<UserPrefVector> newVectors = vectorBuilder.recomputeForUser(user);
+        List<UserPrefVector> newVectors = vectorBuilder.recomputeForUser(userEntity);
         
         // 5. 기존 벡터 삭제 후 새로운 벡터 저장
         if (!currentVectors.isEmpty()) {
