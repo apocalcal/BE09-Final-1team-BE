@@ -12,8 +12,8 @@ spring:
           routes:
             # ⚠️ 중요: Swagger UI 라우팅을 가장 먼저 정의합니다.
             - id: openapi
-            - uri: http://localhost:${server.port} # 게이트웨이 자신을 가리킴
-            - predicates:
+              uri: http://localhost:${server.port} # 게이트웨이 자신을 가리킴
+              predicates:
               - Path=/webjars/swagger-ui/**, /v3/api-docs/**, /swagger-ui.html
             - id: user-service-route
               uri: lb://USER-SERVICE
