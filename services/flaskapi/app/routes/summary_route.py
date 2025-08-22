@@ -46,17 +46,17 @@ def _aggregate_summaries(items, lines: int) -> str:
     # summarize(text, prompt) 시그니처 가정
     return summarize(merged, meta_prompt)
 
-def _resolve_prompt_and_type(data, newsEntity) -> tuple[str, str, int]:
+def _resolve_prompt_and_type(data, news) -> tuple[str, str, int]:
     """
     요약 타입/프롬프트/줄수 확정.
-    - type 후보: data.type / data.summary_type / (newsEntity.category)
+    - type 후보: data.type / data.summary_type / (news.category)
     - PromptManager에 미등록이면 DEFAULT로 정규화
     반환: (resolved_type, prompt_text, lines)
     """
     type_candidate = (
             data.get("summary_type")
             or data.get("type")
-            or (getattr(newsEntity, "category", None) if newsEntity else None)
+            or (getattr(news, "category", None) if news else None)
     )
     lines = _parse_lines(data, default=3)
     resolved_type, prompt_text = PromptManager.get_effective(
@@ -106,14 +106,14 @@ def create_summary():
     text = data.get("text")
 
     # 원문 확보(우선순위: text 직접 제공 > DB 조회)
-    newsEntity = None
+    news = None
     if not (isinstance(text, str) and text.strip()):
         if not news_id:
             return jsonify({"error": "text 또는 news_id가 필요합니다."}), 400
-        newsEntity = News.query.get(news_id)
-        if not newsEntity:
+        news = News.query.get(news_id)
+        if not news:
             return jsonify({"error": "뉴스가 없습니다.", "newsId": news_id}), 404
-        text = getattr(newsEntity, "content", None) or getattr(newsEntity, "body", None)
+        text = getattr(news, "content", None) or getattr(news, "body", None)
         if not text or not str(text).strip():
             return jsonify({"error": "뉴스 본문이 비어 있습니다.", "newsId": news_id}), 400
 
@@ -122,7 +122,7 @@ def create_summary():
     ensemble = _parse_bool(data, "ensemble", default=False)
 
     # 타입/프롬프트/줄수 확정
-    resolved_type, prompt_text, lines = _resolve_prompt_and_type(data, newsEntity)
+    resolved_type, prompt_text, lines = _resolve_prompt_and_type(data, news)
 
     # 캐시 조회: 단일 모드에만 적용(ensemble은 매번 달라질 수 있음)
     # ⚠️ 캐시 키에는 반드시 lines 포함
