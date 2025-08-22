@@ -22,8 +22,8 @@ public class FeedController {
 
     private final RecommendationService recommendationService;
 
-    @GetMapping("/users/{userId}/feed")
-    public ApiResponse<List<FeedItemDto>> getFeed(@PathVariable Long userId) {
-        return ApiResponse.success(recommendationService.getFeed(userId));
+    @GetMapping("/{id}")
+    public ApiResponse<List<FeedItemDto>> getUserFeed(@PathVariable Long id) {
+        return ApiResponse.success(recommendationService.getFeed(id));
     }
 }
