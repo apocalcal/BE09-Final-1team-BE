@@ -12,7 +12,6 @@ import java.util.List;
 @AllArgsConstructor
 public class SubscriptionRequest {
 
-    @NotNull(message = "사용자 ID는 필수입니다")
     private Long userId;
 
     @NotBlank(message = "이메일은 필수입니다")

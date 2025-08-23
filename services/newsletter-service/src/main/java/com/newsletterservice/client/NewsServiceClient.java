@@ -3,6 +3,7 @@ package com.newsletterservice.client;
 import com.newsletterservice.common.ApiResponse;
 import com.newsletterservice.client.dto.NewsResponse;
 import com.newsletterservice.entity.NewsCategory;
+import com.newsletterservice.config.FeignTimeoutConfig;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,9 +11,10 @@ import java.util.List;
 
 @FeignClient(
         name = "news-service",
-        url  = "${NEWS_SERVICE_URL:http://news-service:8082}", // ✅ Compose DNS
+        url  = "${NEWS_SERVICE_URL:http://news-service:8082}",
         contextId = "newsletterNewsServiceClient",
-        path = "/api/news"
+        path = "/api/news",
+        configuration = FeignTimeoutConfig.class
 )
 public interface NewsServiceClient {
 
@@ -76,4 +78,21 @@ public interface NewsServiceClient {
 
     @GetMapping("/api/categories")
     ApiResponse<List<NewsCategory>> getCategories();
+
+    /**
+     * 인기 뉴스 조회 (퍼스널라이즈 로직용)
+     */
+    @GetMapping("/api/news/popular")
+    ApiResponse<List<NewsResponse>> getPopularNews(
+            @RequestParam(defaultValue = "8") int size
+    );
+
+    /**
+     * 카테고리별 최신 뉴스 조회 (퍼스널라이즈 로직용)
+     */
+    @GetMapping("/api/news/by-category")
+    ApiResponse<List<NewsResponse>> getLatestByCategory(
+            @RequestParam("category") String categoryName,
+            @RequestParam(defaultValue = "3") int size
+    );
 }

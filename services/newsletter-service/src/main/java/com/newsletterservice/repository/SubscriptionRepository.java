@@ -14,8 +14,15 @@ import java.util.Optional;
 @Repository
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
 
+
     // 사용자별 구독 정보 조회
     Optional<Subscription> findByUserId(Long userId);
+    
+    // 사용자별 구독 목록 조회
+    List<Subscription> findAllByUserId(Long userId);
+    
+    // 사용자별 상태별 구독 조회
+    List<Subscription> findByUserIdAndStatus(Long userId, SubscriptionStatus status);
 
     // 구독 상태별 조회
     List<Subscription> findByStatus(SubscriptionStatus status);

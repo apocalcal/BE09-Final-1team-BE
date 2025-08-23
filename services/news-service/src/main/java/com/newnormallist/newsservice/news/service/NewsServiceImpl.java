@@ -209,15 +209,15 @@ public class NewsServiceImpl implements NewsService {
                         filteredNews.sort((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()));
                     }
                     break;
-                case "viewcount":
-                    if (order.equals("desc")) {
-                        filteredNews.sort((a, b) -> Integer.compare(b.getViewCount() != null ? b.getViewCount() : 0, 
-                                                                   a.getViewCount() != null ? a.getViewCount() : 0));
-                    } else {
-                        filteredNews.sort((a, b) -> Integer.compare(a.getViewCount() != null ? a.getViewCount() : 0, 
-                                                                   b.getViewCount() != null ? b.getViewCount() : 0));
-                    }
-                    break;
+//                case "viewcount":
+//                    if (order.equals("desc")) {
+//                        filteredNews.sort((a, b) -> Integer.compare(b.getViewCount() != null ? b.getViewCount() : 0,
+//                                                                   a.getViewCount() != null ? a.getViewCount() : 0));
+//                    } else {
+//                        filteredNews.sort((a, b) -> Integer.compare(a.getViewCount() != null ? a.getViewCount() : 0,
+//                                                                   b.getViewCount() != null ? b.getViewCount() : 0));
+//                    }
+//                    break;
                 case "title":
                     if (order.equals("desc")) {
                         filteredNews.sort((a, b) -> b.getTitle().compareTo(a.getTitle()));
@@ -358,6 +358,7 @@ public class NewsServiceImpl implements NewsService {
         return NewsListResponse.builder()
                 .newsId(news.getNewsId())
                 .title(news.getTitle())
+                .content(news.getContent())
                 .press(news.getPress())
                 .link(null) // TODO: link 필드 추가 필요
                 .trusted(news.getTrusted() ? 1 : 0)

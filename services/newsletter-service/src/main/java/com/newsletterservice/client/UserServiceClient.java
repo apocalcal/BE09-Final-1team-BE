@@ -1,10 +1,9 @@
 package com.newsletterservice.client;
 
-
-
 import com.newsletterservice.client.dto.CategoryResponse;
 import com.newsletterservice.common.ApiResponse;
 import com.newsletterservice.client.dto.UserResponse;
+import com.newsletterservice.config.FeignTimeoutConfig;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,7 +13,8 @@ import java.util.List;
         name = "user-service",
         url = "${USER_SERVICE_URL:http://user-service:8081}",
         contextId = "newsletterUserServiceClient",
-        path = "/api/users"
+        path = "/api/users",
+        configuration = FeignTimeoutConfig.class
 )
 public interface UserServiceClient {
     
