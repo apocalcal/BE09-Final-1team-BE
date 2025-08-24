@@ -5,14 +5,13 @@ import com.newsletterservice.client.UserServiceClient;
 import com.newsletterservice.client.dto.CategoryResponse;
 import com.newsletterservice.client.dto.NewsResponse;
 import com.newsletterservice.client.dto.ReadHistoryResponse;
+import com.newsletterservice.client.dto.TrendingKeywordDto;
 import com.newsletterservice.common.ApiResponse;
 import com.newsletterservice.common.exception.NewsletterException;
 import com.newsletterservice.dto.*;
 import com.newsletterservice.entity.*;
-import com.newsletterservice.entity.UserNewsInteraction;
 import com.newsletterservice.repository.NewsletterDeliveryRepository;
 import com.newsletterservice.repository.SubscriptionRepository;
-import com.newsletterservice.repository.UserNewsInteractionRepository;
 import com.newsletterservice.entity.NewsCategory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +40,6 @@ public class NewsletterService {
     // ========================================
     private final NewsletterDeliveryRepository deliveryRepository;
     private final SubscriptionRepository subscriptionRepository;
-    private final UserNewsInteractionRepository userNewsInteractionRepository;
 
     // ========================================
     // Client Dependencies
@@ -64,6 +62,7 @@ public class NewsletterService {
     private static final double HIGH_ENGAGEMENT_THRESHOLD = 40.0;
     private static final double MEDIUM_ENGAGEMENT_THRESHOLD = 25.0;
     private static final double LOW_ENGAGEMENT_THRESHOLD = 15.0;
+    private static final int MAX_CATEGORIES_PER_USER = 3; // 사용자당 최대 3개 카테고리 구독 제한
 
     // ========================================
     // 1. 구독 관리 기능
@@ -76,7 +75,7 @@ public class NewsletterService {
         log.info("구독 생성 요청: userId={}, categories={}", userId, request.getPreferredCategories());
         
         try {
-            validateSubscriptionRequest(request);
+            validateSubscriptionRequest(request, userId);
             
             Long userIdLong = Long.valueOf(userId);
             Optional<Subscription> existingSubscription = subscriptionRepository.findByUserId(userIdLong);
@@ -524,14 +523,14 @@ public class NewsletterService {
         log.info("사용자 맞춤 추천: userId={}, limit={}", userId, limit);
         
         try {
-            List<CategoryResponse> preferences = new ArrayList<>();
+            List<CategoryResponse> preferences = getUserPreferences(userId);
             
             // UserReadHistoryService를 사용하여 최근 읽은 뉴스 기록 조회
-            List<com.newsletterservice.client.dto.ReadHistoryResponse> recentReadHistory = 
+            List<ReadHistoryResponse> recentReadHistory = 
                     userReadHistoryService.getRecentReadHistory(userId, 30);
             
-            Map<String, Double> categoryScores = new HashMap<>();
-            List<NewsResponse> candidateNews = new ArrayList<>();
+            Map<String, Double> categoryScores = calculateCategoryScores(preferences, recentReadHistory);
+            List<NewsResponse> candidateNews = fetchRecommendationCandidates(categoryScores, limit * 2);
             
             // 읽지 않은 뉴스만 필터링
             List<Long> candidateNewsIds = candidateNews.stream()
@@ -626,7 +625,7 @@ public class NewsletterService {
     }
 
     /**
-     * 사용자 참여도 상세 분석 (UserNewsInteraction 기반)
+     * 사용자 참여도 상세 분석 (UserReadHistory 기반)
      */
     public DetailedUserEngagement analyzeDetailedUserEngagement(Long userId, int days) {
         log.info("사용자 상세 참여도 분석: userId={}, days={}", userId, days);
@@ -634,41 +633,34 @@ public class NewsletterService {
         try {
             UserEngagement basicEngagement = analyzeUserEngagement(userId, days);
             
-            LocalDateTime since = LocalDateTime.now().minusDays(days);
+            // UserReadHistoryService를 사용하여 최근 읽은 뉴스 기록 조회
+            List<ReadHistoryResponse> recentReadHistory = userReadHistoryService.getRecentReadHistory(userId, days);
             
-            // UserNewsInteraction에서 사용자 상호작용 데이터 조회
-            List<UserNewsInteraction> userInteractions = userNewsInteractionRepository
-                    .findByUserIdAndCreatedAtAfter(userId, since);
-            
-            // 카테고리별 상호작용 수 계산
-            Map<String, Long> categoryInteractions = userInteractions.stream()
+            // 카테고리별 읽은 뉴스 수 계산
+            Map<String, Long> categoryInteractions = recentReadHistory.stream()
+                    .filter(history -> history.getCategoryName() != null)
                     .collect(Collectors.groupingBy(
-                            UserNewsInteraction::getCategory,
+                            ReadHistoryResponse::getCategoryName,
                             Collectors.counting()
                     ));
             
-            // 상호작용 타입별 분포 계산
-            Map<String, Long> typeDistribution = userInteractions.stream()
-                    .collect(Collectors.groupingBy(
-                            interaction -> interaction.getType().name(),
-                            Collectors.counting()
-                    ));
+            // 읽기 타입별 분포 계산 (모든 기록을 'READ'로 간주)
+            Map<String, Long> typeDistribution = new HashMap<>();
+            typeDistribution.put("READ", (long) recentReadHistory.size());
             
-            // 카테고리별 평균 읽기 시간 계산
-            List<Object[]> readingTimeData = userNewsInteractionRepository
-                    .getAverageReadingTimeByCategory(userId, since);
-            Map<String, Double> averageReadingTimeByCategory = readingTimeData.stream()
+            // 카테고리별 평균 읽기 시간 계산 (기본값 사용)
+            Map<String, Double> averageReadingTimeByCategory = categoryInteractions.entrySet().stream()
                     .collect(Collectors.toMap(
-                            data -> (String) data[0],
-                            data -> ((Number) data[1]).doubleValue()
+                            Map.Entry::getKey,
+                            entry -> 3.0 // 기본 읽기 시간 3분
                     ));
             
             return DetailedUserEngagement.builder()
                     .basicEngagement(basicEngagement)
                     .categoryInteractions(categoryInteractions)
                     .interactionTypeDistribution(typeDistribution)
-                    .totalInteractions(userInteractions.size())
-                    .mostActiveHour(calculateMostActiveHour(userInteractions))
+                    .totalInteractions(recentReadHistory.size())
+                    .mostActiveHour(calculateMostActiveHourFromReadHistory(recentReadHistory))
                     .engagementTrend(calculateEngagementTrend(userId, days))
                     .averageReadingTimeByCategory(averageReadingTimeByCategory)
                     .build();
@@ -1031,10 +1023,14 @@ public class NewsletterService {
             subscription.setCreatedAt(now);
         }
         
+        String categoriesJson = convertNewsCategoriesToJson(request.getPreferredCategories());
+        log.debug("구독 업데이트: userId={}, requestCategories={}, jsonCategories={}", 
+                userId, request.getPreferredCategories(), categoriesJson);
+        
         subscription.setEmail(request.getEmail());
         subscription.setFrequency(request.getFrequency());
         subscription.setStatus(SubscriptionStatus.ACTIVE);
-        subscription.setPreferredCategories(convertNewsCategoriesToJson(request.getPreferredCategories()));
+        subscription.setPreferredCategories(categoriesJson);
         subscription.setKeywords(convertToJson(request.getKeywords()));
         subscription.setSendTime(request.getSendTime() != null ? request.getSendTime() : 9);
         subscription.setPersonalized(request.isPersonalized());
@@ -1443,7 +1439,7 @@ public class NewsletterService {
     // ========================================
 
     private Map<String, Double> calculateCategoryScores(List<CategoryResponse> preferences, 
-                                                       List<UserNewsInteraction> interactions) {
+                                                       List<ReadHistoryResponse> readHistory) {
         Map<String, Double> scores = new HashMap<>();
         
         // 선호 카테고리 점수
@@ -1451,16 +1447,17 @@ public class NewsletterService {
             scores.put(pref.getName(), 1.0);
         }
         
-        // 상호작용 기반 점수 조정
-        Map<String, Long> categoryInteractionCounts = interactions.stream()
+        // 읽은 뉴스 기반 점수 조정
+        Map<String, Long> categoryReadCounts = readHistory.stream()
+                .filter(history -> history.getCategoryName() != null)
                 .collect(Collectors.groupingBy(
-                        UserNewsInteraction::getCategory,
+                        ReadHistoryResponse::getCategoryName,
                         Collectors.counting()
                 ));
         
-        for (Map.Entry<String, Long> entry : categoryInteractionCounts.entrySet()) {
-            double interactionScore = Math.log(entry.getValue() + 1) * 0.1;
-            scores.merge(entry.getKey(), interactionScore, Double::sum);
+        for (Map.Entry<String, Long> entry : categoryReadCounts.entrySet()) {
+            double readScore = Math.log(entry.getValue() + 1) * 0.1;
+            scores.merge(entry.getKey(), readScore, Double::sum);
         }
         
         return scores;
@@ -1528,12 +1525,12 @@ public class NewsletterService {
         }
     }
 
-    private int calculateMostActiveHour(List<UserNewsInteraction> interactions) {
-        if (interactions.isEmpty()) return 9; // 기본값
+    private int calculateMostActiveHour(List<ReadHistoryResponse> readHistory) {
+        if (readHistory.isEmpty()) return 9; // 기본값
         
-        Map<Integer, Long> hourCounts = interactions.stream()
+        Map<Integer, Long> hourCounts = readHistory.stream()
                 .collect(Collectors.groupingBy(
-                        interaction -> interaction.getCreatedAt().getHour(),
+                        history -> history.getUpdatedAt().getHour(),
                         Collectors.counting()
                 ));
         
@@ -1607,11 +1604,15 @@ public class NewsletterService {
     // ========================================
 
     private SubscriptionResponse convertToSubscriptionResponse(Subscription subscription) {
+        List<NewsCategory> categories = parseJsonToCategories(subscription.getPreferredCategories());
+        log.debug("구독 응답 변환: subscriptionId={}, rawCategories={}, parsedCategories={}", 
+                subscription.getId(), subscription.getPreferredCategories(), categories);
+        
         return SubscriptionResponse.builder()
                 .id(subscription.getId())
                 .userId(subscription.getUserId())
                 .email(subscription.getEmail())
-                .preferredCategories(parseJsonToCategories(subscription.getPreferredCategories()))
+                .preferredCategories(categories)
                 .keywords(parseJsonToStringList(subscription.getKeywords()))
                 .frequency(subscription.getFrequency())
                 .status(subscription.getStatus())
@@ -1642,11 +1643,44 @@ public class NewsletterService {
             return new ArrayList<>();
         }
         try {
-            com.fasterxml.jackson.core.type.TypeReference<List<NewsCategory>> typeRef = 
-                    new com.fasterxml.jackson.core.type.TypeReference<List<NewsCategory>>() {};
-            return new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, typeRef);
+            // 먼저 문자열 리스트로 파싱
+            com.fasterxml.jackson.core.type.TypeReference<List<String>> stringTypeRef = 
+                    new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {};
+            List<String> categoryNames = new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, stringTypeRef);
+            log.debug("JSON 파싱 결과: json={}, categoryNames={}", json, categoryNames);
+            
+            // 문자열을 NewsCategory enum으로 변환 (기존 데이터 호환성을 위해 유연하게 처리)
+            List<NewsCategory> result = categoryNames.stream()
+                    .map(name -> {
+                        try {
+                            // 1. 먼저 enum name으로 직접 매칭 시도
+                            NewsCategory category = NewsCategory.valueOf(name);
+                            log.debug("enum name으로 매칭 성공: {} -> {}", name, category);
+                            return category;
+                        } catch (IllegalArgumentException e1) {
+                            try {
+                                // 2. categoryName으로 매칭 시도 (기존 데이터 호환성)
+                                for (NewsCategory category : NewsCategory.values()) {
+                                    if (category.getCategoryName().equals(name)) {
+                                        log.debug("categoryName으로 매칭 성공: {} -> {}", name, category);
+                                        return category;
+                                    }
+                                }
+                                log.warn("알 수 없는 카테고리: {}", name);
+                                return null;
+                            } catch (Exception e2) {
+                                log.warn("카테고리 매칭 실패: {}", name);
+                                return null;
+                            }
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            
+            log.debug("최종 파싱 결과: {}", result);
+            return result;
         } catch (Exception e) {
-            log.error("카테고리 JSON 파싱 실패", e);
+            log.error("카테고리 JSON 파싱 실패: json={}", json, e);
             return new ArrayList<>();
         }
     }
@@ -1674,7 +1708,7 @@ public class NewsletterService {
                 NewsCategory.POLITICS.getCategoryName(),
                 NewsCategory.ECONOMY.getCategoryName(),
                 NewsCategory.SOCIETY.getCategoryName(),
-                NewsCategory.CULTURE.getCategoryName(),
+                NewsCategory.LIFE.getCategoryName(),
                 NewsCategory.INTERNATIONAL.getCategoryName(),
                 NewsCategory.IT_SCIENCE.getCategoryName(),
                 NewsCategory.VEHICLE.getCategoryName(),
@@ -1808,7 +1842,7 @@ public class NewsletterService {
             case POLITICS -> "매일 아침 정치 소식을 간결하게 정리해드립니다";
             case ECONOMY -> "중요 경제 지표, 주식 시장 동향, 투자 인사이트를 제공합니다";
             case SOCIETY -> "사회 각 분야의 주요 이슈를 균형 있게 다룹니다";
-            case CULTURE -> "문화, 생활, 트렌드 소식을 재미있게 전달합니다";
+            case LIFE -> "문화, 생활, 트렌드 소식을 재미있게 전달합니다";
             case INTERNATIONAL -> "전 세계 주요 국제뉴스와 글로벌 이슈를 분석합니다";
             case IT_SCIENCE -> "최신 IT 기술과 과학 발견을 쉽게 설명합니다";
             case VEHICLE -> "자동차 산업, 교통 정책, 모빌리티 트렌드를 다룹니다";
@@ -1822,7 +1856,7 @@ public class NewsletterService {
             case POLITICS -> Arrays.asList("정치", "정책", "국정감사", "선거");
             case ECONOMY -> Arrays.asList("경제전망", "주식", "부동산", "투자");
             case SOCIETY -> Arrays.asList("사회현안", "교육", "복지", "안전");
-            case CULTURE -> Arrays.asList("문화", "예술", "엔터테인먼트", "라이프스타일");
+            case  LIFE  -> Arrays.asList("문화", "예술", "엔터테인먼트", "라이프스타일");
             case INTERNATIONAL -> Arrays.asList("국제뉴스", "외교", "글로벌", "해외");
             case IT_SCIENCE -> Arrays.asList("IT", "과학", "기술", "혁신");
             case VEHICLE -> Arrays.asList("자동차", "교통", "모빌리티", "전기차");
@@ -1836,7 +1870,7 @@ public class NewsletterService {
             case POLITICS -> "오늘의 주요 정치 뉴스 3건과 국정감사 핵심 이슈를 5분만에 읽어보세요.";
             case ECONOMY -> "이번 주 증시 전망과 부동산 정책 변화, 글로벌 경제 동향을 분석합니다.";
             case SOCIETY -> "교육 정책 변화, 복지 제도 개선, 사회 안전망 강화 소식을 전해드립니다.";
-            case CULTURE -> "주말 문화 행사 추천, 화제의 전시회, 새로운 트렌드를 소개합니다.";
+            case LIFE -> "주말 문화 행사 추천, 화제의 전시회, 새로운 트렌드를 소개합니다.";
             case INTERNATIONAL -> "미중 관계, 유럽 정세, 아시아 경제 협력 등 글로벌 이슈를 다룹니다.";
             case IT_SCIENCE -> "AI 기술 발전, 우주 탐사, 바이오 기술 등 최신 과학 소식을 전합니다.";
             case VEHICLE -> "자율주행차 발전, 전기차 시장 동향, 교통 정책 변화를 다룹니다.";
@@ -1879,23 +1913,23 @@ public class NewsletterService {
         List<CategoryResponse> preferences = getUserPreferences(userId);
         
         // 2. 최근 읽기 기록 분석
-        List<ReadHistoryResponse> recentInteractions = getRecentUserInteractions(userId, 30);
+        List<ReadHistoryResponse> recentReadHistory = userReadHistoryService.getRecentReadHistory(userId, 30);
         
         // 3. 시간대별 활동 패턴
-        Map<Integer, Integer> hourlyActivity = analyzeHourlyActivity(recentInteractions);
+        Map<Integer, Integer> hourlyActivity = analyzeHourlyActivity(recentReadHistory);
         
         // 4. 선호하는 뉴스 길이 분석
-        int preferredReadTime = analyzePreferredReadTime(recentInteractions);
+        int preferredReadTime = analyzePreferredReadTime(recentReadHistory);
         
         return UserPreferenceProfile.builder()
                 .userId(userId)
                 .preferredCategories(preferences.stream()
                         .map(CategoryResponse::getName)
                         .collect(Collectors.toList()))
-                .recentInteractions(recentInteractions.size())
+                .recentInteractions(recentReadHistory.size())
                 .mostActiveHour(findMostActiveHour(hourlyActivity))
                 .preferredReadTime(preferredReadTime)
-                .engagementScore(calculateUserEngagementScore(recentInteractions))
+                .engagementScore(calculateUserEngagementScore(recentReadHistory))
                 .lastAnalyzed(LocalDateTime.now())
                 .build();
     }
@@ -2205,6 +2239,56 @@ public class NewsletterService {
     }
 
     // ========================================
+    // Validation Methods
+    // ========================================
+
+    /**
+     * 구독 요청 검증
+     */
+    private void validateSubscriptionRequest(SubscriptionRequest request, String userId) {
+        // 기본 검증
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            throw new NewsletterException("이메일은 필수입니다.", "INVALID_EMAIL");
+        }
+        
+        if (request.getPreferredCategories() == null || request.getPreferredCategories().isEmpty()) {
+            throw new NewsletterException("최소 1개의 카테고리를 선택해야 합니다.", "NO_CATEGORIES");
+        }
+        
+        // 카테고리 개수 제한 검증
+        Long userIdLong = Long.valueOf(userId);
+        List<Subscription> existingSubscriptions = subscriptionRepository.findByUserIdAndStatus(userIdLong, SubscriptionStatus.ACTIVE);
+        
+        // 기존 구독의 카테고리 수 계산
+        Set<NewsCategory> existingCategories = new HashSet<>();
+        for (Subscription sub : existingSubscriptions) {
+            if (sub.getPreferredCategories() != null) {
+                List<NewsCategory> categories = parseJsonToCategories(sub.getPreferredCategories());
+                existingCategories.addAll(categories);
+            }
+        }
+        
+        // 새로운 카테고리 추가 시 제한 확인
+        Set<NewsCategory> newCategories = new HashSet<>(request.getPreferredCategories());
+        newCategories.removeAll(existingCategories); // 기존에 없는 새로운 카테고리만
+        
+        int totalCategories = existingCategories.size() + newCategories.size();
+        
+        if (totalCategories > MAX_CATEGORIES_PER_USER) {
+            throw new NewsletterException(
+                String.format("최대 %d개 카테고리까지 구독할 수 있습니다. 현재 %d개 구독 중입니다.", 
+                    MAX_CATEGORIES_PER_USER, existingCategories.size()),
+                "CATEGORY_LIMIT_EXCEEDED"
+            );
+        }
+        
+        log.info("구독 요청 검증 완료: userId={}, existingCategories={}, newCategories={}, total={}", 
+                userId, existingCategories.size(), newCategories.size(), totalCategories);
+    }
+
+
+
+    // ========================================
     // Utility Methods
     // ========================================
 
@@ -2246,9 +2330,11 @@ public class NewsletterService {
         
         try {
             List<String> categoryNames = categories.stream()
-                    .map(NewsCategory::getCategoryName)
+                    .map(NewsCategory::name)  // enum의 name() 사용
                     .collect(Collectors.toList());
-            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(categoryNames);
+            String json = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(categoryNames);
+            log.debug("카테고리 JSON 변환: categories={}, categoryNames={}, json={}", categories, categoryNames, json);
+            return json;
         } catch (Exception e) {
             log.error("뉴스 카테고리 JSON 변환 실패", e);
             return "[]";
@@ -2260,7 +2346,7 @@ public class NewsletterService {
             case "POLITICS" -> "🏛️";
             case "ECONOMY" -> "💰";
             case "SOCIETY" -> "👥";
-            case "LIFE" -> "🎭";
+            case "CULTURE" -> "🎭";
             case "INTERNATIONAL" -> "🌍";
             case "IT_SCIENCE" -> "💻";
             case "VEHICLE" -> "🚗";
@@ -2383,10 +2469,10 @@ public class NewsletterService {
         return (titleScore + summaryScore) / 2.0;
     }
 
-    private Map<Integer, Integer> analyzeHourlyActivity(List<ReadHistoryResponse> interactions) {
-        return interactions.stream()
+    private Map<Integer, Integer> analyzeHourlyActivity(List<ReadHistoryResponse> readHistory) {
+        return readHistory.stream()
                 .collect(Collectors.groupingBy(
-                        interaction -> interaction.getUpdatedAt().getHour(),
+                        history -> history.getUpdatedAt().getHour(),
                         Collectors.collectingAndThen(Collectors.counting(), Math::toIntExact)
                 ));
     }
@@ -2434,6 +2520,247 @@ public class NewsletterService {
     private String generatePersonalizedSubtitle(UserPreferenceProfile profile) {
         return "당신이 관심 있는 " + profile.getPreferredCategories().size() + 
                "개 카테고리의 최신 소식을 전해드립니다";
+    }
+
+    /**
+     * 구독 재활성화
+     */
+    public SubscriptionResponse reactivateSubscription(Long subscriptionId, Long userId) {
+        log.info("구독 재활성화: subscriptionId={}, userId={}", subscriptionId, userId);
+        
+        try {
+            Subscription subscription = getSubscriptionWithPermissionCheck(subscriptionId, userId);
+            
+            if (subscription.getStatus() != SubscriptionStatus.UNSUBSCRIBED) {
+                throw new NewsletterException("해지된 구독만 재활성화할 수 있습니다.", "INVALID_STATUS");
+            }
+            
+            subscription.setStatus(SubscriptionStatus.ACTIVE);
+            subscription.setUnsubscribedAt(null);
+            subscription.setUpdatedAt(LocalDateTime.now());
+            subscription = subscriptionRepository.save(subscription);
+            
+            log.info("구독 재활성화 완료: subscriptionId={}", subscriptionId);
+            return convertToSubscriptionResponse(subscription);
+            
+        } catch (NewsletterException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("구독 재활성화 중 오류 발생", e);
+            throw new NewsletterException("구독 재활성화 중 오류가 발생했습니다.", "REACTIVATE_ERROR");
+        }
+    }
+
+    // ========================================
+    // 카테고리별 기사 조회 기능
+    // ========================================
+
+    /**
+     * 카테고리별 기사 조회
+     */
+    public List<NewsResponse> getCategoryArticles(String category, int limit) {
+        log.info("카테고리별 기사 조회: category={}, limit={}", category, limit);
+        
+        try {
+            ApiResponse<List<NewsResponse>> response = newsServiceClient.getNewsByCategory(category, 0, limit);
+            if (response != null && response.getData() != null) {
+                return response.getData();
+            }
+            return new ArrayList<>();
+        } catch (Exception e) {
+            log.error("카테고리별 기사 조회 실패: category={}", category, e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 카테고리별 기사와 트렌드 키워드 조회
+     */
+    public Map<String, Object> getCategoryArticlesWithTrendingKeywords(String category, int limit) {
+        log.info("카테고리별 기사와 트렌드 키워드 조회: category={}, limit={}", category, limit);
+        
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            // 1. 해당 카테고리의 최신 기사 조회
+            List<NewsResponse> articles = getCategoryArticles(category, limit);
+            result.put("articles", articles);
+            
+            // 2. 트렌드 키워드 조회
+            List<String> trendingKeywords = getTrendingKeywordsByCategory(category, 8);
+            result.put("trendingKeywords", trendingKeywords);
+            result.put("mainTopics", trendingKeywords); // 트렌드 키워드를 주요 주제로 사용
+            
+            // 3. 총 기사 수 조회
+            try {
+                ApiResponse<Long> countResponse = newsServiceClient.getNewsCountByCategory(category);
+                Long totalArticles = countResponse != null && countResponse.getData() != null ? 
+                        countResponse.getData() : 0L;
+                result.put("totalArticles", totalArticles);
+            } catch (Exception e) {
+                log.warn("카테고리별 기사 수 조회 실패: category={}", category, e);
+                result.put("totalArticles", articles.size());
+            }
+            
+            log.info("카테고리별 데이터 조회 완료: category={}, articles={}, keywords={}", 
+                    category, articles.size(), trendingKeywords.size());
+            
+        } catch (Exception e) {
+            log.error("카테고리별 기사와 트렌드 키워드 조회 실패: category={}", category, e);
+            result.put("articles", new ArrayList<>());
+            result.put("trendingKeywords", getDefaultKeywords());
+            result.put("mainTopics", getDefaultKeywords());
+            result.put("totalArticles", 0L);
+        }
+        
+        return result;
+    }
+
+    /**
+     * 카테고리별 트렌드 키워드 조회
+     */
+    public List<String> getTrendingKeywordsByCategory(String category, int limit) {
+        log.info("카테고리별 트렌드 키워드 조회: category={}, limit={}", category, limit);
+        
+        try {
+            ApiResponse<List<TrendingKeywordDto>> response = newsServiceClient.getTrendingKeywordsByCategory(category, limit, 24);
+            if (response != null && response.getData() != null) {
+                return response.getData().stream()
+                        .map(TrendingKeywordDto::getKeyword)
+                        .collect(Collectors.toList());
+            }
+        } catch (Exception e) {
+            log.warn("카테고리별 트렌드 키워드 조회 실패: category={}", category, e);
+        }
+        
+        // 실패 시 기본 키워드 반환
+        return getDefaultKeywords();
+    }
+
+    /**
+     * 전체 트렌드 키워드 조회
+     */
+    public List<String> getTrendingKeywords(int limit) {
+        log.info("전체 트렌드 키워드 조회: limit={}", limit);
+        
+        try {
+            ApiResponse<List<TrendingKeywordDto>> response = newsServiceClient.getTrendingKeywords(limit, 24);
+            if (response != null && response.getData() != null) {
+                return response.getData().stream()
+                        .map(TrendingKeywordDto::getKeyword)
+                        .collect(Collectors.toList());
+            }
+        } catch (Exception e) {
+            log.warn("전체 트렌드 키워드 조회 실패", e);
+        }
+        
+        // 실패 시 기본 키워드 반환
+        return getDefaultKeywords();
+    }
+
+    /**
+     * 기사에서 트렌드 키워드 추출
+     */
+    public List<String> extractTrendingKeywords(List<NewsResponse> articles) {
+        if (articles == null || articles.isEmpty()) {
+            return getDefaultKeywords();
+        }
+
+        // 기사 제목과 요약에서 키워드 추출
+        Set<String> keywords = new HashSet<>();
+        
+        for (NewsResponse article : articles) {
+            if (article.getTitle() != null) {
+                keywords.addAll(extractKeywordsFromText(article.getTitle()));
+            }
+            if (article.getSummary() != null) {
+                keywords.addAll(extractKeywordsFromText(article.getSummary()));
+            }
+        }
+
+        // 키워드 빈도 계산 및 정렬
+        Map<String, Integer> keywordFrequency = new HashMap<>();
+        for (String keyword : keywords) {
+            keywordFrequency.merge(keyword, 1, Integer::sum);
+        }
+
+        return keywordFrequency.entrySet().stream()
+                .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
+                .limit(8)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 기사에서 주요 주제 추출
+     */
+    public List<String> extractMainTopics(List<NewsResponse> articles) {
+        if (articles == null || articles.isEmpty()) {
+            return getDefaultTopics();
+        }
+
+        // 기사 제목에서 주요 주제 추출
+        Set<String> topics = new HashSet<>();
+        
+        for (NewsResponse article : articles) {
+            if (article.getTitle() != null) {
+                topics.addAll(extractTopicsFromTitle(article.getTitle()));
+            }
+        }
+
+        return topics.stream()
+                .limit(6)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 텍스트에서 키워드 추출
+     */
+    private Set<String> extractKeywordsFromText(String text) {
+        Set<String> keywords = new HashSet<>();
+        
+        // 간단한 키워드 추출 로직 (실제로는 NLP 라이브러리 사용 권장)
+        String[] words = text.split("\\s+");
+        for (String word : words) {
+            // 2글자 이상의 한글 단어만 키워드로 추출
+            if (word.length() >= 2 && word.matches(".*[가-힣].*")) {
+                keywords.add(word);
+            }
+        }
+        
+        return keywords;
+    }
+
+    /**
+     * 제목에서 주요 주제 추출
+     */
+    private Set<String> extractTopicsFromTitle(String title) {
+        Set<String> topics = new HashSet<>();
+        
+        // 제목에서 주요 주제 추출 로직
+        String[] words = title.split("\\s+");
+        for (String word : words) {
+            // 3글자 이상의 한글 단어만 주제로 추출
+            if (word.length() >= 3 && word.matches(".*[가-힣].*")) {
+                topics.add(word);
+            }
+        }
+        
+        return topics;
+    }
+
+    /**
+     * 기본 키워드 반환
+     */
+    private List<String> getDefaultKeywords() {
+        return Arrays.asList("주요뉴스", "핫이슈", "트렌드", "분석", "전망", "동향", "소식", "업데이트");
+    }
+
+    /**
+     * 기본 주제 반환
+     */
+    private List<String> getDefaultTopics() {
+        return Arrays.asList("주요뉴스", "핫이슈", "트렌드", "분석", "전망", "동향");
     }
 
 }

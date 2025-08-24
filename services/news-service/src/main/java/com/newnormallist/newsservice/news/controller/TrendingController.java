@@ -13,12 +13,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.newnormallist.newsservice.news.entity.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/trending")
 @CrossOrigin(origins = "*")
 public class TrendingController {
     
+    private static final Logger log = LoggerFactory.getLogger(TrendingController.class);
+
     @Autowired
     private NewsService newsService;
     @Autowired
@@ -54,6 +59,29 @@ public class TrendingController {
         int windowHours = (hours != null) ? hours : parsePeriodToHours(period);
         List<TrendingKeywordDto> result = trendingService.getTrendingKeywords(windowHours, limit);
         return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    /**
+     * 카테고리별 트렌딩 키워드 조회
+     */
+    @GetMapping("/trending-keywords/category/{categoryName}")
+    public ResponseEntity<ApiResponse<List<TrendingKeywordDto>>> getTrendingKeywordsByCategory(
+            @PathVariable("categoryName") String categoryName,
+            @RequestParam(defaultValue = "8") int limit,
+            @RequestParam(defaultValue = "24") int hours
+    ) {
+        try {
+            Category category = Category.valueOf(categoryName.toUpperCase());
+            List<TrendingKeywordDto> result = newsService.getTrendingKeywordsByCategory(category, limit);
+            return ResponseEntity.ok(ApiResponse.success(result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.fail("유효하지 않은 카테고리입니다: " + categoryName));
+        } catch (Exception e) {
+            log.error("카테고리별 트렌딩 키워드 조회 실패: category={}", categoryName, e);
+            return ResponseEntity.internalServerError()
+                .body(ApiResponse.fail("트렌딩 키워드 조회 중 오류가 발생했습니다."));
+        }
     }
 
     private int parsePeriodToHours(String period) {

@@ -8,6 +8,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.newsletterservice.client.dto.TrendingKeywordDto;
 
 @FeignClient(
         name = "news-service",
@@ -94,5 +95,24 @@ public interface NewsServiceClient {
     ApiResponse<List<NewsResponse>> getLatestByCategory(
             @RequestParam("category") String categoryName,
             @RequestParam(defaultValue = "3") int size
+    );
+
+    /**
+     * 트렌딩 키워드 조회
+     */
+    @GetMapping("/api/trending/keywords")
+    ApiResponse<List<TrendingKeywordDto>> getTrendingKeywords(
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(defaultValue = "24") int hours
+    );
+
+    /**
+     * 카테고리별 트렌딩 키워드 조회
+     */
+    @GetMapping("/api/trending/keywords/category/{categoryName}")
+    ApiResponse<List<TrendingKeywordDto>> getTrendingKeywordsByCategory(
+            @PathVariable("categoryName") String categoryName,
+            @RequestParam(defaultValue = "8") int limit,
+            @RequestParam(defaultValue = "24") int hours
     );
 }

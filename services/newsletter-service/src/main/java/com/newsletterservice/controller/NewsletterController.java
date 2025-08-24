@@ -2,6 +2,7 @@ package com.newsletterservice.controller;
 import com.newsletterservice.common.ApiResponse;
 import com.newsletterservice.common.exception.NewsletterException;
 import com.newsletterservice.dto.*;
+import com.newsletterservice.client.dto.NewsResponse;
 import com.newsletterservice.repository.NewsletterDeliveryRepository;
 import com.newsletterservice.service.EmailNewsletterRenderer;
 import com.newsletterservice.service.NewsletterService;
@@ -185,6 +186,68 @@ public class NewsletterController {
     }
 
     /**
+     * 카테고리별 기사 조회 (뉴스레터 카드용) - 인증 불필요
+     */
+    @GetMapping("/category/{category}/articles")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getCategoryArticles(
+            @PathVariable String category,
+            @RequestParam(defaultValue = "5") int limit) {
+        
+        try {
+            log.info("카테고리별 기사 조회 요청 - category: {}, limit: {}", category, limit);
+            
+            Map<String, Object> result = newsletterService.getCategoryArticlesWithTrendingKeywords(category, limit);
+            
+            return ResponseEntity.ok(ApiResponse.success(result));
+        } catch (Exception e) {
+            log.error("카테고리별 기사 조회 중 오류 발생", e);
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error("CATEGORY_ARTICLES_ERROR", "카테고리별 기사 조회 중 오류가 발생했습니다."));
+        }
+    }
+
+    /**
+     * 트렌드 키워드 조회 - 인증 불필요
+     */
+    @GetMapping("/trending-keywords")
+    public ResponseEntity<ApiResponse<List<String>>> getTrendingKeywords(
+            @RequestParam(defaultValue = "10") int limit) {
+        
+        try {
+            log.info("트렌드 키워드 조회 요청 - limit: {}", limit);
+            
+            List<String> keywords = newsletterService.getTrendingKeywords(limit);
+            
+            return ResponseEntity.ok(ApiResponse.success(keywords));
+        } catch (Exception e) {
+            log.error("트렌드 키워드 조회 중 오류 발생", e);
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error("TRENDING_KEYWORDS_ERROR", "트렌드 키워드 조회 중 오류가 발생했습니다."));
+        }
+    }
+
+    /**
+     * 카테고리별 트렌드 키워드 조회 - 인증 불필요
+     */
+    @GetMapping("/category/{category}/trending-keywords")
+    public ResponseEntity<ApiResponse<List<String>>> getCategoryTrendingKeywords(
+            @PathVariable String category,
+            @RequestParam(defaultValue = "8") int limit) {
+        
+        try {
+            log.info("카테고리별 트렌드 키워드 조회 요청 - category: {}, limit: {}", category, limit);
+            
+            List<String> keywords = newsletterService.getTrendingKeywordsByCategory(category, limit);
+            
+            return ResponseEntity.ok(ApiResponse.success(keywords));
+        } catch (Exception e) {
+            log.error("카테고리별 트렌드 키워드 조회 중 오류 발생", e);
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error("CATEGORY_KEYWORDS_ERROR", "카테고리별 트렌드 키워드 조회 중 오류가 발생했습니다."));
+        }
+    }
+
+    /**
      * 개인화된 뉴스레터 콘텐츠 조회 (JSON)
      */
     @GetMapping("/{newsletterId}/content")
@@ -197,7 +260,6 @@ public class NewsletterController {
             log.info("퍼스널라이즈드 뉴스레터 콘텐츠 조회 - userId: {}, newsletterId: {}", userId, newsletterId);
             
             NewsletterContent content = newsletterService.buildPersonalizedContent(Long.valueOf(userId), newsletterId);
-            
             return ResponseEntity.ok(ApiResponse.success(content));
         } catch (NewsletterException e) {
             log.warn("뉴스레터 콘텐츠 조회 실패: {}", e.getMessage());
@@ -269,6 +331,32 @@ public class NewsletterController {
             return ResponseEntity.badRequest()
                     .header("Content-Type", "text/html; charset=UTF-8")
                     .body("<html><body><h1>오류</h1><p>뉴스레터 미리보기 중 오류가 발생했습니다.</p></body></html>");
+        }
+    }
+
+    /**
+     * 구독 재활성화
+     */
+    @PutMapping("/subscription/{id}/reactivate")
+    public ResponseEntity<ApiResponse<SubscriptionResponse>> reactivateSubscription(
+            @PathVariable Long id,
+            HttpServletRequest httpRequest) {
+        
+        try {
+            String userId = extractUserIdFromToken(httpRequest);
+            log.info("구독 재활성화 요청 - userId: {}, subscriptionId: {}", userId, id);
+            
+            SubscriptionResponse subscription = newsletterService.reactivateSubscription(id, Long.valueOf(userId));
+            
+            return ResponseEntity.ok(ApiResponse.success(subscription, "구독이 재활성화되었습니다."));
+        } catch (NewsletterException e) {
+            log.warn("구독 재활성화 실패: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error(e.getErrorCode(), e.getMessage()));
+        } catch (Exception e) {
+            log.error("구독 재활성화 중 오류 발생", e);
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error("REACTIVATE_ERROR", "구독 재활성화 중 오류가 발생했습니다."));
         }
     }
 
@@ -414,5 +502,23 @@ public class NewsletterController {
         // 실제 구현에서는 JWT 토큰에서 userId를 추출해야 함
         // 여기서는 임시로 1L을 반환
         return 1L;
+    }
+
+    /**
+     * 프론트엔드 카테고리명을 백엔드 카테고리명으로 변환
+     */
+    private String convertToBackendCategory(String frontendCategory) {
+        return switch (frontendCategory) {
+            case "정치" -> "POLITICS";
+            case "경제" -> "ECONOMY";
+            case "사회" -> "SOCIETY";
+            case "생활" -> "LIFE";
+            case "세계" -> "INTERNATIONAL";
+            case "IT/과학" -> "IT_SCIENCE";
+            case "자동차/교통" -> "VEHICLE";
+            case "여행/음식" -> "TRAVEL_FOOD";
+            case "예술" -> "ART";
+            default -> frontendCategory.toUpperCase();
+        };
     }
 }
