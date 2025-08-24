@@ -1,12 +1,13 @@
 # 1. 서버 포트 설정
 server:
   port: 8081
+  forward-headers-strategy: framework
 
 # 2. Eureka 클라이언트 설정
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://discovery-service:8761/eureka/
   instance:
     prefer-ip-address: true
 
@@ -22,3 +23,22 @@ logging:
   level:
     com.newnormallist.userservice: DEBUG
     org.springframework.security: WARN
+
+# 5. swagger 설정
+springdoc:
+  forward-headers-enabled: true # 게이트웨이에서 전달된 헤더를 사용
+  # 이 서비스의 API 문서(JSON 파일)를 어떤 경로에 만들지 결정
+  api-docs:
+    path: /user-api-docs
+  # 2. 이 서비스 단독으로 Swagger UI 페이지를 보고 싶을 때 사용할 경로 (개발/테스트용)
+  swagger-ui:
+    path: /user-swagger-ui.html
+  # 3. 게이트웨이에서 이 서비스를 식별할 그룹 정보 설정
+  group-configs:
+    - group: user-service
+      paths-to-match:
+        - /api/users/**
+        - /api/auth/** # auth API도 문서에 포함
+
+app:
+  gateway-url: http://localhost:8000 # 게이트웨이 URL (개발/테스트용)

@@ -7,7 +7,6 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
@@ -23,9 +22,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
   @Override
   public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-    // isPermitAllPath에 exchange 객체를 직접 전달하도록 수정,
-    if (isPermitAllPath(exchange)) {
-      log.info("✅ [Gateway] PermitAll path, skipping token validation for: {}", exchange.getRequest().getURI().getPath());
+    String path = exchange.getRequest().getURI().getPath();
+    log.info("✅ [Gateway] Request Path: {}", path);
+
+    // permitAll 경로는 토큰 검증 없이 통과
+    if (isPermitAllPath(path)) {
+      log.info("✅ [Gateway] PermitAll path, skipping token validation.");
       return chain.filter(exchange);
     }
 
@@ -43,6 +45,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     try {
       // 토큰 유효성 검증
       if (!jwtTokenProvider.validateToken(token)) {
+        // validateToken 내부에서 이미 로그를 찍고 false를 반환
         return handleUnauthorized(exchange, "Token validation failed.");
       }
       log.info("✅ [Gateway] Token validation successful. Extracting claims...");
@@ -51,8 +54,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
       Long userId = jwtTokenProvider.getUserIdFromJWT(token);
       String role = jwtTokenProvider.getRoleFromJWT(token);
 
+      // userId가 null인 경우 처리 (클레임 이름 불일치 등)
       if (userId == null) {
-        log.error("❌ [Gateway] Could not extract userId from token. Check claim names.");
+        log.error("❌ [Gateway] Could not extract userId from token. Check claim names ('USERID' vs 'userId').");
         return handleUnauthorized(exchange, "Invalid token claims.");
       }
 
@@ -75,28 +79,16 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
   }
 
   /**
-   * 인증이 필요하지 않은 경로인지 확인 (더 정교하게 수정된 버전)
+   * 인증이 필요하지 않은 경로인지 확인
    */
-  private boolean isPermitAllPath(ServerWebExchange exchange) {
-    String path = exchange.getRequest().getURI().getPath();
-    HttpMethod method = exchange.getRequest().getMethod();
-
-    // 인증 없이 항상 허용되는 경로들
-    if (path.startsWith("/api/users/signup") ||
-        path.startsWith("/api/auth/") ||
-        path.startsWith("/api/users/categories")) {
-      return true;
-    }
-
-    // 뉴스 API에 대한 특별 규칙
-    if (path.startsWith("/api/news") && method == HttpMethod.GET) {
-      if (path.equals("/api/news") || path.matches("/api/news/\\d+")) {
-        return true;
-      }
-    }
-
-    // 위 규칙에 해당하지 않는 모든 요청은 토큰 검증이 필요.
-    return false;
+  private boolean isPermitAllPath(String path) {
+    // startsWith를 사용하면 /auth/login, /auth/refresh 등을 모두 포함할 수 있습니다.
+    return path.startsWith("/api/users/signup")
+            || path.startsWith("/api/auth/")
+            || path.startsWith("/api/users/categories")
+            || path.startsWith("/api/news")
+            || path.startsWith("/swagger-ui")
+            || path.contains("api-docs");
   }
 
   /**
@@ -104,11 +96,13 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
    */
   private Mono<Void> handleUnauthorized(ServerWebExchange exchange, String message) {
     exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+    // 필요하다면 응답 본문에 에러 메시지를 추가할 수도 있습니다.
     return exchange.getResponse().setComplete();
   }
 
   @Override
   public int getOrder() {
-    return -1; // 이 필터가 다른 필터들보다 먼저 실행되도록 설정
+    // 이 필터가 다른 필터들보다 먼저 실행되도록 순서를 높게 설정합니다.
+    return -1;
   }
 }

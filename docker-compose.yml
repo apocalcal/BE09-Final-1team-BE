@@ -2,51 +2,103 @@
 services:
   # 1. Config Server
   config-server:
-    build: ./config/config-server # ⭐️ 경로 수정
+    build: ./config/config-server
     container_name: config-server
     ports:
-      - '8888:8888'
+      - "8888:8888"
+    dns:
+      - 8.8.8.8
+    environment:
+      - TZ=Asia/Seoul
+      - SPRING_APPLICATION_NAME=config-server
+      - SPRING_PROFILES_ACTIVE=git # Git 프로필 활성화
+      - SPRING_CLOUD_CONFIG_SERVER_GIT_URI=https://github.com/backend20250319/BE09-Final-1team-BE.git
+      - SPRING_CLOUD_CONFIG_SERVER_GIT_DEFAULT_LABEL=feature/chaehee
+      - SPRING_CLOUD_CONFIG_SERVER_GIT_SEARCH_PATHS=config/config-files
+      - SPRING_CLOUD_CONFIG_SERVER_GIT_CLONE_ON_START=true
+      - SPRING_CLOUD_CONFIG_SERVER_GIT_TIMEOUT=60
+    healthcheck:
+      # 컨테이너 이미지에 curl이 없을 수 있으니 CMD-SHELL로 처리
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8888/actuator/health || wget -qO- http://localhost:8888/actuator/health > /dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
     networks:
       - msa-network
 
-  # 2. Discovery Service (Eureka)
+# 2. Discovery Service (Eureka)
   discovery-service:
-    build: ./services/discovery-service # ⭐️ 경로 수정
+    build: ./services/discovery-service
     container_name: discovery-service
     ports:
-      - '8761:8761'
+      - "8761:8761"
+    dns:
+      - 8.8.8.8
+    environment:
+      - TZ=Asia/Seoul
+      - SPRING_APPLICATION_NAME=discovery-service
+      # Config Server로부터 설정을 가져오도록 (실패해도 부팅되게 optional:)
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      # Eureka 서버 자신은 레지스트리에 등록/조회하지 않도록(서버 전용 구성일 때 권장)
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      # (선택) 관리/헬스 엔드포인트 노출 제어가 필요하면 Config에 두고, 임시 테스트면 아래처럼 가능
+      # - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8761/actuator/health || wget -qO- http://localhost:8761/actuator/health > /dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
     networks:
       - msa-network
-    depends_on:
-      - config-server
-    environment:
-      - SPRING_CONFIG_URI=http://config-server:8888
 
-  # 3. Gateway Service
+# 3. Gateway Service
   gateway-service:
-    build: ./services/gateway-service # ⭐️ 경로 수정
+    build: ./services/gateway-service
     container_name: gateway-service
     ports:
-      - '8000:8000'
+      - "8000:8000"
+    dns:
+      - 8.8.8.8
+    environment:
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
+      - jwt.secret=${JWT_SECRET} # JWT 비밀키 설정
+      - jwt.expiration=${JWT_EXPIRATION} # JWT 만료 시간 설정
+      # (선택) Gateway 라우팅/보안 등은 Config Server 리포지토리(yml)에서 관리 권장
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/actuator/health || wget -qO- http://localhost:8000/actuator/health > /dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
     networks:
       - msa-network
-    depends_on:
-      - discovery-service
-    environment:
-      - SPRING_CONFIG_URI=http://config-server:8888
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka
 
   # 4. User Service
   user-service:
     build: ./services/user-service # ⭐️ 경로 수정
     container_name: user-service
+    ports:
+      - "8081:8081"
+    dns:
+      - 8.8.8.8
     networks:
       - msa-network
     depends_on:
       - discovery-service
     environment:
-      - SPRING_CONFIG_URI=http://config-server:8888
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
       # DB 연결 설정
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
@@ -57,53 +109,58 @@ services:
       - SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME}
       - SPRING_MAIL_PASSWORD=${SPRING_MAIL_PASSWORD}
       # JWT
-      - JWT_SECRET=${JWT_SECRET}
+      - jwt.secret=${JWT_SECRET}
+      - jwt.expiration=${JWT_EXPIRATION}
 
   # 5. News Service
   news-service:
     build: ./services/news-service # ⭐️ 경로 수정
     container_name: news-service
+    ports:
+      - "8082:8082"
+    dns:
+      - 8.8.8.8
     networks:
       - msa-network
     depends_on:
       - discovery-service
     environment:
-      - SPRING_CONFIG_URI=http://config-server:8888
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
       # DB 연결 설정
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      # SMTP
+      - SPRING_MAIL_HOST=${SPRING_MAIL_HOST}
+      - SPRING_MAIL_PORT=${SPRING_MAIL_PORT}
+      - SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME}
+      - SPRING_MAIL_PASSWORD=${SPRING_MAIL_PASSWORD}
       # JWT
-      - JWT_SECRET=${JWT_SECRET}
+      - jwt.secret=${JWT_SECRET}
+      - jwt.expiration=${JWT_EXPIRATION}
 
-  # 6. Flask API
+#  # 6. Flask API (최종 수정)
   flaskapi:
     build: ./services/flaskapi
-    container_name: flaskapi
-    ports:
-      - '5000:5000' # 외부에서 직접 확인도 가능하도록 노출
-    networks:
-      - msa-network
-    depends_on:
-      discovery-service:
-        condition: service_started # 유레카가 먼저 떠야 등록 시도 가능
+    #    ports: ["5000:5000"]                # ← 임시 외부 노출
+    networks: [msa-network]
     environment:
       # Flask 실행 포트
       - PORT=5000
       # 유레카 정보
       - APP_NAME=FLASKAPI
-      - INSTANCE_HOST=flaskapi # ★ 컨테이너명과 동일하게 (게이트웨이/유레카에서 접근 가능)
+      - INSTANCE_HOST=flaskapi          # ★ 컨테이너명과 동일하게 (게이트웨이/유레카에서 접근 가능)
       - EUREKA_SERVER=http://discovery-service:8761/eureka/
       # 타임존
       - TZ=Asia/Seoul
       # 프런트에서 직접 5000 호출할 경우를 대비한 CORS
       - CORS_ALLOWED_ORIGINS=http://localhost:3000
     healthcheck:
-      test: ['CMD', 'curl', '-fsS', 'http://localhost:5000/']
-      interval: 15s
-      timeout: 3s
-      retries: 10
+      test: [ "CMD", "curl", "-fsS", "http://localhost:5000/health" ]
+      interval: 10s
+      timeout: 2s
+      retries: 12
+    restart: unless-stopped
 
   # 7. Crawler Service
   crawler-service:

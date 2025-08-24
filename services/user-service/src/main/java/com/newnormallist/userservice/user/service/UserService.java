@@ -12,6 +12,7 @@ import com.newnormallist.userservice.user.entity.User;
 import com.newnormallist.userservice.common.exception.UserException;
 import com.newnormallist.userservice.user.entity.UserStatus;
 import com.newnormallist.userservice.user.repository.UserRepository;
+import com.newnormallist.userservice.user.repository.NewsRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,12 +23,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -39,6 +40,7 @@ public class UserService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserReadHistoryRepository userReadHistoryRepository;
+    private final NewsRepository newsRepository;
     private final NewsServiceClient newsServiceClient; // Feign Client 의존성 주입
 
     /**
@@ -227,20 +229,26 @@ public class UserService {
                 log.info("뉴스 읽음 기록 갱신 완료 - 사용자 ID: {}, 뉴스 ID: {}", userId, newsId);
                 return;
             }
-
             // 기록을 저장하기 위해 User 엔티티 조회
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+
+            // 직접 DB에서 카테고리 조회 (enum으로 직접 가져옴)
+            NewsCategory categoryName = newsRepository.findCategoryById(newsId)
+                    .orElse(null); // 카테고리가 없어도 null로 저장
+
             // 읽은 기록 엔티티 생성
             UserReadHistory history = UserReadHistory.builder()
                     .user(user)
                     .newsId(newsId)
+                    .categoryName(categoryName)
                     .build();
             // 읽은 기록 저장
             userReadHistoryRepository.save(history);
-            log.info("뉴스 읽음 기록 추가 완료 - 사용자 ID: {}, 뉴스 ID: {}", userId, newsId);
+            log.info("뉴스 읽음 기록 추가 완료 - 사용자 ID: {}, 뉴스 ID: {}, 카테고리: {}", userId, newsId, categoryName);
         }
     }
+
     /**
      * 사용자가 읽은 뉴스 기록 조회 로직 (updated_at 포함)
      * @param userId 사용자 ID

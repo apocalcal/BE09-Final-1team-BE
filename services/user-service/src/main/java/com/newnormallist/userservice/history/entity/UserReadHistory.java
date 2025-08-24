@@ -1,5 +1,6 @@
 package com.newnormallist.userservice.history.entity;
 
+import com.newnormallist.userservice.user.entity.NewsCategory;
 import com.newnormallist.userservice.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -28,6 +29,10 @@ public class UserReadHistory {
     @Column(name = "news_id", nullable = false)
     private Long newsId;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category_name")
+    private NewsCategory categoryName;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -37,12 +42,15 @@ public class UserReadHistory {
     private LocalDateTime updatedAt;
 
     @Builder
-    public UserReadHistory(User user, Long newsId) {
+    public UserReadHistory(User user, Long newsId, NewsCategory categoryName) {
         this.user = user;
         this.newsId = newsId;
+        this.categoryName = categoryName;
     }
 
     public void updateReadTime() {
         this.updatedAt = LocalDateTime.now();
     }
+
+
 }
