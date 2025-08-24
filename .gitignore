@@ -83,11 +83,6 @@ wheels/
 
 *.manifest
 *.spec
-# venv / virtualenv
-venv/
-ENV/
-env/
-.venv/
 
 # venv / virtualenv
 venv/
@@ -113,3 +108,6 @@ env/
 
 #application-local 설정#
 *-local.yml
+
+# 개인 단독 실행용 설정
+*-solo.yml
