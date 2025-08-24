@@ -20,12 +20,13 @@ public class MyPageController {
     @GetMapping("/scraps")
     public ResponseEntity<?> getMyScraps(
             @AuthenticationPrincipal String userIdString,
+            @RequestParam(required = false) String category,
             Pageable pageable) {
         if (userIdString == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("사용자 인증 정보가 없습니다.");
         }
         Long userId = Long.parseLong(userIdString);
-        Page<NewsListResponse> scraps = myPageService.getScrappedNews(userId, pageable);
+        Page<NewsListResponse> scraps = myPageService.getScrappedNews(userId, category, pageable);
         return ResponseEntity.ok(scraps);
     }
 
