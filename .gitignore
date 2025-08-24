@@ -54,9 +54,6 @@ out/
 news-service/target/
 target/
 
-# app-local files
-*-local.yml
-
 # env files
 .env
 .env.local
@@ -106,8 +103,9 @@ env/
 *~
 .DS_Store
 
-#application-local 설정#
-*-local.yml
-
 # 개인 단독 실행용 설정
 *-solo.yml
+
+# 개인용 폴더 / 개인 실행 설정 및 캐시 등
+.local/
+.run/
