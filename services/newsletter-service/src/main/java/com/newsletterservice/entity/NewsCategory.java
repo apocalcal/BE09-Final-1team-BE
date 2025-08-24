@@ -9,7 +9,7 @@ public enum NewsCategory {
     POLITICS("정치", "🏛️"),
     ECONOMY("경제", "💰"),
     SOCIETY("사회", "👥"),
-    LIFE("생활", "🎭"),
+    CULTURE("생활", "🎭"),
     INTERNATIONAL("세계", "🌍"),
     IT_SCIENCE("IT/과학", "💻"),
     VEHICLE("자동차/교통", "🚗"),

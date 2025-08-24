@@ -210,6 +210,68 @@ public class NewsletterController {
         }
     }
 
+    /**
+     * 개인화된 뉴스레터 HTML 조회 (이메일용)
+     */
+    @GetMapping("/{newsletterId}/html")
+    public ResponseEntity<String> getNewsletterHtml(
+            @PathVariable Long newsletterId,
+            HttpServletRequest httpRequest) {
+        
+        try {
+            String userId = extractUserIdFromToken(httpRequest);
+            log.info("퍼스널라이즈드 뉴스레터 HTML 조회 - userId: {}, newsletterId: {}", userId, newsletterId);
+            
+            NewsletterContent content = newsletterService.buildPersonalizedContent(Long.valueOf(userId), newsletterId);
+            String htmlContent = emailRenderer.renderToHtml(content);
+            
+            return ResponseEntity.ok()
+                    .header("Content-Type", "text/html; charset=UTF-8")
+                    .body(htmlContent);
+        } catch (NewsletterException e) {
+            log.warn("뉴스레터 HTML 조회 실패: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .header("Content-Type", "text/html; charset=UTF-8")
+                    .body("<html><body><h1>오류</h1><p>" + e.getMessage() + "</p></body></html>");
+        } catch (Exception e) {
+            log.error("뉴스레터 HTML 조회 중 오류 발생", e);
+            return ResponseEntity.badRequest()
+                    .header("Content-Type", "text/html; charset=UTF-8")
+                    .body("<html><body><h1>오류</h1><p>뉴스레터 HTML 조회 중 오류가 발생했습니다.</p></body></html>");
+        }
+    }
+
+    /**
+     * 개인화된 뉴스레터 미리보기 (HTML)
+     */
+    @GetMapping("/{newsletterId}/preview")
+    public ResponseEntity<String> getNewsletterPreview(
+            @PathVariable Long newsletterId,
+            HttpServletRequest httpRequest) {
+        
+        try {
+            String userId = extractUserIdFromToken(httpRequest);
+            log.info("퍼스널라이즈드 뉴스레터 미리보기 - userId: {}, newsletterId: {}", userId, newsletterId);
+            
+            NewsletterContent content = newsletterService.buildPersonalizedContent(Long.valueOf(userId), newsletterId);
+            String previewHtml = emailRenderer.renderToPreviewHtml(content);
+            
+            return ResponseEntity.ok()
+                    .header("Content-Type", "text/html; charset=UTF-8")
+                    .body(previewHtml);
+        } catch (NewsletterException e) {
+            log.warn("뉴스레터 미리보기 실패: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .header("Content-Type", "text/html; charset=UTF-8")
+                    .body("<html><body><h1>오류</h1><p>" + e.getMessage() + "</p></body></html>");
+        } catch (Exception e) {
+            log.error("뉴스레터 미리보기 중 오류 발생", e);
+            return ResponseEntity.badRequest()
+                    .header("Content-Type", "text/html; charset=UTF-8")
+                    .body("<html><body><h1>오류</h1><p>뉴스레터 미리보기 중 오류가 발생했습니다.</p></body></html>");
+        }
+    }
+
     // ========================================
     // 2. 발송 관리 기능
     // ========================================

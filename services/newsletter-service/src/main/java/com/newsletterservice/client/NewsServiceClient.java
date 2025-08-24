@@ -11,7 +11,7 @@ import java.util.List;
 
 @FeignClient(
         name = "news-service",
-        url  = "${NEWS_SERVICE_URL:http://news-service:8082}",
+        url  = "${news.base-url:http://localhost:8082}",
         contextId = "newsletterNewsServiceClient",
         path = "/api/news",
         configuration = FeignTimeoutConfig.class

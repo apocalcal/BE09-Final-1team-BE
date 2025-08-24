@@ -8,7 +8,8 @@ import lombok.Getter;
 public enum SubscriptionFrequency {
     DAILY("매일"),
     WEEKLY("주간"),
-    MONTHLY("월간");
+    MONTHLY("월간"),
+    IMMEDIATE("즉시"); // 실시간 알림용
 
     private final String description;
 }

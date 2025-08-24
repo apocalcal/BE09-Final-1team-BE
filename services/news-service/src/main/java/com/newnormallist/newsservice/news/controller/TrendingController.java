@@ -4,6 +4,8 @@ import com.newnormallist.newsservice.news.dto.NewsListResponse;
 import com.newnormallist.newsservice.news.dto.NewsResponse;
 import com.newnormallist.newsservice.news.dto.TrendingKeywordDto;
 import com.newnormallist.newsservice.news.service.NewsService;
+import com.newnormallist.newsservice.news.service.TrendingService;
+import com.newnormallist.newsservice.recommendation.dto.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +21,8 @@ public class TrendingController {
     
     @Autowired
     private NewsService newsService;
+    @Autowired
+    private TrendingService trendingService;
 
     /**
      * 트렌딩 뉴스 (페이징)
@@ -37,6 +41,33 @@ public class TrendingController {
         List<NewsResponse> news = newsService.getTrendingNews();
         return ResponseEntity.ok(news);
     }
+
+    /**
+     * 실시간 인기 키워드 조회
+     */
+    @GetMapping("/trending-keywords")
+    public ResponseEntity<ApiResponse<List<TrendingKeywordDto>>> getTrendingKeywords(
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(defaultValue = "24h") String period,
+            @RequestParam(required = false) Integer hours
+    ) {
+        int windowHours = (hours != null) ? hours : parsePeriodToHours(period);
+        List<TrendingKeywordDto> result = trendingService.getTrendingKeywords(windowHours, limit);
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    private int parsePeriodToHours(String period) {
+        try {
+            String p = period.trim().toLowerCase();
+            if (p.endsWith("h")) return Integer.parseInt(p.substring(0, p.length()-1));
+            if (p.endsWith("m")) return Math.max(1, Integer.parseInt(p.substring(0, p.length()-1)) / 60);
+            return Integer.parseInt(p);
+        } catch (Exception e) {
+            return 24;
+        }
+    }
+
+
 
     /**
      * 인기 뉴스 (조회수 기반)

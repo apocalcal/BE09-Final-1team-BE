@@ -341,4 +341,18 @@ public interface NewsletterDeliveryRepository extends JpaRepository<NewsletterDe
         GROUP BY nd.newsletterId
     """)
     List<Object[]> getNewsletterPerformanceStats();
+    
+    // ========================================
+    // 8. 추가 필요한 메서드들
+    // ========================================
+    
+    /**
+     * 특정 시간 이후 생성된 발송 기록 조회
+     */
+    List<NewsletterDelivery> findByCreatedAtAfter(LocalDateTime since);
+    
+    /**
+     * 사용자별 특정 기간 발송 기록 조회
+     */
+    List<NewsletterDelivery> findByUserIdAndCreatedAtBetween(Long userId, LocalDateTime startDate, LocalDateTime endDate);
 }

@@ -32,6 +32,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/subscriptions").permitAll()
                         .requestMatchers(HttpMethod.GET,  "/api/newsletter/confirm").permitAll()
                         .requestMatchers(HttpMethod.GET,  "/api/newsletter/*/content").permitAll() // 임시로 허용
+                        .requestMatchers(HttpMethod.GET,  "/api/newsletter/*/html").permitAll() // HTML 조회 허용
+                        .requestMatchers(HttpMethod.GET,  "/api/newsletter/*/preview").permitAll() // 미리보기 허용
                         .requestMatchers(HttpMethod.POST, "/api/newsletter/delivery/send-now").permitAll() // 발송 허용
                         .requestMatchers(HttpMethod.POST, "/api/newsletter/delivery/schedule").permitAll() // 예약 발송 허용
                         .requestMatchers(HttpMethod.PUT,  "/api/newsletter/delivery/*/cancel").permitAll() // 발송 취소 허용
