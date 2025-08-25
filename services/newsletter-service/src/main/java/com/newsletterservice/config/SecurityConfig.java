@@ -31,16 +31,22 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/newsletter/subscribe").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/subscriptions").permitAll()
                         .requestMatchers(HttpMethod.GET,  "/api/newsletter/confirm").permitAll()
-                        .requestMatchers(HttpMethod.GET,  "/api/newsletter/*/content").permitAll() // 임시로 허용
-                        .requestMatchers(HttpMethod.GET,  "/api/newsletter/*/html").permitAll() // HTML 조회 허용
-                        .requestMatchers(HttpMethod.GET,  "/api/newsletter/*/preview").permitAll() // 미리보기 허용
-                        .requestMatchers(HttpMethod.POST, "/api/newsletter/delivery/send-now").permitAll() // 발송 허용
-                        .requestMatchers(HttpMethod.POST, "/api/newsletter/delivery/schedule").permitAll() // 예약 발송 허용
-                        .requestMatchers(HttpMethod.PUT,  "/api/newsletter/delivery/*/cancel").permitAll() // 발송 취소 허용
-                        .requestMatchers(HttpMethod.PUT,  "/api/newsletter/delivery/*/retry").permitAll() // 발송 재시도 허용
-                        .requestMatchers(HttpMethod.GET,  "/api/newsletter/subscription/*").permitAll() // 구독 조회 허용
-                        .requestMatchers(HttpMethod.DELETE, "/api/newsletter/subscription/*").permitAll() // 구독 해지 허용
-                        .requestMatchers(HttpMethod.PUT,  "/api/newsletter/subscription/*/status").permitAll() // 구독 상태 변경 허용
+                        .requestMatchers(HttpMethod.GET,  "/api/newsletter/{newsletterId}/content").permitAll()
+                        .requestMatchers(HttpMethod.GET,  "/api/newsletter/{newsletterId}/html").permitAll()
+                        .requestMatchers(HttpMethod.GET,  "/api/newsletter/{newsletterId}/preview").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/newsletter/delivery/send-now").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/newsletter/delivery/schedule").permitAll()
+                        .requestMatchers(HttpMethod.PUT,  "/api/newsletter/delivery/{deliveryId}/cancel").permitAll()
+                        .requestMatchers(HttpMethod.PUT,  "/api/newsletter/delivery/{deliveryId}/retry").permitAll()
+                        .requestMatchers(HttpMethod.GET,  "/api/newsletter/subscription/{id}").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/newsletter/subscription/{id}").permitAll()
+                        .requestMatchers(HttpMethod.PUT,  "/api/newsletter/subscription/{subscriptionId}/status").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/newsletter/trending-keywords").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/newsletter/category/{category}/trending-keywords").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/newsletter/category/{category}/articles").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/newsletter/trending-keywords").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/newsletter/category/{category}/trending-keywords").permitAll()
+
                         .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults()); // using Basic for dev
