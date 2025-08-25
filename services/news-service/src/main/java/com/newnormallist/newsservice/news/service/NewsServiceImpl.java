@@ -21,6 +21,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -202,12 +206,22 @@ public class NewsServiceImpl implements NewsService {
             
             switch (sortBy.toLowerCase()) {
                 case "date":
+                case "publishedat":
                     if (order.equals("desc")) {
                         filteredNews.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
                     } else {
                         filteredNews.sort((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()));
                     }
                     break;
+//                case "viewcount":
+//                    if (order.equals("desc")) {
+//                        filteredNews.sort((a, b) -> Integer.compare(b.getViewCount() != null ? b.getViewCount() : 0,
+//                                                                   a.getViewCount() != null ? a.getViewCount() : 0));
+//                    } else {
+//                        filteredNews.sort((a, b) -> Integer.compare(a.getViewCount() != null ? a.getViewCount() : 0,
+//                                                                   b.getViewCount() != null ? b.getViewCount() : 0));
+//                    }
+//                    break;
                 case "title":
                     if (order.equals("desc")) {
                         filteredNews.sort((a, b) -> b.getTitle().compareTo(a.getTitle()));
@@ -348,6 +362,7 @@ public class NewsServiceImpl implements NewsService {
         return NewsListResponse.builder()
                 .newsId(news.getNewsId())
                 .title(news.getTitle())
+                .content(news.getContent())
                 .press(news.getPress())
                 .link(null) // TODO: link 필드 추가 필요
                 .trusted(news.getTrusted() ? 1 : 0)
@@ -492,6 +507,110 @@ public class NewsServiceImpl implements NewsService {
                         .build())
                 .collect(Collectors.toList());
     }
+    
+    @Override
+    public List<TrendingKeywordDto> getTrendingKeywordsByCategory(Category category, int limit) {
+        // 해당 카테고리의 최근 뉴스에서 키워드 추출
+        LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
+        
+        try {
+            // 해당 카테고리의 최근 뉴스 조회
+            Page<News> categoryNews = newsRepository.findByCategory(category, Pageable.ofSize(100));
+            List<News> recentNews = categoryNews.getContent().stream()
+                    .filter(news -> {
+                        try {
+                            LocalDateTime publishedAt = LocalDateTime.parse(news.getPublishedAt());
+                            return publishedAt.isAfter(weekAgo);
+                        } catch (Exception e) {
+                            return false;
+                        }
+                    })
+                    .collect(Collectors.toList());
+            
+            // 키워드 추출 및 빈도 계산
+            Map<String, Long> keywordCounts = recentNews.stream()
+                    .flatMap(news -> extractKeywordsFromNews(news).stream())
+                    .collect(Collectors.groupingBy(keyword -> keyword, Collectors.counting()));
+            
+            return keywordCounts.entrySet().stream()
+                    .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                    .limit(limit)
+                    .map(entry -> TrendingKeywordDto.builder()
+                            .keyword(entry.getKey())
+                            .count(entry.getValue())
+                            .trendScore(entry.getValue().doubleValue())
+                            .build())
+                    .collect(Collectors.toList());
+                    
+        } catch (Exception e) {
+            // log.warn("카테고리별 트렌딩 키워드 조회 실패: category={}", category, e); // Original code had this line commented out
+            return getDefaultKeywords(limit);
+        }
+    }
+    
+    /**
+     * 뉴스에서 키워드 추출
+     */
+    private List<String> extractKeywordsFromNews(News news) {
+        List<String> keywords = new ArrayList<>();
+        
+        // 제목에서 키워드 추출
+        if (news.getTitle() != null) {
+            keywords.addAll(extractKeywordsFromText(news.getTitle()));
+        }
+        
+        // 내용에서 키워드 추출 (내용이 너무 길면 앞부분만 사용)
+        if (news.getContent() != null) {
+            String content = news.getContent();
+            if (content.length() > 500) {
+                content = content.substring(0, 500);
+            }
+            keywords.addAll(extractKeywordsFromText(content));
+        }
+        
+        return keywords;
+    }
+    
+    /**
+     * 텍스트에서 키워드 추출
+     */
+    private List<String> extractKeywordsFromText(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        // 간단한 키워드 추출 로직
+        return Arrays.stream(text.split("\\s+"))
+                .map(word -> word.replaceAll("[^가-힣0-9A-Za-z]", ""))
+                .filter(word -> word.length() >= 2 && word.matches(".*[가-힣].*"))
+                .filter(word -> !STOPWORDS.contains(word))
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * 기본 키워드 반환
+     */
+    private List<TrendingKeywordDto> getDefaultKeywords(int limit) {
+        List<String> defaultKeywords = Arrays.asList(
+            "주요뉴스", "핫이슈", "트렌드", "분석", "전망", "동향", "소식", "업데이트"
+        );
+        
+        return defaultKeywords.stream()
+                .limit(limit)
+                .map(keyword -> TrendingKeywordDto.builder()
+                        .keyword(keyword)
+                        .count(1L)
+                        .trendScore(1.0)
+                        .build())
+                .collect(Collectors.toList());
+    }
+    
+    // 너무 일반적인 단어는 제외
+    private static final Set<String> STOPWORDS = Set.of(
+        "속보", "영상", "단독", "인터뷰", "기자", "사진", "종합", "오늘", "내일",
+        "정부", "대통령", "국회", "한국", "대한민국", "뉴스", "기사", "외신",
+        "관련", "이번", "지난", "현재", "최대", "최소", "전망", "분석", "현장"
+    );
     
     private KeywordSubscriptionDto convertToKeywordSubscriptionDto(KeywordSubscription subscription) {
         return KeywordSubscriptionDto.builder()

@@ -61,4 +61,5 @@ public interface NewsService {
     // 트렌딩 키워드 관련 메서드들
     List<TrendingKeywordDto> getTrendingKeywords(int limit);
     List<TrendingKeywordDto> getPopularKeywords(int limit);
+    List<TrendingKeywordDto> getTrendingKeywordsByCategory(Category category, int limit);
 } 

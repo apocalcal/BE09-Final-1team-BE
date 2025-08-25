@@ -14,8 +14,15 @@ import java.util.Optional;
 @Repository
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
 
+
     // 사용자별 구독 정보 조회
     Optional<Subscription> findByUserId(Long userId);
+    
+    // 사용자별 구독 목록 조회
+    List<Subscription> findAllByUserId(Long userId);
+    
+    // 사용자별 상태별 구독 조회
+    List<Subscription> findByUserIdAndStatus(Long userId, SubscriptionStatus status);
 
     // 구독 상태별 조회
     List<Subscription> findByStatus(SubscriptionStatus status);
@@ -76,4 +83,33 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     // 구독자 통계
     @Query("SELECT s.frequency, COUNT(s) FROM Subscription s WHERE s.status = 'ACTIVE' GROUP BY s.frequency")
     List<Object[]> getActiveSubscriptionStats();
+    
+    // ========================================
+    // 추가 필요한 메서드들
+    // ========================================
+    
+    /**
+     * 특정 카테고리를 포함하는 구독자 수 조회
+     */
+    long countByPreferredCategoriesContaining(String category);
+    
+    /**
+     * 특정 카테고리를 포함하고 특정 상태인 구독자 수 조회
+     */
+    long countByPreferredCategoriesContainingAndStatus(String category, SubscriptionStatus status);
+    
+    /**
+     * 특정 카테고리를 포함하고 특정 시간 이전에 생성된 구독자 수 조회
+     */
+    long countByPreferredCategoriesContainingAndCreatedAtBefore(String category, LocalDateTime date);
+    
+    /**
+     * 특정 카테고리를 포함하고 특정 상태이고 특정 시간 이후에 업데이트된 구독자 수 조회
+     */
+    long countByPreferredCategoriesContainingAndStatusAndUpdatedAtAfter(String category, SubscriptionStatus status, LocalDateTime date);
+    
+    /**
+     * 특정 카테고리를 포함하고 특정 상태인 구독자 목록 조회
+     */
+    List<Subscription> findByPreferredCategoriesContainingAndStatus(String category, SubscriptionStatus status);
 }

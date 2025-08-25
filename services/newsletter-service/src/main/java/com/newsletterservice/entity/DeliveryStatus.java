@@ -11,7 +11,9 @@ public enum DeliveryStatus {
     SENT("발송 완료"),
     OPENED("열람 완료"),
     FAILED("발송 실패"),
-    BOUNCED("반송");
+    BOUNCED("반송"),
+    SCHEDULED("예약됨"),
+    CANCELLED("취소됨");
 
     private final String description;
 }

@@ -6,9 +6,10 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum DeliveryMethod {
-    EMAIL("이메일"),
-    PUSH("푸시 알림"),
-    SMS("문자 메시지");
+    EMAIL("이메일", 1),
+    SMS("SMS", 2),
+    PUSH("푸시 알림", 3);
 
     private final String description;
+    private final int level;
 }
