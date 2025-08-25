@@ -1,6 +1,7 @@
 # 1. 서버 포트 설정
 server:
   port: 8082
+  forward-headers-strategy: framework
 
 # 2. Eureka 클라이언트 설정
 eureka:
@@ -25,9 +26,10 @@ logging:
 
 # 5. Swagger(OpenAPI) 기본 설정
 springdoc:
+  forward-headers-enabled: true # 게이트웨이에서 전달된 헤더를 사용
   api-docs:
     enabled: true # /v3/api-docs 활성화
-    path: /v3/api-docs # 문서 JSON 경로
+    path: /news-api-docs # 문서 JSON 경로
   swagger-ui:
     enabled: true # Swagger UI 활성화
     path: /swagger-ui # UI 접속 경로(예: http://localhost:8082/swagger-ui)
@@ -44,34 +46,36 @@ springdoc:
 
 # 6. 추천 시스템 설정
 reco:
-  quotas: [7, 5, 3] # 상위 3개 카테고리에서 각각 가져올 뉴스 수
+  quotas: [9, 7, 5] # 상위 3개 카테고리에서 각각 가져올 뉴스 수
   read-threshold: 10 # 조회 수 임계값
   scrap-threshold: 10 # 스크랩 수 임계값
   read-half-life-days: 3.0 # 조회 기록 반감기 (일)
   scrap-half-life-days: 10.0 # 스크랩 기록 반감기 (일)
 
   # 케이스별 기본 가중치 (정규화 전)
-  case1-demo: 0.70
-  case1-pref: 0.30
+  case1-demo: 0.30
+  case1-pref: 0.70
   case1-read: 0.0
   case1-scrap: 0.0
 
-  case2-demo: 0.40
-  case2-pref: 0.20
-  case2-read: 0.40
+  case2-demo: 0.20
+  case2-pref: 0.50
+  case2-read: 0.30
   case2-scrap: 0.0
 
-  case3-demo: 0.35
-  case3-pref: 0.25
+  case3-demo: 0.20
+  case3-pref: 0.45
   case3-read: 0.0
-  case3-scrap: 0.40
+  case3-scrap: 0.35
 
-  case4-demo: 0.20
-  case4-pref: 0.10
-  case4-read: 0.35
-  case4-scrap: 0.35
+  case4-demo: 0.15
+  case4-pref: 0.30
+  case4-read: 0.30
+  case4-scrap: 0.25
 # # 6. 스케줄러 설정
 # scheduling:
 #   vector-update:
 #     daily-cron: '0 0 2 * * ?' # 매일 새벽 2시
-#     hourly-cron: '0 0 * * * ?' # 매시간 정각
+#     hourly-cron: '0 0 * * * ?' # 매시간 정각\
+app:
+  gateway-url: http://localhost:8000 # 게이트웨이 URL (개발/테스트용)

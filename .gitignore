@@ -1,4 +1,6 @@
 HELP.md
+
+### Gradle ###
 .gradle
 build/
 .gradle/
@@ -6,7 +8,7 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### STS ###
+### STS (Spring Tool Suite) ###
 .apt_generated
 .classpath
 .factorypath
@@ -37,32 +39,27 @@ out/
 ### VS Code ###
 .vscode/
 
-### secrets ###
+### Secrets & Config ###
 /config/config-files/*-secret.yml
 /config/config-files/*-secrets.yml
-.DS_Store
-
-#application-local 설정#
 *-local.yml
 
-# 터미널 및 IDE 히스토리
+### macOS ###
+.DS_Store
+
+### Shell & Terminal History ###
 .history
 .bash_history
 .zsh_history
 
-# target directory
+### Build Targets ###
 news-service/target/
 target/
 
-# env files
-.env
-.env.local
-
-# python
+### Python ###
 __pycache__/
 *.py[cod]
 *$py.class
-build/
 develop-eggs/
 dist/
 downloads/
@@ -77,31 +74,25 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
 *.manifest
 *.spec
 
-# venv / virtualenv
+### Virtual Environments ###
 venv/
 ENV/
 env/
 .venv/
+services/flaskapi/.venv
 
-# VS Code
-.vscode/
-
-# PyCharm
-.idea/
-
-# Jupyter Notebook 체크포인트
+### Jupyter Notebook ###
 .ipynb_checkpoints/
 
+### Logs, temp files ###
 *.log
 *.pot
 *.mo
 *.swp
 *~
-.DS_Store
 
 # 개인 단독 실행용 설정
 *-solo.yml

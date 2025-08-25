@@ -6,4 +6,3 @@ spring:
   cloud:
     bootstrap:
       enabled: false
-

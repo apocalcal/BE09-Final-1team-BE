@@ -8,6 +8,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import com.newnormallist.crawlerservice.enums.Category;
 import com.newnormallist.crawlerservice.enums.DedupState;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Entity
 @Table(name = "news")
@@ -60,10 +61,25 @@ public class News {
     private String link;
 
     @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "DATETIME(6)")
     private LocalDateTime createdAt;
 
     @LastModifiedDate
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", columnDefinition = "DATETIME(6)")
     private LocalDateTime updatedAt;
+
+    // 날짜를 원하는 형식으로 변환하는 메서드
+    public String getCreatedAtFormatted() {
+        if (createdAt != null) {
+            return createdAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS"));
+        }
+        return null;
+    }
+
+    public String getUpdatedAtFormatted() {
+        if (updatedAt != null) {
+            return updatedAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS"));
+        }
+        return null;
+    }
 }
