@@ -234,11 +234,15 @@ public class UserService {
             // 직접 DB에서 카테고리 조회 (enum으로 직접 가져옴)
             NewsCategory categoryName = newsRepository.findCategoryById(newsId)
                     .orElse(null); // 카테고리가 없어도 null로 저장
+
+            // 직접 DB에서 제목 조회
+            Optional<String> newsTitle = newsRepository.findTitleById(newsId);
             
             // 읽은 기록 엔티티 생성
             UserReadHistory history = UserReadHistory.builder()
                     .user(user)
                     .newsId(newsId)
+                    .newsTitle(newsTitle.orElse("제목 없음"))
                     .categoryName(categoryName)
                     .build();
             // 읽은 기록 저장

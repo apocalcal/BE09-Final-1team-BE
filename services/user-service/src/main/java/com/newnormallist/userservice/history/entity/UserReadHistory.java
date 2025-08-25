@@ -29,6 +29,9 @@ public class UserReadHistory {
     @Column(name = "news_id", nullable = false)
     private Long newsId;
 
+    @Column(name = "news_title", nullable = false)
+    private String newsTitle;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "category_name")
     private NewsCategory categoryName;
@@ -42,9 +45,10 @@ public class UserReadHistory {
     private LocalDateTime updatedAt;
 
     @Builder
-    public UserReadHistory(User user, Long newsId, NewsCategory categoryName) {
+    public UserReadHistory(User user, Long newsId, String newsTitle, NewsCategory categoryName) {
         this.user = user;
         this.newsId = newsId;
+        this.newsTitle = newsTitle;
         this.categoryName = categoryName;
     }
 
