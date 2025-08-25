@@ -1,5 +1,6 @@
 package com.newnormallist.newsservice.news.dto;
 
+import com.newnormallist.newsservice.news.entity.NewsStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,6 +22,9 @@ public class NewsResponse {
     private Integer trusted;
     private LocalDateTime publishedAt;
     private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+
     private String reporterName;
     private String categoryName;
     private String categoryDescription;
@@ -28,4 +32,7 @@ public class NewsResponse {
     private String dedupStateDescription;
     private String imageUrl;
     private String oidAid;
-} 
+
+    private NewsStatus status;
+    
+}

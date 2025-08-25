@@ -1,12 +1,14 @@
-package com.newsservice.news.repository;
+package com.newnormallist.newsservice.news.repository;
 
-import com.newsservice.news.entity.Category;
-import com.newsservice.news.entity.NewsScrap;
+import com.newnormallist.newsservice.news.entity.Category;
+import com.newnormallist.newsservice.news.entity.NewsScrap;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -25,4 +27,8 @@ public interface NewsScrapRepository extends JpaRepository<NewsScrap, Integer> {
     Optional<NewsScrap> findTopByOrderByScrapIdDesc();
 
     Optional<NewsScrap> findByStorageIdAndNewsNewsId(Integer storageId, Long newsId);
+
+    @Modifying
+    @Transactional
+    void deleteByStorageId(Integer storageId);
 }

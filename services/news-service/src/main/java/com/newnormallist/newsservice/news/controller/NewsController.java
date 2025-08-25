@@ -1,9 +1,9 @@
-package com.newsservice.news.controller;
+package com.newnormallist.newsservice.news.controller;
 
-import com.newsservice.news.dto.NewsListResponse;
-import com.newsservice.news.dto.NewsResponse;
-import com.newsservice.news.entity.Category;
-import com.newsservice.news.service.NewsService;
+import com.newnormallist.newsservice.news.dto.NewsListResponse;
+import com.newnormallist.newsservice.news.dto.NewsResponse;
+import com.newnormallist.newsservice.news.entity.Category;
+import com.newnormallist.newsservice.news.service.NewsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

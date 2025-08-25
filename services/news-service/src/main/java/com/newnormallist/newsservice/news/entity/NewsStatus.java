@@ -1,4 +1,4 @@
-package com.newsservice.news.entity;
+package com.newnormallist.newsservice.news.entity;
 
 public enum NewsStatus {
     PUBLISHED, // 공개된 상태

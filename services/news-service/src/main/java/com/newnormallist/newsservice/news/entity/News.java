@@ -44,6 +44,9 @@ public class News {
     @Column(name = "created_at", nullable = true)
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "dedup_state", nullable = false)
     private DedupState dedupState;

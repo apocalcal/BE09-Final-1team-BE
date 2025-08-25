@@ -1,16 +1,16 @@
-package com.newsservice.news.service;
+package com.newnormallist.newsservice.news.service;
 
-import com.newsservice.news.dto.CategoryDto;
-import com.newsservice.news.dto.KeywordSubscriptionDto;
-import com.newsservice.news.dto.NewsCrawlDto;
-import com.newsservice.news.dto.NewsListResponse;
-import com.newsservice.news.dto.NewsResponse;
-import com.newsservice.news.dto.TrendingKeywordDto;
-import com.newsservice.news.entity.*;
-import com.newsservice.news.exception.NewsHiddenException;
-import com.newsservice.news.exception.NewsNotFoundException;
+import com.newnormallist.newsservice.news.dto.CategoryDto;
+import com.newnormallist.newsservice.news.dto.KeywordSubscriptionDto;
+import com.newnormallist.newsservice.news.dto.NewsCrawlDto;
+import com.newnormallist.newsservice.news.dto.NewsListResponse;
+import com.newnormallist.newsservice.news.dto.NewsResponse;
+import com.newnormallist.newsservice.news.dto.TrendingKeywordDto;
+import com.newnormallist.newsservice.news.entity.*;
+import com.newnormallist.newsservice.news.exception.NewsHiddenException;
+import com.newnormallist.newsservice.news.exception.NewsNotFoundException;
 
-import com.newsservice.news.repository.*;
+import com.newnormallist.newsservice.news.repository.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -19,11 +19,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -48,8 +45,6 @@ public class NewsServiceImpl implements NewsService {
 
     @Autowired
     private ScrapStorageRepository scrapStorageRepository;
-
-    // --- (이하 다른 메소드들은 변경 없음) ---
 
     @Override
     public NewsCrawl saveCrawledNews(NewsCrawlDto dto) {
@@ -315,7 +310,6 @@ public class NewsServiceImpl implements NewsService {
         NewsComplaint complaint = new NewsComplaint();
         complaint.setNewsId(newsId);
         complaint.setUserId(userId);
-        // ★★★★★ [수정] @CreationTimestamp가 동작하지 않는 문제를 해결하기 위해, 시간을 직접 설정합니다. ★★★★★
         complaint.setCreatedAt(LocalDateTime.now());
         newsComplaintRepository.save(complaint);
 
@@ -329,13 +323,18 @@ public class NewsServiceImpl implements NewsService {
     @Override
     @Transactional
     public void scrapNews(Long newsId, Long userId) {
-        ScrapStorage scrapStorage = scrapStorageRepository.findByUserId(userId)
-                .orElseGet(() -> {
-                    ScrapStorage newStorage = new ScrapStorage();
-                    newStorage.setUserId(userId);
-                    newStorage.setStorageName(userId + "'s default storage");
-                    return scrapStorageRepository.save(newStorage);
-                });
+        List<ScrapStorage> storages = scrapStorageRepository.findByUserId(userId);
+        ScrapStorage scrapStorage;
+        if (storages.isEmpty()) {
+            ScrapStorage newStorage = new ScrapStorage();
+            newStorage.setUserId(userId);
+            newStorage.setStorageName(userId + "'s default storage");
+            newStorage.setCreatedAt(LocalDateTime.now());
+            newStorage.setUpdatedAt(LocalDateTime.now());
+            scrapStorage = scrapStorageRepository.save(newStorage);
+        } else {
+            scrapStorage = storages.get(0);
+        }
 
         News news = newsRepository.findById(newsId)
                 .orElseThrow(() -> new NewsNotFoundException("스크랩하려는 뉴스를 찾을 수 없습니다: " + newsId));

@@ -1,4 +1,4 @@
-package com.newsservice.news.config.auth;
+package com.newnormallist.newsservice.news.config.auth;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

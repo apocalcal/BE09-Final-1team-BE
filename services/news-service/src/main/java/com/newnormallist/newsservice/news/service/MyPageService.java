@@ -1,6 +1,6 @@
-package com.newsservice.news.service;
+package com.newnormallist.newsservice.news.service;
 
-import com.newsservice.news.dto.NewsListResponse;
+import com.newnormallist.newsservice.news.dto.NewsListResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

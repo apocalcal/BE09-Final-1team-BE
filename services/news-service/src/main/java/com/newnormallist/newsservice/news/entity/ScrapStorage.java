@@ -1,4 +1,4 @@
-package com.newsservice.news.entity;
+package com.newnormallist.newsservice.news.entity;
 
 import jakarta.persistence.*;
 import lombok.*;

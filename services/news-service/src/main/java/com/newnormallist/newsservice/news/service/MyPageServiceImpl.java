@@ -1,13 +1,13 @@
-package com.newsservice.news.service;
+package com.newnormallist.newsservice.news.service;
 
-import com.newsservice.news.dto.NewsListResponse;
-import com.newsservice.news.entity.Category;
-import com.newsservice.news.entity.News;
-import com.newsservice.news.entity.NewsScrap;
-import com.newsservice.news.entity.ScrapStorage;
-import com.newsservice.news.exception.ResourceNotFoundException;
-import com.newsservice.news.repository.NewsScrapRepository;
-import com.newsservice.news.repository.ScrapStorageRepository;
+import com.newnormallist.newsservice.news.dto.NewsListResponse;
+import com.newnormallist.newsservice.news.entity.Category;
+import com.newnormallist.newsservice.news.entity.News;
+import com.newnormallist.newsservice.news.entity.NewsScrap;
+import com.newnormallist.newsservice.news.entity.ScrapStorage;
+import com.newnormallist.newsservice.news.exception.ResourceNotFoundException;
+import com.newnormallist.newsservice.news.repository.NewsScrapRepository;
+import com.newnormallist.newsservice.news.repository.ScrapStorageRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -16,8 +16,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -33,9 +35,12 @@ public class MyPageServiceImpl implements MyPageService {
     public Page<NewsListResponse> getScrappedNews(Long userId, String category, Pageable pageable) {
         log.info("사용자 ID {}의 스크랩 목록 조회 시작. 카테고리: {}, 페이지: {}", userId, category, pageable.getPageNumber());
 
-        ScrapStorage scrapStorage = scrapStorageRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("해당 사용자의 스크랩 보관함을 찾을 수 없습니다: " + userId));
-        log.debug("스크랩 보관함 찾음: {}", scrapStorage.getStorageId());
+        List<ScrapStorage> scrapStorages = scrapStorageRepository.findByUserId(userId);
+        if (scrapStorages.isEmpty()) {
+            throw new ResourceNotFoundException("해당 사용자의 스크랩 보관함을 찾을 수 없습니다: " + userId);
+        }
+        ScrapStorage scrapStorage = scrapStorages.get(0);
+        log.debug("기본 스크랩 보관함 찾음: {}", scrapStorage.getStorageId());
 
         Page<NewsScrap> scrapsPage;
 
@@ -60,9 +65,12 @@ public class MyPageServiceImpl implements MyPageService {
             }
         }
 
-        List<NewsListResponse> dtoList = scrapsPage.getContent().stream()
-                .map(this::convertToNewsListResponse)
-                .collect(Collectors.toList());
+        List<NewsListResponse> dtoList = new ArrayList<>();
+        for (NewsScrap scrap : scrapsPage.getContent()) {
+            if (scrap != null) { // null인 객체를 명시적으로 건너뜁니다.
+                dtoList.add(convertToNewsListResponse(scrap));
+            }
+        }
         
         log.info("스크랩 목록 DTO 변환 완료. {}개의 항목 반환.", dtoList.size());
         return new PageImpl<>(dtoList, pageable, scrapsPage.getTotalElements());
@@ -71,8 +79,11 @@ public class MyPageServiceImpl implements MyPageService {
     @Override
     @Transactional
     public void deleteScrap(Long userId, Long newsId) {
-        ScrapStorage scrapStorage = scrapStorageRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("해당 사용자의 스크랩 보관함을 찾을 수 없습니다: " + userId));
+        List<ScrapStorage> scrapStorages = scrapStorageRepository.findByUserId(userId);
+        if (scrapStorages.isEmpty()) {
+            throw new ResourceNotFoundException("해당 사용자의 스크랩 보관함을 찾을 수 없습니다: " + userId);
+        }
+        ScrapStorage scrapStorage = scrapStorages.get(0);
 
         NewsScrap newsScrap = newsScrapRepository.findByStorageIdAndNewsNewsId(scrapStorage.getStorageId(), newsId)
                 .orElseThrow(() -> new ResourceNotFoundException("해당 뉴스는 스크랩 목록에 없습니다: " + newsId));

@@ -1,4 +1,4 @@
-package com.newsservice.news.exception;
+package com.newnormallist.newsservice.news.exception;
 
 public class InvalidUserIdFormatException extends RuntimeException {
     public InvalidUserIdFormatException(String message, Throwable cause) {

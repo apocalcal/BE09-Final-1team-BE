@@ -1,13 +1,13 @@
-package com.newsservice.news.service;
+package com.newnormallist.newsservice.news.service;
 
-import com.newsservice.news.dto.CategoryDto;
-import com.newsservice.news.dto.KeywordSubscriptionDto;
-import com.newsservice.news.dto.NewsCrawlDto;
-import com.newsservice.news.dto.NewsListResponse;
-import com.newsservice.news.dto.NewsResponse;
-import com.newsservice.news.dto.TrendingKeywordDto;
-import com.newsservice.news.entity.Category;
-import com.newsservice.news.entity.NewsCrawl;
+import com.newnormallist.newsservice.news.dto.CategoryDto;
+import com.newnormallist.newsservice.news.dto.KeywordSubscriptionDto;
+import com.newnormallist.newsservice.news.dto.NewsCrawlDto;
+import com.newnormallist.newsservice.news.dto.NewsListResponse;
+import com.newnormallist.newsservice.news.dto.NewsResponse;
+import com.newnormallist.newsservice.news.dto.TrendingKeywordDto;
+import com.newnormallist.newsservice.news.entity.Category;
+import com.newnormallist.newsservice.news.entity.NewsCrawl;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
