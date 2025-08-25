@@ -27,7 +27,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     // permitAll 경로는 토큰 검증 없이 통과
     if (isPermitAllPath(path)) {
-      log.info("✅ [Gateway] PermitAll path, skipping token validation.");
+      log.info("✅ [Gateway] PermitAll path, skipping token validation for path: {}", path);
       return chain.filter(exchange);
     }
 
@@ -82,11 +82,15 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
    * 인증이 필요하지 않은 경로인지 확인
    */
   private boolean isPermitAllPath(String path) {
-    // startsWith를 사용하면 /auth/login, /auth/refresh 등을 모두 포함할 수 있습니다.
+    boolean isPublicNewsPath = path.startsWith("/api/news") &&
+                               !path.contains("/mypage") &&
+                               !path.contains("/report") &&
+                               !path.contains("/scrap");
+
     return path.startsWith("/api/users/signup")
             || path.startsWith("/api/auth/")
             || path.startsWith("/api/users/categories")
-            || path.startsWith("/api/news")
+            || isPublicNewsPath
             || path.startsWith("/swagger-ui")
             || path.contains("api-docs");
   }
