@@ -3,15 +3,20 @@ package com.newsletterservice.client;
 import com.newsletterservice.common.ApiResponse;
 import com.newsletterservice.client.dto.NewsResponse;
 import com.newsletterservice.entity.NewsCategory;
+import com.newsletterservice.config.FeignTimeoutConfig;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.newsletterservice.client.dto.TrendingKeywordDto;
 
 @FeignClient(
         name = "news-service",
-        url = "${NEWS_SERVICE_URL:http://localhost:8082}",
-        contextId = "newsletterNewsServiceClient")
+        url  = "${news.base-url:http://localhost:8082}",
+        contextId = "newsletterNewsServiceClient",
+        path = "/api/news",
+        configuration = FeignTimeoutConfig.class
+)
 public interface NewsServiceClient {
 
     /**
@@ -74,4 +79,40 @@ public interface NewsServiceClient {
 
     @GetMapping("/api/categories")
     ApiResponse<List<NewsCategory>> getCategories();
+
+    /**
+     * 인기 뉴스 조회 (퍼스널라이즈 로직용)
+     */
+    @GetMapping("/api/news/popular")
+    ApiResponse<List<NewsResponse>> getPopularNews(
+            @RequestParam(defaultValue = "8") int size
+    );
+
+    /**
+     * 카테고리별 최신 뉴스 조회 (퍼스널라이즈 로직용)
+     */
+    @GetMapping("/api/news/by-category")
+    ApiResponse<List<NewsResponse>> getLatestByCategory(
+            @RequestParam("category") String categoryName,
+            @RequestParam(defaultValue = "3") int size
+    );
+
+    /**
+     * 트렌딩 키워드 조회
+     */
+    @GetMapping("/api/trending/keywords")
+    ApiResponse<List<TrendingKeywordDto>> getTrendingKeywords(
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(defaultValue = "24") int hours
+    );
+
+    /**
+     * 카테고리별 트렌딩 키워드 조회
+     */
+    @GetMapping("/api/trending/keywords/category/{categoryName}")
+    ApiResponse<List<TrendingKeywordDto>> getTrendingKeywordsByCategory(
+            @PathVariable("categoryName") String categoryName,
+            @RequestParam(defaultValue = "8") int limit,
+            @RequestParam(defaultValue = "24") int hours
+    );
 }

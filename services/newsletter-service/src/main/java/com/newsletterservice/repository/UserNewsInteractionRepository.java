@@ -17,6 +17,10 @@ public interface UserNewsInteractionRepository extends JpaRepository<UserNewsInt
     List<UserNewsInteraction> findByUserIdAndTypeAndCreatedAtAfter(
             Long userId, InteractionType type, LocalDateTime after);
 
+    // 사용자별, 기간별 조회 (모든 상호작용 타입)
+    List<UserNewsInteraction> findByUserIdAndCreatedAtAfter(
+            Long userId, LocalDateTime after);
+
     // 카테고리별 상호작용 수 조회
     long countByUserIdAndCategoryAndTypeAndCreatedAtAfter(
             Long userId, String category, InteractionType type, LocalDateTime after);

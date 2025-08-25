@@ -50,6 +50,14 @@ public class FeignConfig {
     Logger.Level feignLoggerLevel() {
         return Logger.Level.HEADERS;
     }
+
+    /**
+     * Feign 재시도 설정
+     */
+    @Bean
+    public feign.Retryer feignRetryer() {
+        return new feign.Retryer.Default(100, 1000, 2); // (period, maxPeriod, maxAttempts)
+    }
     
     private String getCurrentJwtToken() {
         try {
