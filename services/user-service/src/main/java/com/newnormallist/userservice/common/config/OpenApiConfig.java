@@ -5,11 +5,15 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class OpenApiConfig {
+    @Value("${app.gateway-url}")
+    private String gatewayUrl;
 
     @Bean
     public OpenAPI openAPI() {
@@ -32,6 +36,7 @@ public class OpenApiConfig {
         SecurityRequirement securityRequirement = new SecurityRequirement().addList(jwtSchemeName);
 
         return new OpenAPI()
+                .addServersItem(new Server().url(gatewayUrl))
                 .info(info)
                 // 4. 위에서 정의한 JWT 인증 스키마를 OpenAPI 문서의 Components에 추가
                 .components(new Components().addSecuritySchemes(jwtSchemeName, securityScheme))

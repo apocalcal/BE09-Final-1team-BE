@@ -83,6 +83,7 @@ venv/
 ENV/
 env/
 .venv/
+services/flaskapi/.venv
 
 ### Jupyter Notebook ###
 .ipynb_checkpoints/
