@@ -248,6 +248,45 @@ public class NewsletterController {
     }
 
     /**
+     * 카테고리별 구독자 수 조회 - 인증 불필요
+     */
+    @GetMapping("/category/{category}/subscribers")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getCategorySubscriberCount(
+            @PathVariable String category) {
+
+        try {
+            log.info("카테고리별 구독자 수 조회 요청 - category: {}", category);
+
+            Map<String, Object> result = newsletterService.getCategorySubscriberStats(category);
+
+            return ResponseEntity.ok(ApiResponse.success(result));
+        } catch (Exception e) {
+            log.error("카테고리별 구독자 수 조회 중 오류 발생", e);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("CATEGORY_SUBSCRIBERS_ERROR", "카테고리별 구독자 수 조회 중 오류가 발생했습니다."));
+        }
+    }
+
+    /**
+     * 전체 카테고리별 구독자 수 조회 - 인증 불필요
+     */
+    @GetMapping("/categories/subscribers")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getAllCategoriesSubscriberCount() {
+
+        try {
+            log.info("전체 카테고리별 구독자 수 조회 요청");
+
+            Map<String, Object> result = newsletterService.getAllCategoriesSubscriberStats();
+
+            return ResponseEntity.ok(ApiResponse.success(result));
+        } catch (Exception e) {
+            log.error("전체 카테고리별 구독자 수 조회 중 오류 발생", e);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("ALL_CATEGORIES_SUBSCRIBERS_ERROR", "전체 카테고리별 구독자 수 조회 중 오류가 발생했습니다."));
+        }
+    }
+
+    /**
      * 개인화된 뉴스레터 콘텐츠 조회 (JSON)
      */
     @GetMapping("/{newsletterId}/content")

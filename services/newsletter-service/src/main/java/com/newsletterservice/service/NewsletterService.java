@@ -2788,4 +2788,121 @@ public class NewsletterService {
         };
     }
 
+    /**
+     * 카테고리별 구독자 통계 조회
+     */
+    public Map<String, Object> getCategorySubscriberStats(String category) {
+        log.info("카테고리별 구독자 통계 조회: category={}", category);
+        
+        try {
+            String englishCategory = convertCategoryToEnglish(category);
+            
+            // 활성 구독자 수
+            long activeSubscribers = subscriptionRepository.countByPreferredCategoriesContainingAndStatus(
+                    englishCategory, SubscriptionStatus.ACTIVE);
+            
+            // 전체 구독자 수 (모든 상태)
+            long totalSubscribers = subscriptionRepository.countByPreferredCategoriesContaining(englishCategory);
+            
+            // 최근 30일간 신규 구독자 수
+            LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+            long newSubscribers = subscriptionRepository.countByPreferredCategoriesContainingAndStatusAndUpdatedAtAfter(
+                    englishCategory, SubscriptionStatus.ACTIVE, thirtyDaysAgo);
+            
+            // 카테고리별 뉴스 개수 (뉴스 서비스에서 조회)
+            Long newsCount = null;
+            try {
+                newsCount = newsServiceClient.getNewsCountByCategory(englishCategory);
+            } catch (Exception e) {
+                log.warn("카테고리별 뉴스 개수 조회 실패: category={}", category, e);
+            }
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("category", category);
+            result.put("categoryEnglish", englishCategory);
+            result.put("activeSubscribers", activeSubscribers);
+            result.put("totalSubscribers", totalSubscribers);
+            result.put("newSubscribersLast30Days", newSubscribers);
+            result.put("newsCount", newsCount != null ? newsCount : 0L);
+            result.put("subscriberGrowthRate", calculateGrowthRate(activeSubscribers, newSubscribers));
+            result.put("lastUpdated", LocalDateTime.now());
+            
+            return result;
+            
+        } catch (Exception e) {
+            log.error("카테고리별 구독자 통계 조회 실패: category={}", category, e);
+            throw new NewsletterException("카테고리별 구독자 통계 조회 중 오류가 발생했습니다.", "CATEGORY_STATS_ERROR");
+        }
+    }
+
+    /**
+     * 전체 카테고리별 구독자 통계 조회
+     */
+    public Map<String, Object> getAllCategoriesSubscriberStats() {
+        log.info("전체 카테고리별 구독자 통계 조회");
+        
+        try {
+            List<String> availableCategories = getAvailableCategories();
+            Map<String, Object> categoryStats = new HashMap<>();
+            Map<String, Long> subscriberCounts = new HashMap<>();
+            Map<String, Long> newsCounts = new HashMap<>();
+            
+            long totalActiveSubscribers = 0;
+            long totalNewsCount = 0;
+            
+            for (String category : availableCategories) {
+                try {
+                    Map<String, Object> stats = getCategorySubscriberStats(category);
+                    categoryStats.put(category, stats);
+                    
+                    Long activeSubscribers = (Long) stats.get("activeSubscribers");
+                    Long newsCount = (Long) stats.get("newsCount");
+                    
+                    subscriberCounts.put(category, activeSubscribers);
+                    newsCounts.put(category, newsCount);
+                    
+                    totalActiveSubscribers += activeSubscribers;
+                    totalNewsCount += newsCount;
+                    
+                } catch (Exception e) {
+                    log.warn("카테고리 {} 통계 조회 실패", category, e);
+                    subscriberCounts.put(category, 0L);
+                    newsCounts.put(category, 0L);
+                }
+            }
+            
+            // 인기 카테고리 순으로 정렬
+            List<String> popularCategories = subscriberCounts.entrySet().stream()
+                    .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toList());
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("totalActiveSubscribers", totalActiveSubscribers);
+            result.put("totalNewsCount", totalNewsCount);
+            result.put("categoryCount", availableCategories.size());
+            result.put("subscriberCounts", subscriberCounts);
+            result.put("newsCounts", newsCounts);
+            result.put("popularCategories", popularCategories);
+            result.put("categoryStats", categoryStats);
+            result.put("lastUpdated", LocalDateTime.now());
+            
+            return result;
+            
+        } catch (Exception e) {
+            log.error("전체 카테고리별 구독자 통계 조회 실패", e);
+            throw new NewsletterException("전체 카테고리별 구독자 통계 조회 중 오류가 발생했습니다.", "ALL_CATEGORIES_STATS_ERROR");
+        }
+    }
+
+    /**
+     * 구독자 성장률 계산
+     */
+    private double calculateGrowthRate(long currentSubscribers, long newSubscribers) {
+        if (currentSubscribers == 0) {
+            return newSubscribers > 0 ? 100.0 : 0.0;
+        }
+        return ((double) newSubscribers / currentSubscribers) * 100.0;
+    }
+
 }

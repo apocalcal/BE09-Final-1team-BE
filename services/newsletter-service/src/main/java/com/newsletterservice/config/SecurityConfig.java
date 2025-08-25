@@ -44,6 +44,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/newsletter/trending-keywords").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/newsletter/category/{category}/trending-keywords").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/newsletter/category/{category}/articles").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/newsletter/category/{category}/subscribers").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/newsletter/categories/subscribers").permitAll()
                         .requestMatchers(HttpMethod.GET, "/newsletter/trending-keywords").permitAll()
                         .requestMatchers(HttpMethod.GET, "/newsletter/category/{category}/trending-keywords").permitAll()
 
