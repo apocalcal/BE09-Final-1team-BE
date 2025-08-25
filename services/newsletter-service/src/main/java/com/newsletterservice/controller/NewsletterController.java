@@ -212,17 +212,17 @@ public class NewsletterController {
     @GetMapping("/trending-keywords")
     public ResponseEntity<ApiResponse<List<String>>> getTrendingKeywords(
             @RequestParam(defaultValue = "10") int limit) {
-        
+
         try {
             log.info("트렌드 키워드 조회 요청 - limit: {}", limit);
-            
+
             List<String> keywords = newsletterService.getTrendingKeywords(limit);
-            
+
             return ResponseEntity.ok(ApiResponse.success(keywords));
         } catch (Exception e) {
             log.error("트렌드 키워드 조회 중 오류 발생", e);
             return ResponseEntity.badRequest()
-                .body(ApiResponse.error("TRENDING_KEYWORDS_ERROR", "트렌드 키워드 조회 중 오류가 발생했습니다."));
+                    .body(ApiResponse.error("TRENDING_KEYWORDS_ERROR", "트렌드 키워드 조회 중 오류가 발생했습니다."));
         }
     }
 
@@ -233,17 +233,17 @@ public class NewsletterController {
     public ResponseEntity<ApiResponse<List<String>>> getCategoryTrendingKeywords(
             @PathVariable String category,
             @RequestParam(defaultValue = "8") int limit) {
-        
+
         try {
             log.info("카테고리별 트렌드 키워드 조회 요청 - category: {}, limit: {}", category, limit);
-            
+
             List<String> keywords = newsletterService.getTrendingKeywordsByCategory(category, limit);
-            
+
             return ResponseEntity.ok(ApiResponse.success(keywords));
         } catch (Exception e) {
             log.error("카테고리별 트렌드 키워드 조회 중 오류 발생", e);
             return ResponseEntity.badRequest()
-                .body(ApiResponse.error("CATEGORY_KEYWORDS_ERROR", "카테고리별 트렌드 키워드 조회 중 오류가 발생했습니다."));
+                    .body(ApiResponse.error("CATEGORY_KEYWORDS_ERROR", "카테고리별 트렌드 키워드 조회 중 오류가 발생했습니다."));
         }
     }
 
