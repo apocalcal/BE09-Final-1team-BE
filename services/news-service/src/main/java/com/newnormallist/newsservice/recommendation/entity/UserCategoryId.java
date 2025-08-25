@@ -13,5 +13,5 @@ public class UserCategoryId implements Serializable {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false, length = 32)
-    private Category category;
+    private RecommendationCategory category;
 }

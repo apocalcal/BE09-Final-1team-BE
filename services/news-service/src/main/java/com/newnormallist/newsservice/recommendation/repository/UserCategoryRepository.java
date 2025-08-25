@@ -7,7 +7,7 @@ import java.util.List;
 
 import com.newnormallist.newsservice.recommendation.entity.UserCategories;
 import com.newnormallist.newsservice.recommendation.entity.UserCategoryId;
-import com.newnormallist.newsservice.recommendation.entity.Category;
+import com.newnormallist.newsservice.recommendation.entity.RecommendationCategory;
 
 // 유저 선호 카테고리 조회 -> P(c) 계산에 사용
 public interface UserCategoryRepository extends JpaRepository<UserCategories, UserCategoryId> {
@@ -17,9 +17,9 @@ public interface UserCategoryRepository extends JpaRepository<UserCategories, Us
 
     // 카테고리 enum만 바로 받고 싶을 때 (벡터 P(c) 만들기 편함)
     @Query("select uc.id.category from UserCategories uc where uc.id.userId = :uid")
-    List<Category> findCategoriesByUserId(@Param("uid") Long userId);
+    List<RecommendationCategory> findCategoriesByUserId(@Param("uid") Long userId);
 
     // 존재여부/삭제 편의 메서드 (엔드포인트에서 쓰기 좋아요)
-    boolean existsByIdUserIdAndIdCategory(Long userId, Category category);
-    long deleteByIdUserIdAndIdCategory(Long userId, Category category);
+    boolean existsByIdUserIdAndIdCategory(Long userId, RecommendationCategory category);
+    long deleteByIdUserIdAndIdCategory(Long userId, RecommendationCategory category);
 }
