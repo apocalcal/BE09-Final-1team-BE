@@ -87,17 +87,27 @@ public class FileServerDatabaseService {
         log.info("📁 {} 카테고리 중복제거된 뉴스 DB 저장 시작", category);
         
         try {
-            // FileServerService를 통해 중복제거된 뉴스 조회
+            // FileServerService의 일관된 방식으로 뉴스 조회
             List<NewsDetail> newsDetailList = fileServerService.getNewsListFromCsv(category, "deduplicated", timePath);
+            
             if (newsDetailList.isEmpty()) {
                 log.info("📁 중복제거된 뉴스 데이터가 없음: {}/{}", category, "deduplicated");
                 return;
             }
             
             List<News> newsEntities = new ArrayList<>();
+            int savedCount = 0;
+            int skippedCount = 0;
             
             for (NewsDetail newsDetail : newsDetailList) {
                 if (newsDetail != null) {
+                    // 중복 체크
+                    if (newsRepository.existsByOidAid(newsDetail.getOidAid())) {
+                        log.debug("📁 중복된 뉴스 건너뜀: {}", newsDetail.getOidAid());
+                        skippedCount++;
+                        continue;
+                    }
+                    
                     News newsEntity = convertToNewsEntity(newsDetail);
                     newsEntities.add(newsEntity);
                 }
@@ -105,7 +115,10 @@ public class FileServerDatabaseService {
             
             if (!newsEntities.isEmpty()) {
                 newsRepository.saveAll(newsEntities);
-                log.info("📁 {} 카테고리 중복제거된 뉴스 DB 저장 완료: {}개", category, newsEntities.size());
+                savedCount = newsEntities.size();
+                log.info("📁 {} 카테고리 중복제거된 뉴스 DB 저장 완료: {}개 저장, {}개 건너뜀", category, savedCount, skippedCount);
+            } else {
+                log.info("📁 {} 카테고리 저장할 뉴스 없음 (모두 중복)", category);
             }
             
         } catch (Exception e) {
