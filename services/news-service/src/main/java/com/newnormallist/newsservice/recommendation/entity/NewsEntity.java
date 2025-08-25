@@ -39,8 +39,8 @@ public class NewsEntity {
     @Column(name = "press", nullable = false, columnDefinition = "TEXT")
     private String press;
 
-    @Column(name = "published_at", columnDefinition = "DATETIME(6)")
-    private LocalDateTime publishedAt;
+    @Column(name = "published_at", length = 100)
+    private String publishedAt;
 
     @Column(name = "reporter", nullable = false, columnDefinition = "TEXT")
     private String reporter;
