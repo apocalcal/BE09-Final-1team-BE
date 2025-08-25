@@ -14,6 +14,7 @@ import com.newnormallist.userservice.user.entity.UserStatus;
 import com.newnormallist.userservice.user.repository.UserRepository;
 import com.newnormallist.userservice.user.repository.NewsRepository;
 import jakarta.persistence.criteria.Predicate;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
