@@ -25,6 +25,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
           new HttpHeaders(), HttpStatus.NOT_FOUND, request);
     }
 
+    @ExceptionHandler(value = { UnauthenticatedUserException.class })
+    protected ResponseEntity<Object> handleUnauthenticatedUser(RuntimeException ex, WebRequest request) {
+        String bodyOfResponse = ex.getMessage();
+        return handleExceptionInternal(ex, bodyOfResponse,
+                new HttpHeaders(), HttpStatus.UNAUTHORIZED, request);
+    }
+
     @ExceptionHandler(value = { Exception.class })
     protected ResponseEntity<Object> handleAllOtherExceptions(Exception ex, WebRequest request) {
         String bodyOfResponse = "서버 내부에서 예상치 못한 오류가 발생했습니다.";
