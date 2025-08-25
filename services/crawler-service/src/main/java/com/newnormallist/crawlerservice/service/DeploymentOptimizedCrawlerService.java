@@ -58,9 +58,9 @@ public class DeploymentOptimizedCrawlerService {
     public void runDeploymentOptimizedCrawling() {
         // 🚨 디버깅: 호출자 추적
         StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-        log.error("🚨🚨🚨 크롤링 시작! 호출자: {}", stackTrace[2].toString());
+        log.info("🚨🚨🚨 크롤링 시작! 호출자: {}", stackTrace[2].toString());
         for (int i = 2; i < Math.min(stackTrace.length, 7); i++) {
-            log.error("  -> {}", stackTrace[i].toString());
+            log.info("  -> {}", stackTrace[i].toString());
         }
         
         log.info("배포 환경 최적화 크롤링 시작");
