@@ -1,7 +1,6 @@
 package com.newnormallist.userservice.user.service;
 
 import com.newnormallist.userservice.auth.repository.RefreshTokenRepository;
-import com.newnormallist.userservice.clients.NewsServiceClient;
 import com.newnormallist.userservice.common.ErrorCode;
 import com.newnormallist.userservice.history.dto.ReadHistoryResponse;
 import com.newnormallist.userservice.history.entity.UserReadHistory;
@@ -14,7 +13,6 @@ import com.newnormallist.userservice.user.entity.UserStatus;
 import com.newnormallist.userservice.user.repository.UserRepository;
 import com.newnormallist.userservice.user.repository.NewsRepository;
 import jakarta.persistence.criteria.Predicate;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -42,7 +40,6 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserReadHistoryRepository userReadHistoryRepository;
     private final NewsRepository newsRepository;
-    private final NewsServiceClient newsServiceClient; // Feign Client 의존성 주입
 
     /**
      * 회원가입 로직
@@ -237,6 +234,10 @@ public class UserService {
             // 직접 DB에서 카테고리 조회 (enum으로 직접 가져옴)
             NewsCategory categoryName = newsRepository.findCategoryById(newsId)
                     .orElse(null); // 카테고리가 없어도 null로 저장
+
+            // 직접 DB에서 제목 조회
+            Optional<String> newsTitle = newsRepository.findTitleById(newsId);
+
 
             // 읽은 기록 엔티티 생성
             UserReadHistory history = UserReadHistory.builder()

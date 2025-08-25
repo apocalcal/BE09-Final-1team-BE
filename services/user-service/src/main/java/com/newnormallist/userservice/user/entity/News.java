@@ -18,5 +18,6 @@ public class News {
     @Column(name = "category_name")
     private NewsCategory categoryName;
     
-    // 필요한 필드만 추가 (카테고리 조회용)
+    @Column(name = "title")
+    private String title;
 }
