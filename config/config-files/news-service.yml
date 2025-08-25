@@ -38,9 +38,9 @@ springdoc:
   packages-to-scan: com.newnormallist.newsservice.news.controller
   paths-to-match: /api/news/**
 
-# (추가) 요약 기능 추가 설정
-summarizer:
-  base-url: http://flaskapi:5000 # 도커 브리지 네트워크 서비스명
+## (추가) 요약 기능 추가 설정
+#summarizer:
+#  base-url: http://flaskapi:5000 # 도커 브리지 네트워크 서비스명
 
 # 6. 추천 시스템 설정
 reco:

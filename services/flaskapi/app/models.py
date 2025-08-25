@@ -2,6 +2,8 @@
 from sqlalchemy import text, Index
 from sqlalchemy.dialects import mysql
 from .extensions import db
+from datetime import datetime
+
 
 # ENUM 정의 (DDL과 동일)
 CATEGORY_ENUM = (
