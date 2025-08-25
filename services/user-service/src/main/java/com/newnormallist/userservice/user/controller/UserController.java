@@ -18,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -264,12 +265,23 @@ public class UserController {
     /**
      * 마이페이지 - 스크랩한 뉴스 목록 조회 API
      */
+    @Operation(
+            summary = "스크랩한 뉴스 목록 조회",
+            description = "사용자가 스크랩한 뉴스 목록을 최신순으로 페이지 조회합니다.",
+            operationId = "getMyScraps"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "스크랩 목록 조회 성공"),
+            @ApiResponse(responseCode = "401", description = "인증 필요")
+    })
     @GetMapping("/mypage/scraps")
-    public ResponseEntity<ApiResponse<Page<ScrappedNewsResponse>>> getMyScraps(
-            @AuthenticationPrincipal String userIdStr,
-            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+    public ResponseEntity<ApiResult<Page<ScrappedNewsResponse>>> getMyScraps(
+            @Parameter(hidden = true) @AuthenticationPrincipal String userIdStr,
+            @ParameterObject
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
         Long userId = Long.parseLong(userIdStr);
         Page<ScrappedNewsResponse> scrappedNews = userService.getScrappedNews(userId, pageable);
-        return ResponseEntity.ok(ApiResponse.success(scrappedNews));
+        return ResponseEntity.ok(ApiResult.success(scrappedNews));
     }
 }
