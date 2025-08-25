@@ -31,7 +31,7 @@ public class NewsEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category_name", nullable = false)
-    private Category categoryName;
+    private RecommendationCategory categoryName;
 
     @Column(name = "content", nullable = false, columnDefinition = "MEDIUMTEXT")
     private String content;
@@ -39,18 +39,18 @@ public class NewsEntity {
     @Column(name = "press", nullable = false, columnDefinition = "TEXT")
     private String press;
 
-    @Column(name = "published_at", length = 100)
-    private String publishedAt;
+    @Column(name = "published_at", columnDefinition = "DATETIME(6)")
+    private LocalDateTime publishedAt;
 
     @Column(name = "reporter", nullable = false, columnDefinition = "TEXT")
     private String reporter;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, columnDefinition = "DATETIME(6)")
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", columnDefinition = "DATETIME(6)")
     private LocalDateTime updatedAt;
 
     @Enumerated(EnumType.STRING)

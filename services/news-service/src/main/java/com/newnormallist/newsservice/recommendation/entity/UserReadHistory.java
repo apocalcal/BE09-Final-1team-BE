@@ -27,7 +27,7 @@ public class UserReadHistory {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category_name")
-    private Category categoryName;
+    private RecommendationCategory categoryName;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "DATETIME(6)")
@@ -38,7 +38,7 @@ public class UserReadHistory {
     private LocalDateTime updatedAt;
 
     @Builder
-    public UserReadHistory(UserEntity userEntity, Long newsId, Category categoryName) {
+    public UserReadHistory(UserEntity userEntity, Long newsId, RecommendationCategory categoryName) {
         this.userEntity = userEntity;
         this.newsId = newsId;
         this.categoryName = categoryName;

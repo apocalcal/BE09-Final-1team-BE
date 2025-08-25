@@ -1,6 +1,6 @@
 package com.newnormallist.newsservice.recommendation.dto;
 
-import com.newnormallist.newsservice.recommendation.entity.Category;
+import com.newnormallist.newsservice.recommendation.entity.RecommendationCategory;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -8,6 +8,6 @@ import lombok.Getter;
 @Getter 
 @AllArgsConstructor
 public class CategoryScoreDto {
-    private final Category category;
+    private final RecommendationCategory category;
     private final double score;
 }

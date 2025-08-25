@@ -382,14 +382,14 @@ public class NewsletterService {
         
         try {
             // NewsServiceClient의 searchNews API 사용
-            ApiResponse<List<NewsResponse>> response = newsServiceClient.searchNews(
+            Page<NewsResponse> response = newsServiceClient.searchNews(
                     request.getKeyword(), 
                     pageable.getPageNumber(), 
                     pageable.getPageSize()
             );
             
-            List<NewsResponse> searchResults = response != null && response.getData() != null ? 
-                    response.getData() : new ArrayList<>();
+            List<NewsResponse> searchResults = response != null && response.getContent() != null ? 
+                    response.getContent() : new ArrayList<>();
             
             // 카테고리 필터링 (필요한 경우)
             if (request.getCategory() != null && !request.getCategory().isEmpty()) {
@@ -568,9 +568,9 @@ public class NewsletterService {
         
         try {
             // NewsServiceClient의 getTrendingNews API 사용
-            ApiResponse<List<NewsResponse>> response = newsServiceClient.getTrendingNews(24, limit);
-            List<NewsResponse> trendingNews = response != null && response.getData() != null ? 
-                    response.getData() : new ArrayList<>();
+            Page<NewsResponse> response = newsServiceClient.getTrendingNews(24, limit);
+            List<NewsResponse> trendingNews = response != null && response.getContent() != null ? 
+                    response.getContent() : new ArrayList<>();
             
             return trendingNews.stream()
                     .map(news -> NewsletterContent.Article.builder()
@@ -976,9 +976,9 @@ public class NewsletterService {
         
         try {
             // NewsServiceClient의 getCategories API 사용
-            ApiResponse<List<NewsCategory>> response = newsServiceClient.getCategories();
-            if (response != null && response.getData() != null) {
-                return response.getData().stream()
+            List<NewsCategory> response = newsServiceClient.getCategories();
+            if (response != null) {
+                return response.stream()
                         .map(NewsCategory::getCategoryName)
                         .collect(Collectors.toList());
             }
@@ -1127,8 +1127,8 @@ public class NewsletterService {
 
     private List<NewsResponse> fetchPopularNews(int size) {
         try {
-            ApiResponse<List<NewsResponse>> response = newsServiceClient.getPopularNews(size);
-            return response != null && response.getData() != null ? response.getData() : new ArrayList<>();
+            Page<NewsResponse> response = newsServiceClient.getPopularNews(size);
+            return response != null && response.getContent() != null ? response.getContent() : new ArrayList<>();
         } catch (Exception e) {
             log.warn("인기 뉴스 조회 실패: {}", e.getMessage());
             return new ArrayList<>();
@@ -1137,8 +1137,8 @@ public class NewsletterService {
 
     private List<NewsResponse> fetchTrendingNews(int hours, int limit) {
         try {
-            ApiResponse<List<NewsResponse>> response = newsServiceClient.getTrendingNews(hours, limit);
-            return response != null && response.getData() != null ? response.getData() : new ArrayList<>();
+            Page<NewsResponse> response = newsServiceClient.getTrendingNews(hours, limit);
+            return response != null && response.getContent() != null ? response.getContent() : new ArrayList<>();
         } catch (Exception e) {
             log.warn("트렌딩 뉴스 조회 실패: {}", e.getMessage());
             return new ArrayList<>();
@@ -1147,8 +1147,8 @@ public class NewsletterService {
 
     private List<NewsResponse> fetchLatestNews(List<String> categories, int limit) {
         try {
-            ApiResponse<List<NewsResponse>> response = newsServiceClient.getLatestNews(categories, limit);
-            return response != null && response.getData() != null ? response.getData() : new ArrayList<>();
+            Page<NewsResponse> response = newsServiceClient.getLatestNews(categories, limit);
+            return response != null && response.getContent() != null ? response.getContent() : new ArrayList<>();
         } catch (Exception e) {
             log.warn("최신 뉴스 조회 실패: {}", e.getMessage());
             return new ArrayList<>();
@@ -1888,8 +1888,9 @@ public class NewsletterService {
 
     private int getRecentNewsCount(String categoryName) {
         try {
-            ApiResponse<List<NewsResponse>> response = newsServiceClient.getNewsByCategory(categoryName, 0, 100);
-            return response != null && response.getData() != null ? response.getData().size() : 0;
+            String englishCategory = convertCategoryToEnglish(categoryName);
+            Page<NewsResponse> response = newsServiceClient.getNewsByCategory(englishCategory, 0, 100);
+            return response != null && response.getContent() != null ? response.getContent().size() : 0;
         } catch (Exception e) {
             return 0;
         }
@@ -1988,10 +1989,10 @@ public class NewsletterService {
         // 2. 트렌딩 뉴스로 보완
         if (collectedNews.size() < strategy.getMaxArticles()) {
             try {
-                ApiResponse<List<NewsResponse>> trendingResponse = newsServiceClient.getTrendingNews(24, 
+                Page<NewsResponse> trendingResponse = newsServiceClient.getTrendingNews(24, 
                         strategy.getMaxArticles() - collectedNews.size());
-                if (trendingResponse != null && trendingResponse.getData() != null) {
-                    collectedNews.addAll(trendingResponse.getData());
+                if (trendingResponse != null && trendingResponse.getContent() != null) {
+                    collectedNews.addAll(trendingResponse.getContent());
                 }
             } catch (Exception e) {
                 log.warn("트렌딩 뉴스 수집 실패");
@@ -2303,10 +2304,11 @@ public class NewsletterService {
 
     private List<NewsResponse> fetchNewsByCategory(String category, int page, int size) {
         try {
-            ApiResponse<List<NewsResponse>> response = newsServiceClient.getNewsByCategory(category, page, size);
-            return response != null && response.getData() != null ? response.getData() : new ArrayList<>();
+            String englishCategory = convertCategoryToEnglish(category);
+            Page<NewsResponse> response = newsServiceClient.getNewsByCategory(englishCategory, page, size);
+            return response != null && response.getContent() != null ? response.getContent() : new ArrayList<>();
         } catch (Exception e) {
-            log.warn("카테고리 뉴스 조회 실패: category={}", category);
+            log.warn("카테고리 뉴스 조회 실패: category={}", category, e);
             return new ArrayList<>();
         }
     }
@@ -2562,9 +2564,10 @@ public class NewsletterService {
         log.info("카테고리별 기사 조회: category={}, limit={}", category, limit);
         
         try {
-            ApiResponse<List<NewsResponse>> response = newsServiceClient.getNewsByCategory(category, 0, limit);
-            if (response != null && response.getData() != null) {
-                return response.getData();
+            String englishCategory = convertCategoryToEnglish(category);
+            Page<NewsResponse> response = newsServiceClient.getNewsByCategory(englishCategory, 0, limit);
+            if (response != null && response.getContent() != null) {
+                return response.getContent();
             }
             return new ArrayList<>();
         } catch (Exception e) {
@@ -2593,10 +2596,9 @@ public class NewsletterService {
             
             // 3. 총 기사 수 조회
             try {
-                ApiResponse<Long> countResponse = newsServiceClient.getNewsCountByCategory(category);
-                Long totalArticles = countResponse != null && countResponse.getData() != null ? 
-                        countResponse.getData() : 0L;
-                result.put("totalArticles", totalArticles);
+                String englishCategory = convertCategoryToEnglish(category);
+                Long totalArticles = newsServiceClient.getNewsCountByCategory(englishCategory);
+                result.put("totalArticles", totalArticles != null ? totalArticles : 0L);
             } catch (Exception e) {
                 log.warn("카테고리별 기사 수 조회 실패: category={}", category, e);
                 result.put("totalArticles", articles.size());
@@ -2623,18 +2625,19 @@ public class NewsletterService {
         log.info("카테고리별 트렌드 키워드 조회: category={}, limit={}", category, limit);
         
         try {
-            ApiResponse<List<TrendingKeywordDto>> response = newsServiceClient.getTrendingKeywordsByCategory(category, limit, 24);
+            String englishCategory = convertCategoryToEnglish(category);
+            ApiResponse<List<TrendingKeywordDto>> response = newsServiceClient.getTrendingKeywordsByCategory(englishCategory, limit, 24);
+            
             if (response != null && response.getData() != null) {
                 return response.getData().stream()
                         .map(TrendingKeywordDto::getKeyword)
                         .collect(Collectors.toList());
             }
+            return getDefaultKeywords();
         } catch (Exception e) {
-            log.warn("카테고리별 트렌드 키워드 조회 실패: category={}", category, e);
+            log.error("카테고리별 트렌드 키워드 조회 실패: category={}", category, e);
+            return getDefaultKeywords();
         }
-        
-        // 실패 시 기본 키워드 반환
-        return getDefaultKeywords();
     }
 
     /**
@@ -2761,6 +2764,28 @@ public class NewsletterService {
      */
     private List<String> getDefaultTopics() {
         return Arrays.asList("주요뉴스", "핫이슈", "트렌드", "분석", "전망", "동향");
+    }
+
+    // ========================================
+    // Utility Methods
+    // ========================================
+
+    /**
+     * 한국어 카테고리명을 영어 enum 값으로 변환
+     */
+    private String convertCategoryToEnglish(String koreanCategory) {
+        return switch (koreanCategory) {
+            case "정치" -> "POLITICS";
+            case "경제" -> "ECONOMY";
+            case "사회" -> "SOCIETY";
+            case "생활" -> "LIFE";
+            case "세계" -> "INTERNATIONAL";
+            case "IT/과학" -> "IT_SCIENCE";
+            case "자동차/교통" -> "VEHICLE";
+            case "여행/음식" -> "TRAVEL_FOOD";
+            case "예술" -> "ART";
+            default -> koreanCategory; // 이미 영어인 경우 그대로 반환
+        };
     }
 
 }
