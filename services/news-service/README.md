@@ -310,7 +310,7 @@ curl -X GET http://localhost:8082/api/newsletter/count
 - `POLITICS`: 정치 🏛️
 - `ECONOMY`: 경제 💰
 - `SOCIETY`: 사회 👥
-- `CULTURE`: 생활/문화 🎭
+- `LIFE`: 생활/문화 🎭
 - `INTERNATIONAL`: 세계 🌍
 - `IT_SCIENCE`: IT/과학 💻
 

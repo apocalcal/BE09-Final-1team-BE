@@ -28,5 +28,4 @@ public class NewsResponse {
     private String dedupStateDescription;
     private String imageUrl;
     private String oidAid;
-    private LocalDateTime updatedAt;
 } 
