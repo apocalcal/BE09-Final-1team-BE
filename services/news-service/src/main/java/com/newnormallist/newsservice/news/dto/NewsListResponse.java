@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class NewsListResponse {
     private Long newsId;
     private String title;
+    private String content;
     private String summary;
     private String press;
     private String link;

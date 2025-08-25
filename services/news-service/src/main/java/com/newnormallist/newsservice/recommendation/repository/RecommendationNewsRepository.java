@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Collection;
 
 import com.newnormallist.newsservice.recommendation.entity.NewsEntity;
-import com.newnormallist.newsservice.recommendation.entity.Category;
+import com.newnormallist.newsservice.recommendation.entity.RecommendationCategory;
 
 
 // findLatestIdsByCategory(cat, limit) : 카테고리 최신 뉴스 ID 가져오기.
@@ -18,13 +18,13 @@ import com.newnormallist.newsservice.recommendation.entity.Category;
 public interface RecommendationNewsRepository extends JpaRepository<NewsEntity, Long> {
 
     @Query("SELECT n.newsId FROM NewsEntity n WHERE n.categoryName = :cat ORDER BY n.publishedAt DESC")
-    List<Long> findLatestIdsByCategory(@Param("cat") Category category, Pageable pageable);
+    List<Long> findLatestIdsByCategory(@Param("cat") RecommendationCategory category, Pageable pageable);
 
     @Query("SELECT n FROM NewsEntity n WHERE n.newsId IN :ids")
     List<NewsEntity> findByIdIn(@Param("ids") Collection<Long> ids);
 
     @Query("SELECT n.categoryName FROM NewsEntity n WHERE n.newsId = :id")
-    Category findCategoryById(@Param("id") Long id);
+    RecommendationCategory findCategoryById(@Param("id") Long id);
     
     // published_at 기준 최신순 정렬 (전체 뉴스 피드용)
     @Query("SELECT n FROM NewsEntity n ORDER BY n.publishedAt DESC")

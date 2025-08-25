@@ -55,8 +55,11 @@ public interface NewsService {
     List<KeywordSubscriptionDto> getUserKeywordSubscriptions(Long userId);
     List<TrendingKeywordDto> getTrendingKeywords(int limit);
     List<TrendingKeywordDto> getPopularKeywords(int limit);
+    List<TrendingKeywordDto> getTrendingKeywordsByCategory(Category category, int limit);
 
     // 트렌딩 키워드 관련 메서드들
     void reportNews(Long newsId, Long userId);
     void scrapNews(Long newsId, Long userId);
+}
+
 }

@@ -9,4 +9,5 @@ import com.newnormallist.newsservice.recommendation.dto.FeedItemDto;
 
 public interface RecommendationService {
     List<FeedItemDto> getFeed(Long userId);
+    List<FeedItemDto> getFeed(Long userId, int page, int size);
 }
