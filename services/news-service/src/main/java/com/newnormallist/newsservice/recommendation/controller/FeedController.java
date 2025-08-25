@@ -23,7 +23,10 @@ public class FeedController {
     private final RecommendationService recommendationService;
 
     @GetMapping("/{id}")
-    public ApiResponse<List<FeedItemDto>> getUserFeed(@PathVariable Long id) {
-        return ApiResponse.success(recommendationService.getFeed(id));
+    public ApiResponse<List<FeedItemDto>> getUserFeed(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "21") int size) {
+        return ApiResponse.success(recommendationService.getFeed(id, page, size));
     }
 }

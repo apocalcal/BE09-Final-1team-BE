@@ -208,7 +208,7 @@ public class PersonalizationService {
         return switch (news.getCategory()) {
             case "POLITICS", "ECONOMY" -> 0.8; // 높은 관심도
             case "SOCIETY", "IT_SCIENCE" -> 0.7;
-            case "CULTURE", "INTERNATIONAL" -> 0.6;
+            case "LIFE", "INTERNATIONAL" -> 0.6;
             default -> 0.5;
         };
     }

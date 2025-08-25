@@ -22,7 +22,7 @@ public class UserPrefVector {
 
     @Id @Enumerated(EnumType.STRING)
     @Column(nullable=false, length=32)
-    private Category category;
+    private RecommendationCategory category;
 
     @Column(nullable=false)
     private double score;   // normalized 0~1
@@ -50,6 +50,6 @@ public class UserPrefVector {
     @Data
     public static class PK implements java.io.Serializable {
         private Long userId;
-        private Category category;
+        private RecommendationCategory category;
     }
 }

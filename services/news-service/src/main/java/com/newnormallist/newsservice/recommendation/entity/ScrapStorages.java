@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "scrap_storage", indexes = @Index(name="idx_sb_user", columnList="userId"))
-public class ScrapStorage {
+public class ScrapStorages {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

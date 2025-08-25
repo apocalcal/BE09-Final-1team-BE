@@ -14,7 +14,7 @@ public class FeedMapper {
             .press(newsEntity.getPress())
             .link(newsEntity.getLink())
             .trusted(newsEntity.getTrusted())
-            .publishedAt(LocalDateTime.parse(newsEntity.getPublishedAt()))
+            .publishedAt(newsEntity.getPublishedAt())
             .createdAt(newsEntity.getCreatedAt())
             .reporter(newsEntity.getReporter())
             .categoryName(newsEntity.getCategoryName())
