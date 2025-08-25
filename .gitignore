@@ -78,9 +78,9 @@ wheels/
 *.spec
 
 ### Virtual Environments ###
-venv/
-ENV/
-env/
+.venv/
+.ENV/
+.env/
 .venv/
 services/flaskapi/.venv
 
