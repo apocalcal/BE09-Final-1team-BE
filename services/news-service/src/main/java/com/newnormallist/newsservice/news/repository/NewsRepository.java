@@ -15,7 +15,8 @@ import java.util.List;
 @Repository
 public interface NewsRepository extends JpaRepository<News, Long> {
 
-    List<News> findByPublishedAtAfter(LocalDateTime since);
+    @Query("SELECT n FROM News n WHERE STR_TO_DATE(n.publishedAt, '%Y-%m-%d %H:%i:%s') > :since")   
+    List<News> findByPublishedAtAfter(String publishedAt);
 
     // 카테고리별 뉴스 조회 (최신순)
     @Query("SELECT n FROM News n WHERE n.categoryName = :category ORDER BY STR_TO_DATE(n.publishedAt, '%Y-%m-%d %H:%i:%s') DESC")
