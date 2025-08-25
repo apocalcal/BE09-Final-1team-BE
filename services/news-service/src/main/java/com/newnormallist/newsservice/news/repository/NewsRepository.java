@@ -18,8 +18,6 @@ public interface NewsRepository extends JpaRepository<News, Long> {
 
     List<News> findByStatus(NewsStatus status);
 
-    @Query("SELECT n FROM News n WHERE n.categoryName = :category AND n.status = 'PUBLISHED' ORDER BY n.createdAt DESC")
-
     @Query("SELECT n FROM News n WHERE STR_TO_DATE(n.publishedAt, '%Y-%m-%d %H:%i:%s') > :since")
     List<News> findByPublishedAtAfter(@Param("since") LocalDateTime since);
 
@@ -62,6 +60,9 @@ public interface NewsRepository extends JpaRepository<News, Long> {
 
     @Query("SELECT n FROM News n WHERE n.status = 'PUBLISHED' ORDER BY n.createdAt DESC")
     Page<News> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    @Query("SELECT n FROM News n WHERE n.status = 'PUBLISHED' ORDER BY n.publishedAt DESC")
+    Page<News> findAllByOrderByPublishedAtDesc(Pageable pageable);
 
     // 연관뉴스 조회를 위한 메서드들
 

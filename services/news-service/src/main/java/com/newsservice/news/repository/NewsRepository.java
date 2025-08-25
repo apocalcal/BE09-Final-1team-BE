@@ -1,8 +1,8 @@
 package com.newsservice.news.repository;
 
-import com.newsservice.news.entity.Category;
-import com.newsservice.news.entity.News;
-import com.newsservice.news.entity.NewsStatus;
+import com.newnormallist.newsservice.news.entity.Category;
+import com.newnormallist.newsservice.news.entity.News;
+import com.newnormallist.newsservice.news.entity.NewsStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

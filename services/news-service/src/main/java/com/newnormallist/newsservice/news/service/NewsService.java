@@ -61,5 +61,3 @@ public interface NewsService {
     void reportNews(Long newsId, Long userId);
     void scrapNews(Long newsId, Long userId);
 }
-
-}
