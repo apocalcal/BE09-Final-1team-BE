@@ -102,7 +102,7 @@ def create_summary():
     # Content-Type 미지정 요청 방지: force 대신 silent 사용
     data = request.get_json(silent=True) or {}
 
-    news_id = data.get("news_id")
+    news_id = data.get("news_id") or data.get('newsId')
     text = data.get("text")
 
     # 원문 확보(우선순위: text 직접 제공 > DB 조회)
