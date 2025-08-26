@@ -83,7 +83,7 @@ def create_summary():
     요청(JSON):
       {
         "news_id": 123,          # 또는 "text": "...", 둘 중 하나 필요
-        "type": "AIBOT",         # 선택(기본 AIBOT)
+        "type": "DEFAULT",         # 선택(기본 DEFAULT)
         "lines": 3,              # 선택(기본 3)
         "prompt": "...",         # 선택
         "ensemble": false        # 선택(기본 false; true면 여러 프롬프트 통합)
@@ -92,7 +92,7 @@ def create_summary():
     응답(JSON, Spring DTO와 호환):
       {
         "newsId": 123,
-        "type": "AIBOT",
+        "type": "DEFAULT",
         "lines": 3,
         "summary": "...",
         "cached": true|false,

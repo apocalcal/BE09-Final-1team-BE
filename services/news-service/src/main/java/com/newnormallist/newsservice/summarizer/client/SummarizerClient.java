@@ -1,157 +1,111 @@
 package com.newnormallist.newsservice.summarizer.client;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.newnormallist.newsservice.news.dto.SummaryRequest;
-import com.newnormallist.newsservice.news.dto.SummaryResponse;
-import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.client.RestTemplate;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * SummarizerClient (RestClient 버전)
- * - Flask /summary 호출 전용 경량 어댑터
- * - 모델키/프롬프트/캐시 로직은 전부 Flask 또는 상위 서비스에 위임
+ * Flask /summary 호출 클라이언트
+ * - summarize(String text, String type, int lines, String prompt) 오버로드 제공
+ * - summarize(SingleRequest payload) : payload 기반 호출
  */
 @Component
-@Slf4j
 public class SummarizerClient {
 
-    @PostConstruct
-    void logBaseUrl() { log.info("[SummarizerClient] baseUrl={}", baseUrl); }
-
-    @Value("${summarizer.base-url:http://localhost:5000}")
+    @Value("${summarizer.base-url:http://flaskapi:5000/summary}")
     private String baseUrl;
 
-    /** 선택: 내부 인증용 API 키가 있으면 X-API-KEY로 전송 (없으면 미전송) */
-    @Value("${summarizer.api-key:}")
-    private String apiKey;
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /** 기본 요약 줄 수 (요청에 없을 때 사용) */
-    @Value("${summarizer.default-lines:3}")
-    private int defaultLines;
+    /**
+     * 외부에서도 사용할 수 있도록 public static으로 노출
+     * (원하면 별도 파일로 분리해도 됩니다)
+     */
+    public static class SingleRequest {
+        private final Long   newsId;   // 없으면 null
+        private final String text;
+        private final String type;
+        private final int    lines;
+        private final String prompt;   // prompt 하나로 통일 (override 개념 포함)
 
-    /** 단건 요약 호출 */
-    public SummaryResponse summarize(SummaryRequest req) {
-        requireIdXorText(req);
+        public SingleRequest(Long newsId, String text, String type, int lines, String prompt) {
+            this.newsId = newsId;
+            this.text   = text;
+            this.type   = type;
+            this.lines  = lines;
+            this.prompt = prompt;
+        }
 
-        // 요청 바디 구성 (Flask가 타입/프롬프트 해석)
-        var payload = new SingleRequest(
-                req.getNewsId(),
-                emptyToNull(req.getText()),
-                req.getType(),
-                req.getLines() != null ? req.getLines() : defaultLines,
-                req.getPromptOverride(),     // 호환: prompt
-                req.getPromptOverride()      // 호환: promptOverride
+        public Long getNewsId() { return newsId; }
+        public String getText() { return text; }
+        public String getType() { return type; }
+        public int getLines() { return lines; }
+        public String getPrompt() { return prompt; }
+    }
+
+    /** 편의 오버로드: 서비스에서 이 버전만 써도 충분합니다. */
+    public String summarize(String text, String type, int lines, String prompt) {
+        return summarize(new SingleRequest(
+                null,                       // newsId 없음
+                emptyToNull(text),
+                type,
+                normalizeLines(lines),
+                emptyToNull(prompt)
+        ));
+    }
+
+    /** 실제 HTTP 호출 구현 (payload → JSON POST) */
+    public String summarize(SingleRequest payload) {
+        Map<String, Object> body = new HashMap<>();
+        if (payload.getText() != null)   body.put("text",  payload.getText());
+        if (payload.getType() != null)   body.put("type",  payload.getType());
+        if (payload.getLines() > 0)      body.put("lines", payload.getLines());
+        if (payload.getPrompt() != null && !payload.getPrompt().isBlank()) {
+            body.put("prompt", payload.getPrompt());
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        ResponseEntity<String> res = restTemplate.postForEntity(
+                baseUrl, new HttpEntity<>(body, headers), String.class
         );
 
+        if (!res.getStatusCode().is2xxSuccessful()) {
+            throw new RuntimeException("Summarizer 호출 실패: " + res.getStatusCode());
+        }
+
+        String raw = res.getBody() == null ? "" : res.getBody();
         try {
-            SingleResponse res = client().post()
-                    .uri("/summary")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .accept(MediaType.APPLICATION_JSON)
-                    .body(payload)
-                    .retrieve()
-                    .body(SingleResponse.class);
-
-            if (res == null) throw new SummarizerException("Empty response from summarizer");
-
-            // SummaryResponse로 매핑
-            long   newsId       = (res.newsId != null) ? res.newsId : -1L;
-            String resolvedType = (res.resolvedType != null) ? res.resolvedType : "DEFAULT";
-            int    lines        = (res.lines != null) ? res.lines : defaultLines;
-            String summary      = (res.summary != null) ? res.summary : "";
-            boolean fromCache   = Boolean.TRUE.equals(res.fromCache);
-
-            // 작성 일시(한국 시간, ISO 8601)
-            String createdAt = OffsetDateTime.now(ZoneId.of("Asia/Seoul"))
-                    .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-
-            return SummaryResponse.builder()
-                    .newsId(newsId)
-                    .resolvedType(resolvedType)
-                    .lines(lines)
-                    .summary(summary)
-                    .cached(fromCache)
-                    .createAt(createdAt)
-                    .build();
-
-        } catch (RestClientResponseException e) {
-            log.error("[summarize] HTTP {} body={}", e.getRawStatusCode(), e.getResponseBodyAsString(), e);
-            throw new SummarizerException("Summarizer API error: " + e.getMessage(), e);
-        } catch (Exception e) {
-            log.error("[summarize] unexpected error", e);
-            throw new SummarizerException("Summarizer API call failed", e);
+            JsonNode json = objectMapper.readTree(raw);
+            // Flask가 { "summary": "..."}를 반환한다고 가정
+            JsonNode s = json.get("summary");
+            return s != null && !s.isNull() ? s.asText("") : raw;
+        } catch (Exception ignore) {
+            // JSON이 아니면 원문 그대로 반환
+            return raw;
         }
     }
 
-    /** 편의: 뉴스ID 기반 */
-    public SummaryResponse summarizeByNewsId(long newsId, String type, Integer lines, String promptOverride) {
-        return summarize(SummaryRequest.builder()
-                .newsId(newsId).type(type).lines(lines).promptOverride(promptOverride).build());
+    /* --------- 유틸 --------- */
+
+    private static String emptyToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s;
     }
 
-    /** 편의: 본문 기반 */
-    public SummaryResponse summarizeByText(String text, String type, Integer lines, String promptOverride) {
-        return summarize(SummaryRequest.builder()
-                .text(text).type(type).lines(lines).promptOverride(promptOverride).build());
+    private static int normalizeLines(int l) {
+        if (l <= 0) return 3;
+        if (l > 10) return 10;
+        return l;
     }
-
-    /* ─────────── 내부 보조 ─────────── */
-
-    private RestClient client() {
-        RestClient.Builder b = RestClient.builder().baseUrl(baseUrl);
-        if (apiKey != null && !apiKey.isBlank()) {
-            b.defaultHeader("X-API-KEY", apiKey);
-        }
-        return b.build();
-    }
-
-    private void requireIdXorText(SummaryRequest req) {
-        boolean hasId = req.getNewsId() != null;
-        boolean hasText = req.getText() != null && !req.getText().isBlank();
-        if (hasId == hasText) {
-            throw new IllegalArgumentException("newsId 또는 text 중 하나만 제공해야 합니다. (Either newsId or text must be provided exclusively)");
-        }
-    }
-
-    private static String emptyToNull(String s) { return (s == null || s.isBlank()) ? null : s; }
-
-    /* ─────────── 전송/수신 DTO ─────────── */
-
-    /** Flask로 보내는 페이로드 (필드 최소화) */
-    private record SingleRequest(
-            @JsonProperty("newsId") Long   newsId,
-            @JsonProperty("text")   String text,
-            @JsonProperty("type")   String type,
-            @JsonProperty("lines")  Integer lines,
-            @JsonProperty("prompt") String prompt,                 // 호환
-            @JsonProperty("promptOverride") String promptOverride  // 호환
-    ) {}
-
-    /** Flask에서 받는 응답 (snake/camel 혼용 지원) */
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    private static class SingleResponse {
-        @JsonProperty("newsId") Long newsId;
-        @JsonAlias({"resolved_type","resolvedType"}) String resolvedType;
-        @JsonProperty("lines") Integer lines;
-        @JsonProperty("summary") String summary;
-        @JsonProperty("fromCache") Boolean fromCache;
-    }
-
-    /* ─────────── 예외 ─────────── */
-    public static class SummarizerException extends RuntimeException {
-        public SummarizerException(String msg) { super(msg); }
-        public SummarizerException(String msg, Throwable cause) { super(msg, cause); }
-    }
-
 }
