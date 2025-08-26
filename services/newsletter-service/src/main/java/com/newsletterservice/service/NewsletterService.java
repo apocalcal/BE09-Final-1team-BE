@@ -6,6 +6,7 @@ import com.newsletterservice.client.dto.CategoryResponse;
 import com.newsletterservice.client.dto.NewsResponse;
 import com.newsletterservice.client.dto.ReadHistoryResponse;
 import com.newsletterservice.client.dto.TrendingKeywordDto;
+import com.newsletterservice.client.dto.CategoryDto;
 import com.newsletterservice.common.ApiResponse;
 import com.newsletterservice.common.exception.NewsletterException;
 import com.newsletterservice.dto.*;
@@ -976,10 +977,10 @@ public class NewsletterService {
         
         try {
             // NewsServiceClient의 getCategories API 사용
-            List<NewsCategory> response = newsServiceClient.getCategories();
+            List<CategoryDto> response = newsServiceClient.getCategories();
             if (response != null) {
                 return response.stream()
-                        .map(NewsCategory::getCategoryName)
+                        .map(CategoryDto::getCategoryName)
                         .collect(Collectors.toList());
             }
             return getDefaultCategories();

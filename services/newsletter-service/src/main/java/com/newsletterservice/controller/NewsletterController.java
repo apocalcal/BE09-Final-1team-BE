@@ -207,6 +207,27 @@ public class NewsletterController {
     }
 
     /**
+     * 카테고리별 헤드라인 조회 (뉴스레터 카드용) - 인증 불필요
+     */
+    @GetMapping("/category/{category}/headlines")
+    public ResponseEntity<ApiResponse<List<NewsletterContent.Article>>> getCategoryHeadlines(
+            @PathVariable String category,
+            @RequestParam(defaultValue = "5") int limit) {
+        
+        try {
+            log.info("카테고리별 헤드라인 조회 요청 - category: {}, limit: {}", category, limit);
+            
+            List<NewsletterContent.Article> headlines = newsletterService.getCategoryHeadlines(category, limit);
+            
+            return ResponseEntity.ok(ApiResponse.success(headlines));
+        } catch (Exception e) {
+            log.error("카테고리별 헤드라인 조회 중 오류 발생", e);
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error("CATEGORY_HEADLINES_ERROR", "카테고리별 헤드라인 조회 중 오류가 발생했습니다."));
+        }
+    }
+
+    /**
      * 트렌드 키워드 조회 - 인증 불필요
      */
     @GetMapping("/trending-keywords")
@@ -296,7 +317,7 @@ public class NewsletterController {
         
         try {
             String userId = extractUserIdFromToken(httpRequest);
-            log.info("퍼스널라이즈드 뉴스레터 콘텐츠 조회 - userId: {}, newsletterId: {}", userId, newsletterId);
+            log.info("개인화된 뉴스레터 콘텐츠 조회 - userId: {}, newsletterId: {}", userId, newsletterId);
             
             NewsletterContent content = newsletterService.buildPersonalizedContent(Long.valueOf(userId), newsletterId);
             return ResponseEntity.ok(ApiResponse.success(content));
@@ -321,14 +342,14 @@ public class NewsletterController {
         
         try {
             String userId = extractUserIdFromToken(httpRequest);
-            log.info("퍼스널라이즈드 뉴스레터 HTML 조회 - userId: {}, newsletterId: {}", userId, newsletterId);
+            log.info("개인화된 뉴스레터 HTML 조회 - userId: {}, newsletterId: {}", userId, newsletterId);
             
             NewsletterContent content = newsletterService.buildPersonalizedContent(Long.valueOf(userId), newsletterId);
             String htmlContent = emailRenderer.renderToHtml(content);
             
             return ResponseEntity.ok()
                     .header("Content-Type", "text/html; charset=UTF-8")
-                    .body(htmlContent);
+                    .body(htmlContent); 
         } catch (NewsletterException e) {
             log.warn("뉴스레터 HTML 조회 실패: {}", e.getMessage());
             return ResponseEntity.badRequest()
@@ -352,7 +373,7 @@ public class NewsletterController {
         
         try {
             String userId = extractUserIdFromToken(httpRequest);
-            log.info("퍼스널라이즈드 뉴스레터 미리보기 - userId: {}, newsletterId: {}", userId, newsletterId);
+            log.info("개인화된 뉴스레터 미리보기 - userId: {}, newsletterId: {}", userId, newsletterId);
             
             NewsletterContent content = newsletterService.buildPersonalizedContent(Long.valueOf(userId), newsletterId);
             String previewHtml = emailRenderer.renderToPreviewHtml(content);
