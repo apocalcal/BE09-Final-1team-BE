@@ -1,10 +1,11 @@
-package com.newnormallist.newsservice.news.client;
+package com.newnormallist.newsservice.summarizer.client;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.newnormallist.newsservice.news.dto.SummaryRequest;
 import com.newnormallist.newsservice.news.dto.SummaryResponse;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -24,6 +25,9 @@ import java.time.format.DateTimeFormatter;
 @Component
 @Slf4j
 public class SummarizerClient {
+
+    @PostConstruct
+    void logBaseUrl() { log.info("[SummarizerClient] baseUrl={}", baseUrl); }
 
     @Value("${summarizer.base-url:http://localhost:5000}")
     private String baseUrl;
@@ -149,4 +153,5 @@ public class SummarizerClient {
         public SummarizerException(String msg) { super(msg); }
         public SummarizerException(String msg, Throwable cause) { super(msg, cause); }
     }
+
 }

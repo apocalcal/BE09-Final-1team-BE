@@ -53,8 +53,7 @@ class PromptManager:
             "background_then_new": "배경은 간단히만 언급하고, 새로 보고된 사실 중심으로 구성해줘.",
             "stakeholders": "이해관계자(정부·기업·개인 등)별 핵심 메시지를 구분해 요약해줘.",
             "active_voice": "중복·수식어 최소화, 능동태 사용으로 핵심 사실만 요약해줘.",
-            "limits_next_steps": "불확실성·한계·다음 단계(향후 일정/조치)를 포함해 정리해줘.",
-            "keyword": "내용이 왜곡되지 않게 "
+            "limits_next_steps": "불확실성·한계·다음 단계(향후 일정/조치)를 포함해 정리해줘."
         },
         # 필요 시 카테고리별 세트를 추가 (예: POLITICS, ECONOMY, IT_SCIENCE 등)
         "NEWSLETTER": {

@@ -1,6 +1,6 @@
 package com.newnormallist.newsservice.news.service;
 
-import com.newnormallist.newsservice.news.client.SummarizerClient;
+import com.newnormallist.newsservice.summarizer.client.SummarizerClient;
 import com.newnormallist.newsservice.news.dto.SummaryRequest;
 import com.newnormallist.newsservice.news.dto.SummaryResponse;
 import lombok.RequiredArgsConstructor;
