@@ -50,7 +50,7 @@ spring:
       client:
         registration:
           kakao:
-            redirect-uri: "{baseUrl}/api/auth/login/oauth2/code/{registrationId}"
+            redirect-uri: "http://localhost:8000/api/auth/login/oauth2/code/kakao"
             authorization-grant-type: authorization_code
             client-authentication-method: POST
             scope:
