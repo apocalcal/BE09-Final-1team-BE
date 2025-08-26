@@ -1,8 +1,10 @@
 package com.newnormallist.userservice.common.config;
 
+import com.newnormallist.userservice.auth.handler.OAuth2AuthenticationSuccessHandler;
 import com.newnormallist.userservice.auth.jwt.HeaderAuthenticationFilter;
 import com.newnormallist.userservice.auth.jwt.RestAccessDeniedHandler;
 import com.newnormallist.userservice.auth.jwt.RestAuthenticationEntryPoint;
+import com.newnormallist.userservice.auth.service.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,6 +15,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -23,6 +26,8 @@ public class SecurityConfig {
     private final HeaderAuthenticationFilter headerAuthenticationFilter;
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final RestAccessDeniedHandler restAccessDeniedHandler;
+    private final CustomOAuth2UserService CustomOAuth2UserService;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     // PasswordEncoder Bean 등록
     @Bean
@@ -44,8 +49,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth ->
-                        // Swagger 관련 URL은 모두 허용
-                        auth.anyRequest().permitAll());
+                        auth.anyRequest().permitAll()
+                );
         return http.build();
     }
 
@@ -63,9 +68,20 @@ public class SecurityConfig {
                         e.authenticationEntryPoint(restAuthenticationEntryPoint)
                                 .accessDeniedHandler(restAccessDeniedHandler))
                 // 3. 인가 규칙 설정
-                .authorizeHttpRequests(auth ->
-                        // 게이트웨이를 통과한 모든 요청을 신뢰하므로, 모든 요청을 허용
-                        auth.anyRequest().permitAll()
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "api/auth/**", // 인증 관련 엔드포인트는 모두 허용
+                                "api/users/signup" // 회원가입 엔드포인트는 모두 허용
+                        ).permitAll()
+                        .requestMatchers("api/users/admin/**").hasRole("USER") // /api
+                        .anyRequest().authenticated() // 그 외의 요청은 인증 필요
+                );
+        http
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(CustomOAuth2UserService)
+                        )
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
                 )
                 // 4. 게이트웨이가 추가한 헤더를 처리하는 커스텀 필터는 유지합니다.
                 .addFilterBefore(headerAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
