@@ -13,9 +13,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -26,14 +23,8 @@ public class SecurityConfig {
     private final HeaderAuthenticationFilter headerAuthenticationFilter;
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final RestAccessDeniedHandler restAccessDeniedHandler;
-    private final CustomOAuth2UserService CustomOAuth2UserService;
+    private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
-
-    // PasswordEncoder Bean 등록
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
 
     @Bean
     @Order(1) // Swagger 관련 설정은 우선순위를 높게 설정합니다.
@@ -69,17 +60,21 @@ public class SecurityConfig {
                                 .accessDeniedHandler(restAccessDeniedHandler))
                 // 3. 인가 규칙 설정
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "api/auth/**", // 인증 관련 엔드포인트는 모두 허용
-                                "api/users/signup" // 회원가입 엔드포인트는 모두 허용
-                        ).permitAll()
-                        .requestMatchers("api/users/admin/**").hasRole("USER") // /api
-                        .anyRequest().authenticated() // 그 외의 요청은 인증 필요
-                );
-        http
+//                        .requestMatchers(
+//                                "/favicon.ico",
+//                                "/api/auth/**", // 인증 관련 엔드포인트는 모두 허용
+//                                "/api/users/signup" // 회원가입 엔드포인트는 모두 허용
+//                        ).permitAll()
+//                        .requestMatchers("/api/users/admin/**").hasRole("ADMIN")
+//                        .anyRequest().authenticated() // 그 외의 요청은 인증 필요
+                        .anyRequest().permitAll()
+                )
                 .oauth2Login(oauth2 -> oauth2
+                        .redirectionEndpoint(redirection -> redirection
+                                .baseUri("/api/auth/login/oauth2/code/*") // 카카오 리다이렉트 URI 패턴 설정
+                        )
                         .userInfoEndpoint(userInfo -> userInfo
-                                .userService(CustomOAuth2UserService)
+                                .userService(customOAuth2UserService)
                         )
                         .successHandler(oAuth2AuthenticationSuccessHandler)
                 )
