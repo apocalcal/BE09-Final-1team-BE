@@ -1,15 +1,14 @@
 package com.newsletterservice.config;
 
+import feign.FeignException;
 import feign.Retryer;
-import feign.RequestInterceptor;
 import feign.codec.ErrorDecoder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.http.HttpStatus;
 
-import jakarta.servlet.http.HttpServletRequest;
+import java.io.IOException;
 
 @Configuration
 @Slf4j
@@ -32,36 +31,31 @@ public class FeignTimeoutConfig {
     }
     
     /**
-     * Feign 요청에 JWT 토큰 자동 추가
+     * Feign 에러 디코더
      */
     @Bean
-    public RequestInterceptor requestInterceptor() {
-        return requestTemplate -> {
-            // 현재 요청에서 Authorization 헤더를 가져와서 Feign 요청에 추가
-            String token = getCurrentJwtToken();
-            if (token != null && !token.isEmpty()) {
-                requestTemplate.header("Authorization", token);
-                log.debug("Feign 요청에 Authorization 헤더 추가: {}", token.substring(0, Math.min(token.length(), 20)) + "...");
-            } else {
-                log.debug("JWT 토큰이 없어 Authorization 헤더를 추가하지 않습니다.");
+    public ErrorDecoder errorDecoder() {
+        return (methodKey, response) -> {
+            log.error("Feign 호출 실패: methodKey={}, status={}, reason={}", 
+                    methodKey, response.status(), response.reason());
+            
+            try {
+                if (response.status() == 401) {
+                    log.error("인증 실패: 401 Unauthorized");
+                    return new FeignException.Unauthorized("인증이 필요합니다", response.request(), response.body().asInputStream().readAllBytes(), null);
+                } else if (response.status() == 404) {
+                    log.error("리소스를 찾을 수 없음: 404 Not Found");
+                    return new FeignException.NotFound("리소스를 찾을 수 없습니다", response.request(), response.body().asInputStream().readAllBytes(), null);
+                } else if (response.status() >= 500) {
+                    log.error("서버 오류: {} {}", response.status(), response.reason());
+                    return new FeignException.InternalServerError("서버 오류가 발생했습니다", response.request(), response.body().asInputStream().readAllBytes(), null);
+                }
+                
+                return new FeignException.FeignServerException(response.status(), response.reason(), response.request(), response.body().asInputStream().readAllBytes(), null);
+            } catch (IOException e) {
+                log.error("응답 본문 읽기 실패: {}", e.getMessage());
+                return new FeignException.FeignServerException(response.status(), response.reason(), response.request(), new byte[0], null);
             }
         };
-    }
-    
-    private String getCurrentJwtToken() {
-        try {
-            // 현재 HTTP 요청에서 Authorization 헤더 추출
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attributes != null) {
-                HttpServletRequest request = attributes.getRequest();
-                String authHeader = request.getHeader("Authorization");
-                if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                    return authHeader; // "Bearer " 포함하여 반환
-                }
-            }
-        } catch (Exception e) {
-            log.warn("JWT 토큰 추출 중 오류 발생: {}", e.getMessage());
-        }
-        return null;
     }
 }

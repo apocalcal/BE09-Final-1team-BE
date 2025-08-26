@@ -978,14 +978,19 @@ public class NewsletterService {
         try {
             // NewsServiceClient의 getCategories API 사용
             List<CategoryDto> response = newsServiceClient.getCategories();
-            if (response != null) {
-                return response.stream()
+            if (response != null && !response.isEmpty()) {
+                List<String> categories = response.stream()
                         .map(CategoryDto::getCategoryName)
                         .collect(Collectors.toList());
+                log.info("뉴스 서비스에서 카테고리 조회 성공: categories={}", categories);
+                return categories;
             }
+            
+            log.warn("뉴스 서비스에서 카테고리 응답이 null이거나 비어있습니다. 기본 카테고리 사용");
             return getDefaultCategories();
+            
         } catch (Exception e) {
-            log.warn("카테고리 조회 실패, 기본 카테고리 반환", e);
+            log.warn("뉴스 서비스 카테고리 조회 실패, 기본 카테고리 반환: error={}", e.getMessage(), e);
             return getDefaultCategories();
         }
     }
@@ -2306,10 +2311,28 @@ public class NewsletterService {
     private List<NewsResponse> fetchNewsByCategory(String category, int page, int size) {
         try {
             String englishCategory = convertCategoryToEnglish(category);
+            log.debug("뉴스 서비스 호출: category={}, englishCategory={}, page={}, size={}", 
+                    category, englishCategory, page, size);
+            
             Page<NewsResponse> response = newsServiceClient.getNewsByCategory(englishCategory, page, size);
-            return response != null && response.getContent() != null ? response.getContent() : new ArrayList<>();
+            
+            if (response == null) {
+                log.warn("뉴스 서비스 응답이 null: category={}", category);
+                return new ArrayList<>();
+            }
+            
+            List<NewsResponse> content = response.getContent();
+            if (content == null) {
+                log.warn("뉴스 서비스 응답 내용이 null: category={}", category);
+                return new ArrayList<>();
+            }
+            
+            log.debug("뉴스 서비스 응답 성공: category={}, count={}", category, content.size());
+            return content;
+            
         } catch (Exception e) {
-            log.warn("카테고리 뉴스 조회 실패: category={}", category, e);
+            log.error("카테고리 뉴스 조회 실패: category={}, page={}, size={}, error={}", 
+                    category, page, size, e.getMessage(), e);
             return new ArrayList<>();
         }
     }
@@ -2566,13 +2589,19 @@ public class NewsletterService {
         
         try {
             String englishCategory = convertCategoryToEnglish(category);
+            log.debug("카테고리 변환: {} -> {}", category, englishCategory);
+            
             Page<NewsResponse> response = newsServiceClient.getNewsByCategory(englishCategory, 0, limit);
             if (response != null && response.getContent() != null) {
+                log.info("카테고리별 기사 조회 성공: category={}, articles={}", category, response.getContent().size());
                 return response.getContent();
             }
+            
+            log.warn("카테고리별 기사 응답이 null입니다: category={}", category);
             return new ArrayList<>();
+            
         } catch (Exception e) {
-            log.error("카테고리별 기사 조회 실패: category={}", category, e);
+            log.error("카테고리별 기사 조회 실패: category={}, error={}", category, e.getMessage(), e);
             return new ArrayList<>();
         }
     }
@@ -2601,7 +2630,7 @@ public class NewsletterService {
                 Long totalArticles = newsServiceClient.getNewsCountByCategory(englishCategory);
                 result.put("totalArticles", totalArticles != null ? totalArticles : 0L);
             } catch (Exception e) {
-                log.warn("카테고리별 기사 수 조회 실패: category={}", category, e);
+                log.warn("카테고리별 기사 수 조회 실패: category={}, error={}", category, e.getMessage());
                 result.put("totalArticles", articles.size());
             }
             
@@ -2609,7 +2638,7 @@ public class NewsletterService {
                     category, articles.size(), trendingKeywords.size());
             
         } catch (Exception e) {
-            log.error("카테고리별 기사와 트렌드 키워드 조회 실패: category={}", category, e);
+            log.error("카테고리별 기사와 트렌드 키워드 조회 실패: category={}, error={}", category, e.getMessage(), e);
             result.put("articles", new ArrayList<>());
             result.put("trendingKeywords", getDefaultKeywords());
             result.put("mainTopics", getDefaultKeywords());
@@ -2627,16 +2656,23 @@ public class NewsletterService {
         
         try {
             String englishCategory = convertCategoryToEnglish(category);
+            log.debug("카테고리 변환: {} -> {}", category, englishCategory);
+            
             ApiResponse<List<TrendingKeywordDto>> response = newsServiceClient.getTrendingKeywordsByCategory(englishCategory, limit, 24);
             
             if (response != null && response.getData() != null) {
-                return response.getData().stream()
+                List<String> keywords = response.getData().stream()
                         .map(TrendingKeywordDto::getKeyword)
                         .collect(Collectors.toList());
+                log.info("카테고리별 트렌드 키워드 조회 성공: category={}, keywords={}", category, keywords.size());
+                return keywords;
             }
+            
+            log.warn("카테고리별 트렌드 키워드 응답이 null입니다: category={}", category);
             return getDefaultKeywords();
+            
         } catch (Exception e) {
-            log.error("카테고리별 트렌드 키워드 조회 실패: category={}", category, e);
+            log.error("카테고리별 트렌드 키워드 조회 실패: category={}, error={}", category, e.getMessage(), e);
             return getDefaultKeywords();
         }
     }
@@ -2775,17 +2811,29 @@ public class NewsletterService {
      * 한국어 카테고리명을 영어 enum 값으로 변환
      */
     private String convertCategoryToEnglish(String koreanCategory) {
-        return switch (koreanCategory) {
-            case "정치" -> "POLITICS";
-            case "경제" -> "ECONOMY";
-            case "사회" -> "SOCIETY";
-            case "생활" -> "LIFE";
-            case "세계" -> "INTERNATIONAL";
-            case "IT/과학" -> "IT_SCIENCE";
-            case "자동차/교통" -> "VEHICLE";
-            case "여행/음식" -> "TRAVEL_FOOD";
-            case "예술" -> "ART";
-            default -> koreanCategory; // 이미 영어인 경우 그대로 반환
+        if (koreanCategory == null || koreanCategory.trim().isEmpty()) {
+            log.warn("카테고리가 null이거나 비어있습니다: {}", koreanCategory);
+            return "POLITICS"; // 기본값
+        }
+        
+        String normalizedCategory = koreanCategory.trim();
+        
+        return switch (normalizedCategory.toLowerCase()) {
+            // 한국어 및 영어 카테고리명 (대소문자 구분 없이)
+            case "정치", "politics" -> "POLITICS";
+            case "경제", "economy" -> "ECONOMY";
+            case "사회", "society" -> "SOCIETY";
+            case "생활", "life", "문화" -> "LIFE";
+            case "세계", "international", "국제" -> "INTERNATIONAL";
+            case "it/과학", "it_science", "it과학", "과학", "기술" -> "IT_SCIENCE";
+            case "자동차/교통", "vehicle", "자동차", "교통" -> "VEHICLE";
+            case "여행/음식", "travel_food", "여행", "음식", "맛집" -> "TRAVEL_FOOD";
+            case "예술", "art", "문화예술" -> "ART";
+            
+            default -> {
+                log.warn("알 수 없는 카테고리: {}. 기본값 POLITICS 사용", normalizedCategory);
+                yield "POLITICS";
+            }
         };
     }
 
@@ -2797,6 +2845,7 @@ public class NewsletterService {
         
         try {
             String englishCategory = convertCategoryToEnglish(category);
+            log.debug("카테고리 변환: {} -> {}", category, englishCategory);
             
             // 활성 구독자 수
             long activeSubscribers = subscriptionRepository.countByPreferredCategoriesContainingAndStatus(
@@ -2815,7 +2864,7 @@ public class NewsletterService {
             try {
                 newsCount = newsServiceClient.getNewsCountByCategory(englishCategory);
             } catch (Exception e) {
-                log.warn("카테고리별 뉴스 개수 조회 실패: category={}", category, e);
+                log.warn("카테고리별 뉴스 개수 조회 실패: category={}, error={}", category, e.getMessage());
             }
             
             Map<String, Object> result = new HashMap<>();
@@ -2828,10 +2877,13 @@ public class NewsletterService {
             result.put("subscriberGrowthRate", calculateGrowthRate(activeSubscribers, newSubscribers));
             result.put("lastUpdated", LocalDateTime.now());
             
+            log.info("카테고리별 구독자 통계 조회 성공: category={}, activeSubscribers={}, totalSubscribers={}", 
+                    category, activeSubscribers, totalSubscribers);
+            
             return result;
             
         } catch (Exception e) {
-            log.error("카테고리별 구독자 통계 조회 실패: category={}", category, e);
+            log.error("카테고리별 구독자 통계 조회 실패: category={}, error={}", category, e.getMessage(), e);
             throw new NewsletterException("카테고리별 구독자 통계 조회 중 오류가 발생했습니다.", "CATEGORY_STATS_ERROR");
         }
     }
@@ -2866,9 +2918,21 @@ public class NewsletterService {
                     totalNewsCount += newsCount;
                     
                 } catch (Exception e) {
-                    log.warn("카테고리 {} 통계 조회 실패", category, e);
+                    log.warn("카테고리 {} 통계 조회 실패: error={}", category, e.getMessage());
                     subscriberCounts.put(category, 0L);
                     newsCounts.put(category, 0L);
+                    
+                    // 기본 통계 정보 생성
+                    Map<String, Object> defaultStats = new HashMap<>();
+                    defaultStats.put("category", category);
+                    defaultStats.put("categoryEnglish", convertCategoryToEnglish(category));
+                    defaultStats.put("activeSubscribers", 0L);
+                    defaultStats.put("totalSubscribers", 0L);
+                    defaultStats.put("newSubscribersLast30Days", 0L);
+                    defaultStats.put("newsCount", 0L);
+                    defaultStats.put("subscriberGrowthRate", 0.0);
+                    defaultStats.put("lastUpdated", LocalDateTime.now());
+                    categoryStats.put(category, defaultStats);
                 }
             }
             
@@ -2888,10 +2952,13 @@ public class NewsletterService {
             result.put("categoryStats", categoryStats);
             result.put("lastUpdated", LocalDateTime.now());
             
+            log.info("전체 카테고리별 구독자 통계 조회 완료: totalActiveSubscribers={}, totalNewsCount={}, categoryCount={}", 
+                    totalActiveSubscribers, totalNewsCount, availableCategories.size());
+            
             return result;
             
         } catch (Exception e) {
-            log.error("전체 카테고리별 구독자 통계 조회 실패", e);
+            log.error("전체 카테고리별 구독자 통계 조회 실패: error={}", e.getMessage(), e);
             throw new NewsletterException("전체 카테고리별 구독자 통계 조회 중 오류가 발생했습니다.", "ALL_CATEGORIES_STATS_ERROR");
         }
     }

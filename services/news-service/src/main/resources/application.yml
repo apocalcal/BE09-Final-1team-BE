@@ -6,3 +6,10 @@ spring:
   cloud:
     bootstrap:
       enabled: false
+server:
+  port: 8082
+
+logging:
+  level:
+    com.newnormallist.newsservice: DEBUG
+    org.springframework.web: DEBUG

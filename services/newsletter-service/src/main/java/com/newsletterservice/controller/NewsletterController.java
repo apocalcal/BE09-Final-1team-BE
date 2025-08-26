@@ -2,7 +2,6 @@ package com.newsletterservice.controller;
 import com.newsletterservice.common.ApiResponse;
 import com.newsletterservice.common.exception.NewsletterException;
 import com.newsletterservice.dto.*;
-import com.newsletterservice.client.dto.NewsResponse;
 import com.newsletterservice.repository.NewsletterDeliveryRepository;
 import com.newsletterservice.service.EmailNewsletterRenderer;
 import com.newsletterservice.service.NewsletterService;
@@ -13,8 +12,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
+
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/newsletter")
@@ -186,6 +188,37 @@ public class NewsletterController {
     }
 
     /**
+     * 카테고리별 헤드라인 조회 - 인증 불필요
+     */
+    @GetMapping("/category/{category}/headlines")
+    public ResponseEntity<ApiResponse<List<Map<String, ? extends Serializable>>>> getCategoryHeadlines(
+            @PathVariable String category,
+            @RequestParam(defaultValue = "5") int limit) {
+        
+        try {
+            log.info("카테고리별 헤드라인 조회 요청 - category: {}, limit: {}", category, limit);
+            
+            List<NewsletterContent.Article> headlines = newsletterService.getCategoryHeadlines(category, limit);
+            List<Map<String, ? extends Serializable>> result = headlines.stream()
+                    .map(article -> Map.of(
+                            "id", article.getId(),
+                            "title", article.getTitle(),
+                            "summary", article.getSummary(),
+                            "url", article.getUrl(),
+                            "publishedAt", article.getPublishedAt(),
+                            "category", article.getCategory()
+                    ))
+                    .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(ApiResponse.success(result));
+        } catch (Exception e) {
+            log.error("카테고리별 헤드라인 조회 중 오류 발생", e);
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error("CATEGORY_HEADLINES_ERROR", "카테고리별 헤드라인 조회 중 오류가 발생했습니다."));
+        }
+    }
+
+    /**
      * 카테고리별 기사 조회 (뉴스레터 카드용) - 인증 불필요
      */
     @GetMapping("/category/{category}/articles")
@@ -203,27 +236,6 @@ public class NewsletterController {
             log.error("카테고리별 기사 조회 중 오류 발생", e);
             return ResponseEntity.badRequest()
                 .body(ApiResponse.error("CATEGORY_ARTICLES_ERROR", "카테고리별 기사 조회 중 오류가 발생했습니다."));
-        }
-    }
-
-    /**
-     * 카테고리별 헤드라인 조회 (뉴스레터 카드용) - 인증 불필요
-     */
-    @GetMapping("/category/{category}/headlines")
-    public ResponseEntity<ApiResponse<List<NewsletterContent.Article>>> getCategoryHeadlines(
-            @PathVariable String category,
-            @RequestParam(defaultValue = "5") int limit) {
-        
-        try {
-            log.info("카테고리별 헤드라인 조회 요청 - category: {}, limit: {}", category, limit);
-            
-            List<NewsletterContent.Article> headlines = newsletterService.getCategoryHeadlines(category, limit);
-            
-            return ResponseEntity.ok(ApiResponse.success(headlines));
-        } catch (Exception e) {
-            log.error("카테고리별 헤드라인 조회 중 오류 발생", e);
-            return ResponseEntity.badRequest()
-                .body(ApiResponse.error("CATEGORY_HEADLINES_ERROR", "카테고리별 헤드라인 조회 중 오류가 발생했습니다."));
         }
     }
 
@@ -308,6 +320,33 @@ public class NewsletterController {
     }
 
     /**
+     * 전체 구독자 통계 조회 - 인증 불필요
+     */
+    @GetMapping("/stats/subscribers")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSubscriberStats(
+            @RequestParam(required = false) String category) {
+
+        try {
+            log.info("구독자 통계 조회 요청: { category: {} }", category);
+
+            Map<String, Object> result;
+            if (category != null && !category.trim().isEmpty()) {
+                // 특정 카테고리 구독자 통계
+                result = newsletterService.getCategorySubscriberStats(category);
+            } else {
+                // 전체 카테고리 구독자 통계
+                result = newsletterService.getAllCategoriesSubscriberStats();
+            }
+
+            return ResponseEntity.ok(ApiResponse.success(result));
+        } catch (Exception e) {
+            log.error("구독자 통계 조회 중 오류 발생", e);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("SUBSCRIBER_STATS_ERROR", "구독자 통계 조회 중 오류가 발생했습니다."));
+        }
+    }
+
+    /**
      * 개인화된 뉴스레터 콘텐츠 조회 (JSON)
      */
     @GetMapping("/{newsletterId}/content")
@@ -317,7 +356,7 @@ public class NewsletterController {
         
         try {
             String userId = extractUserIdFromToken(httpRequest);
-            log.info("개인화된 뉴스레터 콘텐츠 조회 - userId: {}, newsletterId: {}", userId, newsletterId);
+            log.info("퍼스널라이즈드 뉴스레터 콘텐츠 조회 - userId: {}, newsletterId: {}", userId, newsletterId);
             
             NewsletterContent content = newsletterService.buildPersonalizedContent(Long.valueOf(userId), newsletterId);
             return ResponseEntity.ok(ApiResponse.success(content));
@@ -342,14 +381,14 @@ public class NewsletterController {
         
         try {
             String userId = extractUserIdFromToken(httpRequest);
-            log.info("개인화된 뉴스레터 HTML 조회 - userId: {}, newsletterId: {}", userId, newsletterId);
+            log.info("퍼스널라이즈드 뉴스레터 HTML 조회 - userId: {}, newsletterId: {}", userId, newsletterId);
             
             NewsletterContent content = newsletterService.buildPersonalizedContent(Long.valueOf(userId), newsletterId);
             String htmlContent = emailRenderer.renderToHtml(content);
             
             return ResponseEntity.ok()
                     .header("Content-Type", "text/html; charset=UTF-8")
-                    .body(htmlContent); 
+                    .body(htmlContent);
         } catch (NewsletterException e) {
             log.warn("뉴스레터 HTML 조회 실패: {}", e.getMessage());
             return ResponseEntity.badRequest()
@@ -373,7 +412,7 @@ public class NewsletterController {
         
         try {
             String userId = extractUserIdFromToken(httpRequest);
-            log.info("개인화된 뉴스레터 미리보기 - userId: {}, newsletterId: {}", userId, newsletterId);
+            log.info("퍼스널라이즈드 뉴스레터 미리보기 - userId: {}, newsletterId: {}", userId, newsletterId);
             
             NewsletterContent content = newsletterService.buildPersonalizedContent(Long.valueOf(userId), newsletterId);
             String previewHtml = emailRenderer.renderToPreviewHtml(content);
@@ -568,7 +607,14 @@ public class NewsletterController {
      * 프론트엔드 카테고리명을 백엔드 카테고리명으로 변환
      */
     private String convertToBackendCategory(String frontendCategory) {
-        return switch (frontendCategory) {
+        if (frontendCategory == null || frontendCategory.trim().isEmpty()) {
+            log.warn("프론트엔드 카테고리가 null이거나 비어있습니다: {}", frontendCategory);
+            return "POLITICS"; // 기본값
+        }
+        
+        String normalizedCategory = frontendCategory.trim();
+        
+        return switch (normalizedCategory) {
             case "정치" -> "POLITICS";
             case "경제" -> "ECONOMY";
             case "사회" -> "SOCIETY";
@@ -578,7 +624,20 @@ public class NewsletterController {
             case "자동차/교통" -> "VEHICLE";
             case "여행/음식" -> "TRAVEL_FOOD";
             case "예술" -> "ART";
-            default -> frontendCategory.toUpperCase();
+            // 이미 영어인 경우 대소문자 정규화
+            case "politics", "POLITICS" -> "POLITICS";
+            case "economy", "ECONOMY" -> "ECONOMY";
+            case "society", "SOCIETY" -> "SOCIETY";
+            case "life", "LIFE" -> "LIFE";
+            case "international", "INTERNATIONAL" -> "INTERNATIONAL";
+            case "it_science", "IT_SCIENCE" -> "IT_SCIENCE";
+            case "vehicle", "VEHICLE" -> "VEHICLE";
+            case "travel_food", "TRAVEL_FOOD" -> "TRAVEL_FOOD";
+            case "art", "ART" -> "ART";
+            default -> {
+                log.warn("알 수 없는 프론트엔드 카테고리: {}. 기본값 POLITICS 사용", normalizedCategory);
+                yield "POLITICS";
+            }
         };
     }
 }
