@@ -22,7 +22,7 @@ management:
 logging:
   level:
     com.newnormallist.userservice: DEBUG
-    org.springframework.security: WARN
+    org.springframework.security: DEBUG
 
 # 5. swagger 설정
 springdoc:
