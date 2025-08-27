@@ -40,7 +40,7 @@ public class NewsletterContent {
         private Long id;
         private String title;
         private String summary;
-        private String category;
+        private String category; // String 타입으로 유지 (카테고리명)
         private String url;
         private LocalDateTime publishedAt;
         private String imageUrl;
