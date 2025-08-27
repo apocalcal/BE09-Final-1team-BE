@@ -2,6 +2,8 @@ package com.newnormallist.newsservice.summarizer.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.newnormallist.newsservice.summarizer.dto.SummaryRequest;
+import com.newnormallist.newsservice.summarizer.dto.SummaryResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -62,6 +64,11 @@ public class SummarizerClient {
                 normalizeLines(lines),
                 emptyToNull(prompt)
         ));
+    }
+
+    public SummaryResponse summarize(SummaryRequest req) {
+        String url = baseUrl + "/summary";
+        return restTemplate.postForObject(url, req, SummaryResponse.class);
     }
 
     /** 실제 HTTP 호출 구현 (payload → JSON POST) */

@@ -42,7 +42,7 @@ public class CategoryController {
             return ResponseEntity.ok(news);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("지원하지 않는 카테고리입니다: " + categoryName + 
-                ". 사용 가능한 카테고리: POLITICS, ECONOMY, SOCIETY, LIFE, INTERNATIONAL, IT_SCIENCE");
+                ". 사용 가능한 카테고리: POLITICS, ECONOMY, SOCIETY, LIFE, INTERNATIONAL, IT_SCIENCE, VEHICLE, TRAVEL_FOOD, ART");
         }
     }
 
@@ -57,7 +57,7 @@ public class CategoryController {
             return ResponseEntity.ok(count);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("지원하지 않는 카테고리입니다: " + categoryName + 
-                ". 사용 가능한 카테고리: POLITICS, ECONOMY, SOCIETY, LIFE, INTERNATIONAL, IT_SCIENCE");
+                ". 사용 가능한 카테고리: POLITICS, ECONOMY, SOCIETY, LIFE, INTERNATIONAL, IT_SCIENCE, VEHICLE, TRAVEL_FOOD, ART");
         }
     }
 }
