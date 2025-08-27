@@ -12,13 +12,13 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 public class NewsResponse {
-    private Long id;
+    private Long newsId;
     private String title;
     private String content;
     private String summary;
     private String imageUrl;
-    private String sourceUrl;
-    private String category;
+    private String link;
+    private String categoryName;
     private LocalDateTime publishedAt;
     private LocalDateTime createdAt;
 }

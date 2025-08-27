@@ -29,6 +29,8 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.HashSet;
+import java.util.Arrays;
 
 @Service
 @RequiredArgsConstructor
@@ -395,7 +397,7 @@ public class NewsletterService {
             // 카테고리 필터링 (필요한 경우)
             if (request.getCategory() != null && !request.getCategory().isEmpty()) {
                 searchResults = searchResults.stream()
-                        .filter(news -> request.getCategory().equals(news.getCategory()))
+                        .filter(news -> request.getCategory().equals(news.getCategoryName()))
                         .collect(Collectors.toList());
             }
             
@@ -535,13 +537,13 @@ public class NewsletterService {
             
             // 읽지 않은 뉴스만 필터링
             List<Long> candidateNewsIds = candidateNews.stream()
-                    .map(NewsResponse::getId)
+                    .map(NewsResponse::getNewsId)
                     .collect(Collectors.toList());
             List<Long> unreadNewsIds = userReadHistoryService.filterUnreadNewsIds(userId, candidateNewsIds);
             
             // 필터링된 뉴스만 반환
             List<NewsResponse> filteredNews = candidateNews.stream()
-                    .filter(news -> unreadNewsIds.contains(news.getId()))
+                    .filter(news -> unreadNewsIds.contains(news.getNewsId()))
                     .collect(Collectors.toList());
             
             return filteredNews.stream()
@@ -575,9 +577,9 @@ public class NewsletterService {
             
             return trendingNews.stream()
                     .map(news -> NewsletterContent.Article.builder()
-                            .id(news.getId())
+                            .id(news.getNewsId())
                             .title(news.getTitle())
-                            .category(news.getCategory())
+                            .category(news.getCategoryName())
                             .trendScore(0.0)
                             .publishedAt(news.getPublishedAt())
                             .viewCount(0L) // TODO: 실제 조회수 연동
@@ -1165,12 +1167,12 @@ public class NewsletterService {
         if (candidates == null || candidates.isEmpty()) return;
         
         Set<Long> existingIds = accumulator.stream()
-                .map(NewsResponse::getId)
+                .map(NewsResponse::getNewsId)
                 .collect(Collectors.toSet());
         
         for (NewsResponse news : candidates) {
             if (accumulator.size() >= maxSize) break;
-            if (existingIds.add(news.getId())) {
+            if (existingIds.add(news.getNewsId())) {
                 accumulator.add(news);
             }
         }
@@ -1241,11 +1243,11 @@ public class NewsletterService {
 
     private NewsletterContent.Article toContentArticle(NewsResponse news) {
         return NewsletterContent.Article.builder()
-                .id(news.getId())
+                .id(news.getNewsId())
                 .title(news.getTitle())
                 .summary(news.getSummary())
-                .category(news.getCategory())
-                .url(news.getSourceUrl())
+                .category(news.getCategoryName())
+                .url(news.getLink())
                 .publishedAt(news.getPublishedAt())
                 .imageUrl(news.getImageUrl())
                 .viewCount(null)
@@ -1383,7 +1385,7 @@ public class NewsletterService {
     private boolean matchesFilter(NewsResponse news, NewsFilterRequest request) {
         // 카테고리 필터
         if (request.getCategories() != null && !request.getCategories().isEmpty()) {
-            if (!request.getCategories().contains(news.getCategory())) {
+            if (!request.getCategories().contains(news.getCategoryName())) {
                 return false;
             }
         }
@@ -1422,12 +1424,12 @@ public class NewsletterService {
 
     private EnhancedNewsletterInfo convertToEnhancedInfo(NewsResponse news) {
         return EnhancedNewsletterInfo.builder()
-                .id(news.getId())
+                .id(news.getNewsId())
                 .title(news.getTitle())
                 .summary(news.getSummary())
-                .category(news.getCategory())
+                .category(news.getCategoryName())
                 .publishedAt(news.getPublishedAt())
-                .sourceUrl(news.getSourceUrl())
+                .sourceUrl(news.getLink())
                 .imageUrl(news.getImageUrl())
                 .estimatedReadTime(calculateReadTime(news.getSummary()))
                 .relevanceScore(1.0)
@@ -1485,7 +1487,7 @@ public class NewsletterService {
     }
 
     private double calculatePersonalizationScore(NewsResponse news, Map<String, Double> categoryScores) {
-        double baseScore = categoryScores.getOrDefault(news.getCategory(), 0.0);
+        double baseScore = categoryScores.getOrDefault(news.getCategoryName(), 0.0);
         
         // 시간 점수 (최신일수록 높음)
         long hoursAgo = ChronoUnit.HOURS.between(news.getPublishedAt(), LocalDateTime.now());
@@ -1495,8 +1497,8 @@ public class NewsletterService {
     }
 
     private String generateRecommendationReason(NewsResponse news, Map<String, Double> categoryScores) {
-        if (categoryScores.containsKey(news.getCategory())) {
-            return news.getCategory() + " 카테고리에 관심을 보이셨습니다";
+        if (categoryScores.containsKey(news.getCategoryName())) {
+            return news.getCategoryName() + " 카테고리에 관심을 보이셨습니다";
         }
         return "최신 트렌드 뉴스입니다";
     }
@@ -2028,7 +2030,7 @@ public class NewsletterService {
         // 2. 카테고리별 섹션
         Map<String, List<NewsResponse>> categoryGroups = news.stream()
                 .skip(3)
-                .collect(Collectors.groupingBy(NewsResponse::getCategory));
+                .collect(Collectors.groupingBy(NewsResponse::getCategoryName));
         
         for (Map.Entry<String, List<NewsResponse>> entry : categoryGroups.entrySet()) {
             String categoryIcon = getCategoryIcon(entry.getKey());
@@ -2386,7 +2388,7 @@ public class NewsletterService {
         if (profile.getPreferredCategories().isEmpty() || news.isEmpty()) return 0.5;
         
         long matchingNews = news.stream()
-                .mapToLong(n -> profile.getPreferredCategories().contains(n.getCategory()) ? 1 : 0)
+                .mapToLong(n -> profile.getPreferredCategories().contains(n.getCategoryName()) ? 1 : 0)
                 .sum();
         
         return (double) matchingNews / news.size();
@@ -2476,7 +2478,7 @@ public class NewsletterService {
     }
 
     private double calculateRelevanceScore(NewsResponse news, AggregatedPreferenceProfile profile) {
-        String category = news.getCategory();
+        String category = news.getCategoryName();
         int frequency = profile.getCategoryFrequency().getOrDefault(category, 0);
         return (double) frequency / profile.getTotalUsers();
     }
@@ -2525,13 +2527,13 @@ public class NewsletterService {
     private List<NewsletterContent.Article> convertToNewsletterArticles(List<NewsResponse> news) {
         return news.stream()
                 .map(n -> NewsletterContent.Article.builder()
-                        .id(n.getId())
+                        .id(n.getNewsId())
                         .title(n.getTitle())
                         .summary(n.getSummary())
-                        .category(n.getCategory())
-                        .url(n.getSourceUrl())
-                        .imageUrl(n.getImageUrl())
+                        .category(n.getCategoryName())
+                        .url(n.getLink())
                         .publishedAt(n.getPublishedAt())
+                        .imageUrl(n.getImageUrl())
                         .viewCount(0L) // TODO: 실제 조회수 연동
                         .build())
                 .collect(Collectors.toList());
@@ -2640,8 +2642,8 @@ public class NewsletterService {
         } catch (Exception e) {
             log.error("카테고리별 기사와 트렌드 키워드 조회 실패: category={}, error={}", category, e.getMessage(), e);
             result.put("articles", new ArrayList<>());
-            result.put("trendingKeywords", getDefaultKeywords());
-            result.put("mainTopics", getDefaultKeywords());
+            result.put("trendingKeywords", new ArrayList<>());
+            result.put("mainTopics", new ArrayList<>());
             result.put("totalArticles", 0L);
         }
         
@@ -2669,11 +2671,11 @@ public class NewsletterService {
             }
             
             log.warn("카테고리별 트렌드 키워드 응답이 null입니다: category={}", category);
-            return getDefaultKeywords();
+            return new ArrayList<>();
             
         } catch (Exception e) {
             log.error("카테고리별 트렌드 키워드 조회 실패: category={}, error={}", category, e.getMessage(), e);
-            return getDefaultKeywords();
+            return new ArrayList<>();
         }
     }
 
@@ -2694,8 +2696,8 @@ public class NewsletterService {
             log.warn("전체 트렌드 키워드 조회 실패", e);
         }
         
-        // 실패 시 기본 키워드 반환
-        return getDefaultKeywords();
+        // 실패 시 빈 리스트 반환
+        return new ArrayList<>();
     }
 
     /**
@@ -2703,7 +2705,7 @@ public class NewsletterService {
      */
     public List<String> extractTrendingKeywords(List<NewsResponse> articles) {
         if (articles == null || articles.isEmpty()) {
-            return getDefaultKeywords();
+            return new ArrayList<>();
         }
 
         // 기사 제목과 요약에서 키워드 추출
@@ -2736,7 +2738,7 @@ public class NewsletterService {
      */
     public List<String> extractMainTopics(List<NewsResponse> articles) {
         if (articles == null || articles.isEmpty()) {
-            return getDefaultTopics();
+            return new ArrayList<>();
         }
 
         // 기사 제목에서 주요 주제 추출
@@ -2759,16 +2761,111 @@ public class NewsletterService {
     private Set<String> extractKeywordsFromText(String text) {
         Set<String> keywords = new HashSet<>();
         
+        // 복합 명사 처리 (IT 컨퍼런스, 주식 시장 등)
+        text = text.replaceAll("IT 컨퍼런스", "IT컨퍼런스");
+        text = text.replaceAll("주식 시장", "주식시장");
+        
         // 간단한 키워드 추출 로직 (실제로는 NLP 라이브러리 사용 권장)
         String[] words = text.split("\\s+");
         for (String word : words) {
-            // 2글자 이상의 한글 단어만 키워드로 추출
-            if (word.length() >= 2 && word.matches(".*[가-힣].*")) {
-                keywords.add(word);
+            // 특수문자 제거
+            String cleanedWord = word.replaceAll("[^가-힣0-9A-Za-z]", "");
+            
+            // 2글자 이상의 한글 단어만 키워드로 추출하고 스톱워드 제외
+            if (cleanedWord.length() >= 2 && cleanedWord.matches(".*[가-힣].*") && !isStopWord(cleanedWord)) {
+                // 조사나 어미 제거
+                String normalizedWord = removeJosaAndEndings(cleanedWord);
+                if (!normalizedWord.isEmpty() && !isStopWord(normalizedWord)) {
+                    keywords.add(normalizedWord);
+                }
             }
         }
         
         return keywords;
+    }
+    
+    /**
+     * 조사나 어미 제거
+     */
+    private String removeJosaAndEndings(String word) {
+        if (word.length() < 2) {
+            return word;
+        }
+        
+        // 조사 제거
+        String[] josa = {"이", "가", "을", "를", "의", "에", "에서", "로", "으로", "와", "과", "도", "는", "은", "만", "부터", "까지", "에게", "로서", "같이", "처럼", "만큼", "보다", "같은"};
+        for (String j : josa) {
+            if (word.endsWith(j)) {
+                word = word.substring(0, word.length() - j.length());
+                break;
+            }
+        }
+        
+        // 동사 어미 제거
+        String[] verbEndings = {"하면서", "하고", "하며", "이다", "있다", "없다", "하다", "되다", "따르다", "통하다", "위하다", "대하다", "했다고", "했다", "했다", "하고", "하며", "면서", "이다", "있다", "없다", "하다", "되다", "따르다", "통하다", "위하다", "대하다"};
+        for (String ending : verbEndings) {
+            if (word.endsWith(ending)) {
+                word = word.substring(0, word.length() - ending.length());
+                break;
+            }
+        }
+        
+        // 일반적인 어미 제거
+        String[] endings = {"는", "은", "이", "가", "을", "를", "의", "에", "에서", "로", "으로", "와", "과", "도", "만", "부터", "까지", "에게", "로서", "같이", "처럼", "만큼", "보다", "같은"};
+        for (String ending : endings) {
+            if (word.endsWith(ending)) {
+                word = word.substring(0, word.length() - ending.length());
+                break;
+            }
+        }
+        
+        return word;
+    }
+    
+    /**
+     * 스톱워드 체크
+     */
+    private boolean isStopWord(String word) {
+        Set<String> stopWords = new HashSet<>(Arrays.asList(
+            "있다", "없다", "하다", "되다", "이다", "것", "수", "등", "및", "또는", "그리고",
+            "이번", "지난", "현재", "오늘", "내일", "어제", "내년", "작년", "올해", "금년",
+            "현장", "관련", "기자", "사진", "영상", "단독", "인터뷰", "종합",
+            "정부", "대통령", "국회", "한국", "대한민국", "뉴스", "기사", "외신",
+            "밝혔다", "통해", "위해", "대해", "에서", "으로", "에게", "부터", "까지", "로서",
+            "같이", "처럼", "만큼", "보다", "같은", "이런", "저런", "그런", "어떤", "무슨",
+            "몇", "얼마", "언제", "어디", "누가", "무엇", "어떻게", "왜", "어째서",
+            "있는", "없는", "하는", "되는", "것으로", "따르면", "등을", "것을", "것이", "것은",
+            "것도", "것만", "것과", "것의", "것에", "때문", "이유", "결과", "원인", "목적", "방법",
+            // 사용자가 요청한 제외 키워드들
+            "것으로", "대한", "따르면", "등을", "당시", "12일",
+            // 날짜 관련
+            "년", "분", "초", "주", "개월", "년도", "년간", "개월간", "주간",
+            "오전", "오후", "새벽", "밤", "낮", "저녁", "아침", "점심", "식사",
+            // 요일
+            "월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일",
+            "월", "화", "수", "목", "금", "토", "일",
+            // 장소 관련
+            "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "제주",
+            "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남",
+            "강남", "강북", "서초", "마포", "종로", "중구", "용산", "성동", "광진", 
+            "동대문", "중랑", "성북", "도봉", "노원", "은평", "서대문", "양천", 
+            "강서", "구로", "금천", "영등포", "동작", "관악", "송파", "강동",
+            "지역", "지방", "시", "군", "구", "읍", "면", "리", "번지", "길", "로", "가", "호",
+            // 조사 - 중복 요소들이 있어도 HashSet이 자동으로 처리
+            "이", "가", "을", "를", "의", "에", "에서", "로", "으로", "와", "과", "도", 
+            "는", "은", "만", "부터", "까지", "에게", "로서", "같이", "처럼", "만큼", 
+            "보다", "같은", "이런", "저런", "그런", "어떤", "무슨", "몇", "얼마", 
+            "언제", "어디", "누가", "무엇", "어떻게", "왜", "어째서",
+            // 어미
+            "있다", "없다", "하다", "되다", "이다", "따르다", "통하다", "위하다", "대하다",
+            "있는", "없는", "하는", "되는", "어떤", "무슨",
+            "것으로", "것을", "것이", "것은", "것도", "것만", "것과", "것의", "것에",
+            "등을", "등이", "등은", "등도", "등과", "등에", "등의",
+            "따른", "따르는", "따를", "따른다", "통한", "통하는", "통할", "통한다", 
+            "위한", "위하는", "위할", "위한다", "대한", "대하는", "대할", "대한다"
+        ));
+        
+        return stopWords.contains(word);
     }
 
     /**
@@ -2789,19 +2886,7 @@ public class NewsletterService {
         return topics;
     }
 
-    /**
-     * 기본 키워드 반환
-     */
-    private List<String> getDefaultKeywords() {
-        return Arrays.asList("주요뉴스", "핫이슈", "트렌드", "분석", "전망", "동향", "소식", "업데이트");
-    }
 
-    /**
-     * 기본 주제 반환
-     */
-    private List<String> getDefaultTopics() {
-        return Arrays.asList("주요뉴스", "핫이슈", "트렌드", "분석", "전망", "동향");
-    }
 
     // ========================================
     // Utility Methods

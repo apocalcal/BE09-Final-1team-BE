@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -191,7 +192,7 @@ public class NewsletterController {
      * 카테고리별 헤드라인 조회 - 인증 불필요
      */
     @GetMapping("/category/{category}/headlines")
-    public ResponseEntity<ApiResponse<List<Map<String, ? extends Serializable>>>> getCategoryHeadlines(
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getCategoryHeadlines(
             @PathVariable String category,
             @RequestParam(defaultValue = "5") int limit) {
         
@@ -199,15 +200,17 @@ public class NewsletterController {
             log.info("카테고리별 헤드라인 조회 요청 - category: {}, limit: {}", category, limit);
             
             List<NewsletterContent.Article> headlines = newsletterService.getCategoryHeadlines(category, limit);
-            List<Map<String, ? extends Serializable>> result = headlines.stream()
-                    .map(article -> Map.of(
-                            "id", article.getId(),
-                            "title", article.getTitle(),
-                            "summary", article.getSummary(),
-                            "url", article.getUrl(),
-                            "publishedAt", article.getPublishedAt(),
-                            "category", article.getCategory()
-                    ))
+            List<Map<String, Object>> result = headlines.stream()
+                    .map(article -> {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("id", article.getId());
+                        map.put("title", article.getTitle() != null ? article.getTitle() : "");
+                        map.put("summary", article.getSummary() != null ? article.getSummary() : "");
+                        map.put("url", article.getUrl() != null ? article.getUrl() : "");
+                        map.put("publishedAt", article.getPublishedAt() != null ? article.getPublishedAt() : "");
+                        map.put("category", article.getCategory() != null ? article.getCategory() : "");
+                        return map;
+                    })
                     .collect(Collectors.toList());
             
             return ResponseEntity.ok(ApiResponse.success(result));

@@ -3,7 +3,6 @@ package com.newsletterservice.client;
 import com.newsletterservice.common.ApiResponse;
 import com.newsletterservice.client.dto.NewsResponse;
 import com.newsletterservice.client.dto.CategoryDto;
-import com.newsletterservice.entity.NewsCategory;
 import com.newsletterservice.config.FeignTimeoutConfig;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.data.domain.Page;
