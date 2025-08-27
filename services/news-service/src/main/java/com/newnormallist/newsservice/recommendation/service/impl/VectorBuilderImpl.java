@@ -134,7 +134,7 @@ public class VectorBuilderImpl implements VectorBuilder {
         
         try {
             // 먼저 JPA 방식 시도
-            List<NewsScrap> scraps = newsScrapRepository.findRecentScrapsByUserId(userId, thirtyDaysAgo);
+            List<NewsScraper> scraps = newsScrapRepository.findRecentScrapsByUserId(userId, thirtyDaysAgo);
             return calculateScrapWeights(scraps);
         } catch (Exception e) {
             // 날짜 파싱 오류 시 Native Query 사용
@@ -144,11 +144,11 @@ public class VectorBuilderImpl implements VectorBuilder {
         }
     }
     
-    private Map<RecommendationCategory, Double> calculateScrapWeights(List<NewsScrap> scraps) {
+    private Map<RecommendationCategory, Double> calculateScrapWeights(List<NewsScraper> scraps) {
         Map<RecommendationCategory, Double> categoryWeights = new HashMap<>();
         double totalWeight = 0.0;
         
-        for (NewsScrap scrap : scraps) {
+        for (NewsScraper scrap : scraps) {
             long daysDiff = java.time.Duration.between(scrap.getCreatedAt(), LocalDateTime.now()).toDays();
             double weight = MathUtils.dayWeight(daysDiff, properties.getScrapHalfLifeDays());
             
