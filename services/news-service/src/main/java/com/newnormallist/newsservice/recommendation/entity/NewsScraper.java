@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Table(name = "news_scrap", indexes = {
     @Index(name="idx_ns_user_time", columnList="storageId, createdAt DESC")
 })
-public class NewsScrap {
+public class NewsScraper {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
