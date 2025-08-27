@@ -116,7 +116,7 @@ public class MyPageServiceImpl implements MyPageService {
                     .build();
 
         } catch (Exception e) {
-            log.error("Failed to convert NewsScrap with ID: {}. Error: {}", newsScrap.getScrapId(), e.getMessage(), e);
+            log.error("Failed to convert NewsScraper with ID: {}. Error: {}", newsScrap.getScrapId(), e.getMessage(), e);
             return NewsListResponse.builder()
                     .newsId(0L)
                     .title("[데이터 변환 오류]")
