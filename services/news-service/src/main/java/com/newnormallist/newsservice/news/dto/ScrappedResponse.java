@@ -1,12 +1,12 @@
-package com.newnormallist.userservice.user.dto;
+package com.newnormallist.newsservice.news.dto;
 
+import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor
-public class ScrappedNewsResponse {
+public class ScrappedResponse {
     private Long newsId;
     private String title;
     private String press;
