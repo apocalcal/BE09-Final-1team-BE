@@ -22,9 +22,6 @@ management:
 logging:
   level:
     com.newnormallist.userservice: DEBUG
-    org.springframework.security: TRACE
-    org.springframework.web.reactive.function.client.ExchangeFunctions: TRACE
-
 
 # 5. swagger 설정
 springdoc:
