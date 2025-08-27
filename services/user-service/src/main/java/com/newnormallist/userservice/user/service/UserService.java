@@ -238,11 +238,11 @@ public class UserService {
             // 직접 DB에서 제목 조회
             Optional<String> newsTitle = newsRepository.findTitleById(newsId);
 
-
             // 읽은 기록 엔티티 생성
             UserReadHistory history = UserReadHistory.builder()
                     .user(user)
                     .newsId(newsId)
+                    .newsTitle(newsTitle.orElse("제목 없음"))
                     .categoryName(categoryName)
                     .build();
             // 읽은 기록 저장
@@ -262,23 +262,5 @@ public class UserService {
         // updated_at 기준 내림차순으로 정렬된 기록 조회 후 DTO로 변환
         return userReadHistoryRepository.findByUserIdOrderByUpdatedAtDesc(userId, pageable)
                 .map(ReadHistoryResponse::new);
-    }
-
-    /**
-     * 스크랩된 뉴스 목록 조회 로직
-     * @param userId 사용자 ID
-     * @param pageable 페이지 정보
-     * @return Page<ScrappedNewsResponse> 스크랩된 뉴스 목록
-     */
-    public Page<ScrappedNewsResponse> getScrappedNews(Long userId, Pageable pageable) {
-        String sort = pageable.getSort().stream()
-                .map(order -> order.getProperty() + "," + order.getDirection())
-                .collect(Collectors.joining());
-        return newsServiceClient.getScrappedNews(
-                userId,
-                pageable.getPageNumber(),
-                pageable.getPageSize(),
-                sort
-        );
     }
 }

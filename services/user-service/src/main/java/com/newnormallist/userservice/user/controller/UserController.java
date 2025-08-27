@@ -45,6 +45,17 @@ public class UserController {
     /**
      * 회원가입 API
      */
+    @Operation(
+            summary = "회원가입",
+            description = "새로운 사용자를 등록합니다.",
+            operationId = "signup"
+            // requestBody 속성은 springdoc이 자동으로 생성해주므로 제거
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "회원가입 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청"),
+            @ApiResponse(responseCode = "409", description = "이미 존재하는 사용자")
+    })
     @PostMapping("/signup")
     public ResponseEntity<ApiResult<String>> signup(@Valid @RequestBody SignupRequest signupRequest) {
         userService.signup(signupRequest);
@@ -258,30 +269,5 @@ public class UserController {
         Long userId = Long.parseLong(userIdStr);
         Page<ReadHistoryResponse> historyPage = userService.getReadHistory(userId, pageable);
         return ResponseEntity.ok(ApiResult.success(historyPage));
-    }
-
-
-
-    /**
-     * 마이페이지 - 스크랩한 뉴스 목록 조회 API
-     */
-    @Operation(
-            summary = "스크랩한 뉴스 목록 조회",
-            description = "사용자가 스크랩한 뉴스 목록을 최신순으로 페이지 조회합니다.",
-            operationId = "getMyScraps"
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "스크랩 목록 조회 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 필요")
-    })
-    @GetMapping("/mypage/scraps")
-    public ResponseEntity<ApiResult<Page<ScrappedNewsResponse>>> getMyScraps(
-            @Parameter(hidden = true) @AuthenticationPrincipal String userIdStr,
-            @ParameterObject
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
-    ) {
-        Long userId = Long.parseLong(userIdStr);
-        Page<ScrappedNewsResponse> scrappedNews = userService.getScrappedNews(userId, pageable);
-        return ResponseEntity.ok(ApiResult.success(scrappedNews));
     }
 }
