@@ -25,7 +25,6 @@ public class MyPageController {
             Pageable pageable) {
         Long userId = getUserIdOrThrow(userIdString);
 
-        // 프론트엔드에서 요청한 페이지 번호와 정렬은 유지하되, 페이지 크기는 10으로 고정합니다.
         Pageable fixedPageable = PageRequest.of(pageable.getPageNumber(), 10, pageable.getSort());
 
         Page<NewsListResponse> scraps = myPageService.getScrappedNews(userId, category, fixedPageable);
@@ -48,14 +47,12 @@ public class MyPageController {
      * @throws UnauthenticatedUserException 사용자 인증 정보가 없을 경우 발생
      */
     private Long getUserIdOrThrow(String userIdString) {
-        // Spring Security는 인증되지 않은 사용자를 "anonymousUser" 문자열로 전달할 수 있습니다.
         if (userIdString == null || "anonymousUser".equals(userIdString)) {
             throw new UnauthenticatedUserException("사용자 인증 정보가 없습니다. 로그인이 필요합니다.");
         }
         try {
             return Long.parseLong(userIdString);
         } catch (NumberFormatException e) {
-            // "anonymousUser"가 아닌 다른 비정상적인 문자열이 들어올 경우를 대비한 방어 코드
             throw new UnauthenticatedUserException("유효하지 않은 사용자 ID 형식입니다: " + userIdString);
         }
     }
