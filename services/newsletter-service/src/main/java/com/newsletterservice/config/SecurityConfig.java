@@ -55,6 +55,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/newsletter/subscription/{id}").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/newsletter/subscription/{id}").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/newsletter/subscription/{subscriptionId}/status").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/newsletter/newsletters/unsubscribe").permitAll()
 
                         // 2-5. 공개 통계 및 트렌딩 정보 - 인증 불필요
                         .requestMatchers(HttpMethod.GET, "/api/newsletter/trending-keywords").permitAll()

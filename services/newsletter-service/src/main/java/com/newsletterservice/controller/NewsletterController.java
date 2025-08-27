@@ -437,6 +437,24 @@ public class NewsletterController {
     }
 
     /**
+     * 카테고리별 구독자 수 동기화 (관리자용)
+     */
+    @PostMapping("/admin/sync-category-subscribers")
+    public ResponseEntity<ApiResponse<String>> syncCategorySubscriberCounts() {
+        try {
+            log.info("카테고리별 구독자 수 동기화 요청");
+            
+            newsletterService.syncCategorySubscriberCounts();
+            
+            return ResponseEntity.ok(ApiResponse.success("카테고리별 구독자 수 동기화가 완료되었습니다."));
+        } catch (Exception e) {
+            log.error("카테고리별 구독자 수 동기화 중 오류 발생", e);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("SYNC_ERROR", "카테고리별 구독자 수 동기화 중 오류가 발생했습니다."));
+        }
+    }
+
+    /**
      * 구독 재활성화
      */
     @PutMapping("/subscription/{id}/reactivate")
