@@ -1,8 +1,7 @@
 package com.newnormallist.newsservice.news.repository;
-
+import com.newnormallist.newsservice.news.entity.NewsStatus;
 import com.newnormallist.newsservice.news.entity.Category;
 import com.newnormallist.newsservice.news.entity.News;
-import com.newnormallist.newsservice.news.entity.NewsStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,8 +15,6 @@ import java.util.List;
 @Repository
 public interface NewsRepository extends JpaRepository<News, Long> {
 
-    List<News> findByStatus(NewsStatus status);
-
     @Query("SELECT n FROM News n WHERE STR_TO_DATE(n.publishedAt, '%Y-%m-%d %H:%i:%s') > :since")
     List<News> findByPublishedAtAfter(@Param("since") LocalDateTime since);
 
@@ -25,64 +22,77 @@ public interface NewsRepository extends JpaRepository<News, Long> {
     @Query("SELECT n FROM News n WHERE n.categoryName = :category ORDER BY STR_TO_DATE(n.publishedAt, '%Y-%m-%d %H:%i:%s') DESC")
     Page<News> findByCategory(@Param("category") Category category, Pageable pageable);
 
-    @Query("SELECT n FROM News n WHERE (n.title LIKE %:keyword% OR n.content LIKE %:keyword%) AND n.status = 'PUBLISHED' ORDER BY n.createdAt DESC")
+    // 키워드 검색 (제목, 내용에서 검색, 최신순)
+    @Query("SELECT n FROM News n WHERE " +
+           "n.title LIKE %:keyword% OR n.content LIKE %:keyword% ORDER BY STR_TO_DATE(n.publishedAt, '%Y-%m-%d %H:%i:%s') DESC")
     Page<News> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
-    @Query("SELECT n FROM News n WHERE n.status = 'PUBLISHED' ORDER BY n.createdAt DESC")
+    // 최신 뉴스 조회 (발행일 기준 내림차순)
+    @Query("SELECT n FROM News n ORDER BY n.publishedAt DESC")
     Page<News> findLatestNews(Pageable pageable);
 
-    @Query("SELECT n FROM News n WHERE n.status = 'PUBLISHED' ORDER BY n.trusted DESC")
+    // 인기 뉴스 조회 (신뢰도 기준 내림차순)
+    @Query("SELECT n FROM News n ORDER BY n.trusted DESC")
     Page<News> findPopularNews(Pageable pageable);
 
-    @Query("SELECT n FROM News n WHERE n.status = 'PUBLISHED' ORDER BY n.trusted DESC, n.createdAt DESC")
+    // 트렌딩 뉴스 조회 (신뢰도 + 발행일 기준)
+    @Query("SELECT n FROM News n ORDER BY n.trusted DESC, STR_TO_DATE(n.publishedAt, '%Y-%m-%d %H:%i:%s') DESC")
     Page<News> findTrendingNews(Pageable pageable);
 
-    @Query("SELECT n FROM News n WHERE n.createdAt BETWEEN :startDate AND :endDate AND n.status = 'PUBLISHED'")
-    Page<News> findByCreatedAtBetween(@Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate,
-            Pageable pageable);
+    // 특정 기간 내 뉴스 조회 (페이징) - String 비교로 변경
+    @Query("SELECT n FROM News n WHERE n.publishedAt BETWEEN :startDate AND :endDate ORDER BY STR_TO_DATE(n.publishedAt, '%Y-%m-%d %H:%i:%s') DESC")
+    Page<News> findByPublishedAtBetween(@Param("startDate") String startDate,
+                                       @Param("endDate") String endDate,
+                                       Pageable pageable);
 
-    @Query("SELECT n FROM News n WHERE n.createdAt BETWEEN :startDate AND :endDate AND n.status = 'PUBLISHED' ORDER BY n.createdAt DESC")
-    List<News> findByCreatedAtBetween(@Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate);
+    // 특정 기간 내 뉴스 조회 (List 반환) - String 비교로 변경
+    @Query("SELECT n FROM News n WHERE n.publishedAt BETWEEN :startDate AND :endDate ORDER BY STR_TO_DATE(n.publishedAt, '%Y-%m-%d %H:%i:%s') DESC")
+    List<News> findByPublishedAtBetween(@Param("startDate") String startDate,
+                                       @Param("endDate") String endDate);
 
-    @Query("SELECT n FROM News n WHERE n.trusted = true AND n.status = 'PUBLISHED' ORDER BY n.createdAt DESC")
+    // 신뢰도가 높은 뉴스 조회 (최신순)
+    @Query("SELECT n FROM News n WHERE n.trusted = true ORDER BY STR_TO_DATE(n.publishedAt, '%Y-%m-%d %H:%i:%s') DESC")
     Page<News> findByTrustedTrue(Pageable pageable);
 
-    @Query("SELECT n FROM News n WHERE n.press = :press AND n.status = 'PUBLISHED' ORDER BY n.createdAt DESC")
+    // 특정 언론사 뉴스 조회 (최신순)
+    @Query("SELECT n FROM News n WHERE n.press = :press ORDER BY STR_TO_DATE(n.publishedAt, '%Y-%m-%d %H:%i:%s') DESC")
     Page<News> findByPress(@Param("press") String press, Pageable pageable);
 
-    @Query("SELECT COUNT(n) FROM News n WHERE n.categoryName = :category AND n.status = 'PUBLISHED'")
+    // 카테고리별 뉴스 개수 조회
+    @Query("SELECT COUNT(n) FROM News n WHERE n.categoryName = :category")
     Long countByCategory(@Param("category") Category category);
 
-    @Query("SELECT n FROM News n WHERE n.status = 'PUBLISHED'")
+    // 전체 뉴스 조회 (페이징)
     Page<News> findAll(Pageable pageable);
 
-    @Query("SELECT n FROM News n WHERE n.status = 'PUBLISHED' ORDER BY n.createdAt DESC")
-    Page<News> findAllByOrderByCreatedAtDesc(Pageable pageable);
-
-    @Query("SELECT n FROM News n WHERE n.status = 'PUBLISHED' ORDER BY n.publishedAt DESC")
+    // 전체 뉴스 조회 (최신순 정렬)
+    @Query("SELECT n FROM News n ORDER BY STR_TO_DATE(n.publishedAt, '%Y-%m-%d %H:%i:%s') DESC")
     Page<News> findAllByOrderByPublishedAtDesc(Pageable pageable);
 
     // 연관뉴스 조회를 위한 메서드들
 
-    @Query("SELECT n FROM News n WHERE n.oidAid IN :oidAids AND n.status = 'PUBLISHED'")
+    // oid_aid 리스트로 뉴스 조회
+    @Query("SELECT n FROM News n WHERE n.oidAid IN :oidAids")
     List<News> findByOidAidIn(@Param("oidAids") List<String> oidAids);
 
-    // 이 메서드의 날짜 타입을 String으로 다시 변경
-    @Query("SELECT n FROM News n WHERE n.publishedAt = :publishedAt AND n.categoryName = :categoryName AND n.newsId != :excludeNewsId AND n.status = 'PUBLISHED'")
+    // 같은 발행일, 같은 카테고리, 특정 뉴스 제외
+    @Query("SELECT n FROM News n WHERE n.publishedAt = :publishedAt AND n.categoryName = :categoryName AND n.newsId != :excludeNewsId")
     List<News> findByPublishedAtAndCategoryNameAndNewsIdNot(@Param("publishedAt") String publishedAt,
-            @Param("categoryName") Category categoryName,
-            @Param("excludeNewsId") Long excludeNewsId);
+                                                           @Param("categoryName") Category categoryName,
+                                                           @Param("excludeNewsId") Long excludeNewsId);
 
-    @Query("SELECT n FROM News n WHERE n.oidAid IN :oidAids AND n.newsId != :excludeNewsId AND n.status = 'PUBLISHED'")
+    // oid_aid 리스트로 뉴스 조회 (특정 뉴스 제외)
+    @Query("SELECT n FROM News n WHERE n.oidAid IN :oidAids AND n.newsId != :excludeNewsId")
     List<News> findByOidAidInAndNewsIdNot(@Param("oidAids") List<String> oidAids,
-            @Param("excludeNewsId") Long excludeNewsId);
+                                          @Param("excludeNewsId") Long excludeNewsId);
 
-    // 이 메서드의 날짜 타입을 String으로 다시 변경
-    @Query("SELECT n FROM News n WHERE n.publishedAt BETWEEN :startDate AND :endDate AND n.categoryName = :categoryName AND n.newsId NOT IN :excludeNewsIds AND n.status = 'PUBLISHED'")
+    // 특정 기간, 같은 카테고리, 특정 뉴스들 제외
+    @Query("SELECT n FROM News n WHERE n.publishedAt BETWEEN :startDate AND :endDate AND n.categoryName = :categoryName AND n.newsId NOT IN :excludeNewsIds")
     List<News> findByPublishedAtBetweenAndCategoryNameAndNewsIdNotIn(@Param("startDate") String startDate,
-            @Param("endDate") String endDate,
-            @Param("categoryName") Category categoryName,
-            @Param("excludeNewsIds") List<Long> excludeNewsIds);
+                                                                     @Param("endDate") String endDate,
+                                                                     @Param("categoryName") Category categoryName,
+                                                                     @Param("excludeNewsIds") List<Long> excludeNewsIds);
+    List<News> findByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
+
+    List<News> findByStatus(NewsStatus status);
 }
