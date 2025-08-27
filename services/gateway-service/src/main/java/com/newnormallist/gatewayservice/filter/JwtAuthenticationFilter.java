@@ -82,11 +82,17 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
    * 인증이 필요하지 않은 경로인지 확인
    */
   private boolean isPermitAllPath(String path) {
-    // startsWith를 사용하면 /auth/login, /auth/refresh 등을 모두 포함할 수 있습니다.
+    // /api/news/ 로 시작하지만, /mypage, /report, /scrap 을 포함하지 않는 경우에만 토큰 검증을 건너뜁니다.
+    boolean isPublicNewsPath = path.startsWith("/api/news") &&
+            !path.contains("/mypage") &&
+            !path.contains("/report") &&
+            !path.contains("/scrap") &&
+            !path.contains("/collection");
+
     return path.startsWith("/api/users/signup")
             || path.startsWith("/api/auth/")
             || path.startsWith("/api/users/categories")
-            || path.startsWith("/api/news")
+            || isPublicNewsPath
             || path.startsWith("/swagger-ui")
             || path.contains("api-docs");
   }

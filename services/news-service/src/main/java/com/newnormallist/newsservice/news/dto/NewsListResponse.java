@@ -1,5 +1,5 @@
 package com.newnormallist.newsservice.news.dto;
-
+import com.newnormallist.newsservice.news.entity.News;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -29,4 +29,26 @@ public class NewsListResponse {
     private String dedupStateDescription;
     private String imageUrl;
     private String oidAid;
-} 
+    private LocalDateTime updatedAt;
+
+    public static NewsListResponse from(News news) {
+        if (news == null) {
+            return NewsListResponse.builder()
+                    .newsId(0L)
+                    .title("[삭제된 뉴스]")
+                    .press("-")
+                    .categoryName("기타")
+                    .build();
+        }
+        return NewsListResponse.builder()
+                .newsId(news.getNewsId())
+                .title(news.getTitle())
+                .press(news.getPress())
+                .reporterName(news.getReporter())
+                .categoryName(news.getCategoryName() != null ? news.getCategoryName().getCategoryName() : null)
+                .imageUrl(news.getImageUrl())
+                .createdAt(news.getCreatedAt())
+                .updatedAt(news.getUpdatedAt())
+                .build();
+    }
+}

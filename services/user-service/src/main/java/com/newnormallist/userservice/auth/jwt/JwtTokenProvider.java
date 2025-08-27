@@ -123,5 +123,19 @@ public class JwtTokenProvider {
   public long getRefreshExpiration() {
     return refreshTokenExpiration;
   }
-
+    /**
+     * OAuth2 신규 유저를 위한 임시 토큰 생성
+     * - 유효시간을 짧게 설정 (예: 10분)
+     * - 권한(role) 정보를 포함하지 않아 다른 API 접근을 막음
+     */
+    public String createTempToken(String email, Long userId) {
+        Date now = new Date();
+        long tempTokenValidityInMilliseconds = 10 * 60 * 1000L; // 10분
+        return Jwts.builder().subject(email)
+                .claim("userId", userId)
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + tempTokenValidityInMilliseconds))
+                .signWith(secretKey)
+                .compact();
+    }
 }

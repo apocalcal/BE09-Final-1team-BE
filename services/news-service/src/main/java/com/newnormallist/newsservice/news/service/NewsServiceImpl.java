@@ -12,6 +12,7 @@ import com.newnormallist.newsservice.news.exception.NewsNotFoundException;
 import com.newnormallist.newsservice.news.repository.KeywordSubscriptionRepository;
 import com.newnormallist.newsservice.news.repository.NewsCrawlRepository;
 import com.newnormallist.newsservice.news.repository.NewsRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,6 +29,7 @@ import java.util.Map;
 
 @Service
 @Transactional
+@Slf4j
 public class NewsServiceImpl implements NewsService {
 
     @Autowired
@@ -125,7 +127,7 @@ public class NewsServiceImpl implements NewsService {
         // 현재는 view count 필드가 없으므로 나중에 구현
     }
 
-    // 새로운 API 엔드포인트들을 위한 메서드들
+
     @Override
     public Page<NewsListResponse> getTrendingNews(Pageable pageable) {
         return newsRepository.findTrendingNews(pageable)
@@ -510,29 +512,45 @@ public class NewsServiceImpl implements NewsService {
     
     @Override
     public List<TrendingKeywordDto> getTrendingKeywordsByCategory(Category category, int limit) {
-        // 해당 카테고리의 최근 뉴스에서 키워드 추출
-        LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
+        log.info("카테고리별 트렌딩 키워드 조회 시작: category={}, limit={}", category, limit);
+        
+        // 해당 카테고리의 최근 뉴스에서 키워드 추출 (기간을 30일로 확장)
+        LocalDateTime monthAgo = LocalDateTime.now().minusDays(30);
+        log.info("조회 기간: {} ~ {}", monthAgo, LocalDateTime.now());
         
         try {
-            // 해당 카테고리의 최근 뉴스 조회
-            Page<News> categoryNews = newsRepository.findByCategory(category, Pageable.ofSize(100));
+            // 해당 카테고리의 최근 뉴스 조회 (개수를 500개로 증가)
+            Page<News> categoryNews = newsRepository.findByCategory(category, Pageable.ofSize(500));
+            log.info("카테고리 {} 전체 뉴스 수: {}", category, categoryNews.getTotalElements());
+            
             List<News> recentNews = categoryNews.getContent().stream()
                     .filter(news -> {
                         try {
                             LocalDateTime publishedAt = LocalDateTime.parse(news.getPublishedAt());
-                            return publishedAt.isAfter(weekAgo);
+                            return publishedAt.isAfter(monthAgo);
                         } catch (Exception e) {
+                            log.debug("날짜 파싱 실패: newsId={}, publishedAt={}", news.getNewsId(), news.getPublishedAt());
                             return false;
                         }
                     })
                     .collect(Collectors.toList());
+            
+            log.info("카테고리 {}의 최근 뉴스 수: {}", category, recentNews.size());
+            
+            if (recentNews.isEmpty()) {
+                log.warn("최근 뉴스가 없어 기본 키워드를 반환합니다: category={}", category);
+                return getDefaultKeywordsByCategory(category, limit);
+            }
             
             // 키워드 추출 및 빈도 계산
             Map<String, Long> keywordCounts = recentNews.stream()
                     .flatMap(news -> extractKeywordsFromNews(news).stream())
                     .collect(Collectors.groupingBy(keyword -> keyword, Collectors.counting()));
             
-            return keywordCounts.entrySet().stream()
+            log.info("추출된 키워드 수: {}", keywordCounts.size());
+            log.debug("키워드 빈도: {}", keywordCounts);
+            
+            List<TrendingKeywordDto> result = keywordCounts.entrySet().stream()
                     .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
                     .limit(limit)
                     .map(entry -> TrendingKeywordDto.builder()
@@ -541,10 +559,20 @@ public class NewsServiceImpl implements NewsService {
                             .trendScore(entry.getValue().doubleValue())
                             .build())
                     .collect(Collectors.toList());
+            
+            log.info("카테고리별 트렌드 키워드 결과: category={}, resultSize={}", category, result.size());
+            
+            // 결과가 비어있으면 기본 키워드 반환
+            if (result.isEmpty()) {
+                log.info("추출된 키워드가 없어 기본 키워드를 반환합니다: category={}", category);
+                return getDefaultKeywordsByCategory(category, limit);
+            }
+            
+            return result;
                     
         } catch (Exception e) {
-            // log.warn("카테고리별 트렌딩 키워드 조회 실패: category={}", category, e); // Original code had this line commented out
-            return getDefaultKeywords(limit);
+            log.error("카테고리별 트렌딩 키워드 조회 실패: category={}, error={}", category, e.getMessage(), e);
+            return getDefaultKeywordsByCategory(category, limit);
         }
     }
     
@@ -556,18 +584,23 @@ public class NewsServiceImpl implements NewsService {
         
         // 제목에서 키워드 추출
         if (news.getTitle() != null) {
-            keywords.addAll(extractKeywordsFromText(news.getTitle()));
+            List<String> titleKeywords = extractKeywordsFromText(news.getTitle());
+            log.debug("제목에서 추출된 키워드: {}", titleKeywords);
+            keywords.addAll(titleKeywords);
         }
         
-        // 내용에서 키워드 추출 (내용이 너무 길면 앞부분만 사용)
+        // 내용에서 키워드 추출 (내용이 너무 길면 앞부분만 사용, 길이를 1000자로 증가)
         if (news.getContent() != null) {
             String content = news.getContent();
-            if (content.length() > 500) {
-                content = content.substring(0, 500);
+            if (content.length() > 1000) {
+                content = content.substring(0, 1000);
             }
-            keywords.addAll(extractKeywordsFromText(content));
+            List<String> contentKeywords = extractKeywordsFromText(content);
+            log.debug("내용에서 추출된 키워드 수: {}", contentKeywords.size());
+            keywords.addAll(contentKeywords);
         }
         
+        log.debug("전체 추출된 키워드: {}", keywords);
         return keywords;
     }
     
@@ -579,12 +612,64 @@ public class NewsServiceImpl implements NewsService {
             return new ArrayList<>();
         }
         
-        // 간단한 키워드 추출 로직
-        return Arrays.stream(text.split("\\s+"))
-                .map(word -> word.replaceAll("[^가-힣0-9A-Za-z]", ""))
-                .filter(word -> word.length() >= 2 && word.matches(".*[가-힣].*"))
-                .filter(word -> !STOPWORDS.contains(word))
-                .collect(Collectors.toList());
+        List<String> keywords = new ArrayList<>();
+        
+        // 1. 공백으로 분할
+        String[] words = text.split("\\s+");
+        
+        for (String word : words) {
+            if (word == null || word.trim().isEmpty()) {
+                continue;
+            }
+            
+            // 2. 특수문자 제거 (한글, 영문, 숫자만 남김)
+            String cleanedWord = word.replaceAll("[^가-힣0-9A-Za-z]", "");
+            
+            // 3. 더 관대한 키워드 필터링 조건
+            if (cleanedWord.length() >= 2 && 
+                !STOPWORDS.contains(cleanedWord) &&
+                !cleanedWord.equals("있다") && 
+                !cleanedWord.equals("없다") && 
+                !cleanedWord.equals("하다") && 
+                !cleanedWord.equals("되다") && 
+                !cleanedWord.equals("이다") &&
+                !cleanedWord.equals("것") &&
+                !cleanedWord.equals("수") &&
+                !cleanedWord.equals("등") &&
+                !cleanedWord.equals("및") &&
+                !cleanedWord.equals("또는") &&
+                !cleanedWord.equals("그리고") &&
+                !cleanedWord.equals("이번") &&
+                !cleanedWord.equals("지난") &&
+                !cleanedWord.equals("현재") &&
+                !cleanedWord.equals("최대") &&
+                !cleanedWord.equals("최소") &&
+                !cleanedWord.equals("현장") &&
+                !cleanedWord.equals("관련") &&
+                !cleanedWord.equals("기자") &&
+                !cleanedWord.equals("사진") &&
+                !cleanedWord.equals("영상") &&
+                !cleanedWord.equals("단독") &&
+                !cleanedWord.equals("인터뷰") &&
+                !cleanedWord.equals("종합") &&
+                !cleanedWord.equals("오늘") &&
+                !cleanedWord.equals("내일") &&
+                !cleanedWord.equals("정부") &&
+                !cleanedWord.equals("대통령") &&
+                !cleanedWord.equals("국회") &&
+                !cleanedWord.equals("한국") &&
+                !cleanedWord.equals("대한민국") &&
+                !cleanedWord.equals("뉴스") &&
+                !cleanedWord.equals("기사") &&
+                !cleanedWord.equals("외신")) {
+                
+                keywords.add(cleanedWord);
+                log.debug("추출된 키워드: '{}' (원본: '{}')", cleanedWord, word);
+            }
+        }
+        
+        log.debug("텍스트에서 추출된 키워드 수: {}", keywords.size());
+        return keywords;
     }
     
     /**
@@ -605,11 +690,59 @@ public class NewsServiceImpl implements NewsService {
                 .collect(Collectors.toList());
     }
     
+    /**
+     * 카테고리별 기본 키워드 반환
+     */
+    private List<TrendingKeywordDto> getDefaultKeywordsByCategory(Category category, int limit) {
+        List<String> defaultKeywords = switch (category) {
+            case VEHICLE -> Arrays.asList(
+                "전기차", "자율주행", "대중교통", "도로교통", "친환경", "모빌리티", "자동차시장", "교통정책"
+            );
+            case ECONOMY -> Arrays.asList(
+                "주식", "부동산", "금리", "환율", "투자", "경제정책", "기업실적", "시장동향"
+            );
+            case POLITICS -> Arrays.asList(
+                "정치", "국회", "정부", "외교", "정책", "선거", "여야", "국정감사"
+            );
+            case SOCIETY -> Arrays.asList(
+                "사회", "교육", "복지", "의료", "환경", "안전", "범죄", "사회문제"
+            );
+            case IT_SCIENCE -> Arrays.asList(
+                "AI", "빅데이터", "클라우드", "블록체인", "5G", "반도체", "소프트웨어", "디지털전환"
+            );
+            case INTERNATIONAL -> Arrays.asList(
+                "국제", "외교", "무역", "글로벌", "외국", "국제정세", "외교정책", "국제협력"
+            );
+            case LIFE -> Arrays.asList(
+                "생활", "문화", "건강", "요리", "패션", "여행", "취미", "라이프스타일"
+            );
+            case TRAVEL_FOOD -> Arrays.asList(
+                "여행", "음식", "맛집", "관광", "호텔", "레스토랑", "카페", "여행지"
+            );
+            case ART -> Arrays.asList(
+                "예술", "영화", "음악", "미술", "공연", "문화", "창작", "아트"
+            );
+            default -> Arrays.asList(
+                "주요뉴스", "핫이슈", "트렌드", "분석", "전망", "동향", "소식", "업데이트"
+            );
+        };
+        
+        return defaultKeywords.stream()
+                .limit(limit)
+                .map(keyword -> TrendingKeywordDto.builder()
+                        .keyword(keyword)
+                        .count(1L)
+                        .trendScore(1.0)
+                        .build())
+                .collect(Collectors.toList());
+    }
+    
     // 너무 일반적인 단어는 제외
     private static final Set<String> STOPWORDS = Set.of(
         "속보", "영상", "단독", "인터뷰", "기자", "사진", "종합", "오늘", "내일",
         "정부", "대통령", "국회", "한국", "대한민국", "뉴스", "기사", "외신",
-        "관련", "이번", "지난", "현재", "최대", "최소", "전망", "분석", "현장"
+        "관련", "이번", "지난", "현재", "최대", "최소", "현장", "및", "또는", "그리고",
+        "있다", "없다", "하다", "되다", "이다"
     );
     
     private KeywordSubscriptionDto convertToKeywordSubscriptionDto(KeywordSubscription subscription) {

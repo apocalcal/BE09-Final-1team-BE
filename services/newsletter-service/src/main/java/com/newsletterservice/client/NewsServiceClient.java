@@ -2,7 +2,7 @@ package com.newsletterservice.client;
 
 import com.newsletterservice.common.ApiResponse;
 import com.newsletterservice.client.dto.NewsResponse;
-import com.newsletterservice.entity.NewsCategory;
+import com.newsletterservice.client.dto.CategoryDto;
 import com.newsletterservice.config.FeignTimeoutConfig;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.data.domain.Page;
@@ -78,7 +78,7 @@ public interface NewsServiceClient {
     );
 
     @GetMapping("/api/categories")
-    List<NewsCategory> getCategories();
+    List<CategoryDto> getCategories();
 
     /**
      * 인기 뉴스 조회 (퍼스널라이즈 로직용)
