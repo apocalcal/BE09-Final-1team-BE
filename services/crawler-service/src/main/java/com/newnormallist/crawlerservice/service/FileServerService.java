@@ -306,7 +306,7 @@ public class FileServerService {
         
         // 만약 해당 시간의 파일이 없다면, 몇 분 전의 파일들을 시도
         String csvContent = null;
-        for (int i = 0; i < 10; i++) { // 최대 10분 전까지 시도
+        for (int i = 0; i < 180; i++) { // 최대 3시간 전까지 시도 (180분)
             String tryTimestamp = LocalDateTime.now().minusMinutes(i).format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm"));
             String tryFileName = category.toLowerCase() + "_" + stage + "_" + tryTimestamp + ".csv";
             String tryFullPath = dirPath + "/" + tryFileName;
@@ -314,7 +314,29 @@ public class FileServerService {
             csvContent = downloadFileFromServer(tryFullPath);
             if (csvContent != null) {
                 fullPath = tryFullPath;
+                log.info("📁 파일 발견 ({}분 전): {}", i, fullPath);
                 break;
+            }
+        }
+        
+        // PM 경로에서 찾지 못했다면 AM 경로도 시도
+        if (csvContent == null) {
+            log.info("📁 PM 경로에서 파일을 찾지 못함, AM 경로 시도: {}", dirPath);
+            String amTimePath = timePath.replace("/pm/", "/am/").replace("_pm", "_am");
+            String amDirPath = amTimePath + "/" + stage;
+            
+            for (int i = 0; i < 180; i++) { // 최대 3시간 전까지 시도 (180분)
+                String tryTimestamp = LocalDateTime.now().minusMinutes(i).format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm"));
+                String tryFileName = category.toLowerCase() + "_" + stage + "_" + tryTimestamp + ".csv";
+                String tryFullPath = amDirPath + "/" + tryFileName;
+                
+                csvContent = downloadFileFromServer(tryFullPath);
+                if (csvContent != null) {
+                    fullPath = tryFullPath;
+                    dirPath = amDirPath;
+                    log.info("📁 AM 경로에서 파일 발견 ({}분 전): {}", i, fullPath);
+                    break;
+                }
             }
         }
         
@@ -602,8 +624,8 @@ public class FileServerService {
         List<RelatedNewsDetail> relatedNewsList = new ArrayList<>();
         
         try {
-            // 최근 10분간의 파일을 시도
-            for (int i = 0; i < 10; i++) {
+            // 최근 3시간간의 파일을 시도
+            for (int i = 0; i < 180; i++) {
                 String tryTimestamp = LocalDateTime.now().minusMinutes(i).format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm"));
                 String fileName = category.toLowerCase() + "_related_" + tryTimestamp + ".csv";
                 String tryFullPath = dirPath + "/" + fileName; // basePath 중복 제거
@@ -613,8 +635,30 @@ public class FileServerService {
                 String csvContent = downloadFileFromServer(tryFullPath);
                 if (csvContent != null) {
                     relatedNewsList = parseRelatedNewsCsv(csvContent);
-                    log.info("📁 연관뉴스 파일서버 조회 완료: {} - 카테고리: {}, 개수: {}", tryFullPath, category, relatedNewsList.size());
+                    log.info("📁 연관뉴스 파일서버 조회 완료 ({}분 전): {} - 카테고리: {}, 개수: {}", i, tryFullPath, category, relatedNewsList.size());
                     break;
+                }
+            }
+            
+            // PM 경로에서 찾지 못했다면 AM 경로도 시도
+            if (relatedNewsList.isEmpty()) {
+                log.info("📁 PM 경로에서 연관뉴스 파일을 찾지 못함, AM 경로 시도: {}", dirPath);
+                String amTimePath = timePath.replace("/pm/", "/am/").replace("_pm", "_am");
+                String amDirPath = amTimePath + "/related";
+                
+                for (int i = 0; i < 180; i++) {
+                    String tryTimestamp = LocalDateTime.now().minusMinutes(i).format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm"));
+                    String fileName = category.toLowerCase() + "_related_" + tryTimestamp + ".csv";
+                    String tryFullPath = amDirPath + "/" + fileName;
+                    
+                    log.debug("📁 연관뉴스 AM 경로 조회 시도: {}", tryFullPath);
+                    
+                    String csvContent = downloadFileFromServer(tryFullPath);
+                    if (csvContent != null) {
+                        relatedNewsList = parseRelatedNewsCsv(csvContent);
+                        log.info("📁 연관뉴스 AM 경로에서 파일 발견 ({}분 전): {} - 카테고리: {}, 개수: {}", i, tryFullPath, category, relatedNewsList.size());
+                        break;
+                    }
                 }
             }
             

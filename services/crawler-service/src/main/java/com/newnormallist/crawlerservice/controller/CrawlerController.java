@@ -1,6 +1,7 @@
 package com.newnormallist.crawlerservice.controller;
 
 import com.newnormallist.crawlerservice.service.DeploymentOptimizedCrawlerService;
+import com.newnormallist.crawlerservice.service.FileServerDatabaseService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,7 @@ import org.springframework.http.HttpStatus;
  * 
  * 기능:
  * - POST /api/crawler/start: 크롤링 시작 (비동기)
+ * - POST /api/crawler/save-fileserver: 파일서버 데이터 DB 저장
  * - GET /api/crawler/status: 크롤링 상태 확인
  * - GET /api/crawler/config: 크롤러 설정 조회
  * - GET /api/crawler/health: 헬스체크
@@ -34,6 +36,7 @@ import org.springframework.http.HttpStatus;
 public class CrawlerController {
 
     private final DeploymentOptimizedCrawlerService deploymentOptimizedCrawlerService;
+    private final FileServerDatabaseService fileServerDatabaseService;
 
     /**
      * 배포 환경 최적화된 크롤링 시작 (메인 엔드포인트)
@@ -65,6 +68,42 @@ public class CrawlerController {
             Map<String, Object> response = new HashMap<>();
             response.put("status", "error");
             response.put("message", "크롤링 시작 실패: " + e.getMessage());
+            response.put("timestamp", LocalDateTime.now());
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 파일서버에 있는 뉴스를 DB에 저장 (크롤링 없이)
+     */
+    @PostMapping("/save-fileserver")
+    public ResponseEntity<Map<String, Object>> saveFileserverData() {
+        try {
+            log.info("파일서버 데이터 DB 저장 시작 요청");
+            
+            // 비동기로 실행
+            CompletableFuture.runAsync(() -> {
+                try {
+                    fileServerDatabaseService.saveLatestDataToDatabase();
+                } catch (Exception e) {
+                    log.error("파일서버 데이터 DB 저장 실패: {}", e.getMessage(), e);
+                }
+            });
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "파일서버 데이터 DB 저장이 시작되었습니다.");
+            response.put("timestamp", LocalDateTime.now());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("파일서버 데이터 DB 저장 시작 실패: {}", e.getMessage(), e);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "파일서버 데이터 DB 저장 시작 실패: " + e.getMessage());
             response.put("timestamp", LocalDateTime.now());
             
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
@@ -109,8 +148,6 @@ public class CrawlerController {
         
         return ResponseEntity.ok(response);
     }
-
-
 
     /**
      * 헬스 체크

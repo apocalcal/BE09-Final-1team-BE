@@ -17,7 +17,9 @@ import com.newnormallist.newsservice.recommendation.entity.RecommendationCategor
 // findCategoryById(id) : 조회 로그 저장 시 newsId → category 팝업용.
 public interface RecommendationNewsRepository extends JpaRepository<NewsEntity, Long> {
 
-    @Query("SELECT n.newsId FROM NewsEntity n WHERE n.categoryName = :cat ORDER BY n.publishedAt DESC")
+    @Query("SELECT n.newsId FROM NewsEntity n WHERE n.categoryName = :cat ORDER BY " +
+           "CASE WHEN n.publishedAt LIKE '%T%' THEN STR_TO_DATE(n.publishedAt, '%Y-%m-%dT%H:%i:%s') " +
+           "ELSE STR_TO_DATE(n.publishedAt, '%Y-%m-%d %H:%i:%s') END DESC")
     List<Long> findLatestIdsByCategory(@Param("cat") RecommendationCategory category, Pageable pageable);
 
     @Query("SELECT n FROM NewsEntity n WHERE n.newsId IN :ids")
@@ -27,6 +29,8 @@ public interface RecommendationNewsRepository extends JpaRepository<NewsEntity, 
     RecommendationCategory findCategoryById(@Param("id") Long id);
     
     // published_at 기준 최신순 정렬 (전체 뉴스 피드용)
-    @Query("SELECT n FROM NewsEntity n ORDER BY n.publishedAt DESC")
+    @Query("SELECT n FROM NewsEntity n ORDER BY " +
+           "CASE WHEN n.publishedAt LIKE '%T%' THEN STR_TO_DATE(n.publishedAt, '%Y-%m-%dT%H:%i:%s') " +
+           "ELSE STR_TO_DATE(n.publishedAt, '%Y-%m-%d %H:%i:%s') END DESC")
     Page<NewsEntity> findAllByOrderByPublishedAtDesc(Pageable pageable);
 }

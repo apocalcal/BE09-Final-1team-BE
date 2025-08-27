@@ -142,6 +142,7 @@ services:
 #  # 6. Flask API (최종 수정)
   flaskapi:
     build: ./services/flaskapi
+
     #    ports: ["5000:5000"]                # ← 임시 외부 노출
     networks: [msa-network]
     environment:

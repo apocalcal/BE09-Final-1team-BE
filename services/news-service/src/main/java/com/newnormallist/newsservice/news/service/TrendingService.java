@@ -26,7 +26,7 @@ public class TrendingService {
         LocalDateTime since = LocalDateTime.now().minusHours(safeHours);
         List<News> recent = newsRepository.findByPublishedAtAfter(since);
 
-        // 제목 + 요약(가능하면)에서 키워드 추출
+        // 제목 + 요약(가능하면)에서 키워드 추출   
         Map<String, Long> counts = recent.stream()
                 .flatMap(n -> tokenizeKo(joinTitleSummary(n)).stream())
                 .filter(tok -> !STOPWORDS.contains(tok))

@@ -1,7 +1,7 @@
-package com.newnormallist.newsservice.news.dto;
+package com.newnormallist.newsservice.summarizer.dto;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.*;
 
 /**
@@ -16,12 +16,21 @@ import lombok.*;
 public class SummaryRequest {
 
     private Long newsId;    // newsId
+
     private String text;
+
     private String type;    // 카테고리/요약 타입
 
-    private String promptOverride;
+    @Min(1) @Max(10)
     private Integer lines;  // SummarizerClient에서 기본 3 사용
+
+    private String promptOverride;
+
     private Boolean force;
+
+    public String getPrompt() {           // ← alias
+        return this.promptOverride;
+    }
 
     /** Options → Request : 최소 매핑 (공백 문자열은 null 처리) */
     public static SummaryRequest from(SummaryOptions o) {
