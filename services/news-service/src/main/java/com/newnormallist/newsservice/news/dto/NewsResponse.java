@@ -22,9 +22,6 @@ public class NewsResponse {
     private Integer trusted;
     private LocalDateTime publishedAt;
     private LocalDateTime createdAt;
-
-    private LocalDateTime updatedAt;
-
     private String reporterName;
     private String categoryName;
     private String categoryDescription;
@@ -32,7 +29,6 @@ public class NewsResponse {
     private String dedupStateDescription;
     private String imageUrl;
     private String oidAid;
-
     private NewsStatus status;
-    
+    private LocalDateTime updatedAt;
 }
