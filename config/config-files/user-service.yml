@@ -65,3 +65,4 @@ spring:
 oauth2:
   redirect:
     frontend-callback-url: http://localhost:3000/oauth/callback # 프론트엔드 리다이렉트 URL (개발/테스트용)
+    frontend-additional-info-url: http://localhost:3000/oauth/additional-info # 추가 정보 입력 페이지 URL (개발/테스트용)
