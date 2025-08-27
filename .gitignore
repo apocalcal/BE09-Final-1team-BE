@@ -104,3 +104,4 @@ services/flaskapi/.venv
 # 개인용 폴더 / 개인 실행 설정 및 캐시 등
 .local/
 .run/
+.env

@@ -34,11 +34,11 @@ public class User {
     @Column(nullable = false)
     private String name;
 
-    @Column(name = "birth_year", nullable = false)
+    @Column(name = "birth_year")
     private Integer birthYear;
 
 
-    @Column(name = "gender", nullable = false)
+    @Column(name = "gender")
     private String gender;
 
     @Column(name = "letter_ok", nullable = false)
@@ -70,6 +70,12 @@ public class User {
     @Builder.Default
     private UserStatus status = UserStatus.ACTIVE;
 
+    @Column(name = "provider")
+    private String provider; // 예: "google", "kakao"
+
+    @Column(name = "provider_id")
+    private String providerId; // "google" 또는 "kakao"에서 제공하는 고유 ID
+
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
     }
@@ -92,5 +98,13 @@ public class User {
 
     public void changeStatus(UserStatus userStatus) {
         this.status = userStatus;
+    }
+
+    // 소셜 로그인 사용자의 정보 업데이트를 위한 메소드
+    public User updateSocialInfo(String name, String provider, String providerId) {
+        this.name = name;
+        this.provider = provider;
+        this.providerId = providerId;
+        return this;
     }
 }
