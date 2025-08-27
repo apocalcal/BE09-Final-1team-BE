@@ -1,10 +1,14 @@
 package com.newnormallist.newsservice.news.controller;
 
-import com.newnormallist.newsservice.news.dto.NewsListResponse;
+import com.newnormallist.newsservice.news.dto.AddNewsToCollectionRequest;
+import com.newnormallist.newsservice.news.dto.CollectionCreateRequest;
 import com.newnormallist.newsservice.news.dto.NewsResponse;
+import com.newnormallist.newsservice.news.dto.ScrapStorageResponse;
 import com.newnormallist.newsservice.news.entity.Category;
+import com.newnormallist.newsservice.news.exception.UnauthenticatedUserException;
 import com.newnormallist.newsservice.news.service.NewsService;
-import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -12,70 +16,110 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/news")
-@RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class NewsController {
 
-    private final NewsService newsService;
+    @Autowired
+    private NewsService newsService;
 
-    // --- 기존 코드 (변경 없음) ---
+    /**
+     * 뉴스 개수 조회 API
+     * @return 총 뉴스 개수
+     */
     @GetMapping("/count")
     public ResponseEntity<Long> getNewsCount() {
         return ResponseEntity.ok(newsService.getNewsCount());
     }
 
+    /**
+     * 뉴스 조회수 증가
+     */
     @PostMapping("/{newsId}/view")
-    public ResponseEntity<?> incrementViewCount(@PathVariable Long newsId) {
+    public ResponseEntity<Void> incrementViewCount(@PathVariable Long newsId) {
         newsService.incrementViewCount(newsId);
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * 뉴스 목록 조회(페이징 지원)
+     */
     @GetMapping
-    public ResponseEntity<?> getNews(
+    public ResponseEntity<Page<NewsResponse>> getNews(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String keyword,
             Pageable pageable) {
 
-        try {
-            Category categoryEntity = null;
-            if (category != null && !category.equals("전체")) {
-                try {
-                    categoryEntity = Category.valueOf(category.toUpperCase());
-                } catch (IllegalArgumentException e) {
-                    return ResponseEntity.badRequest().body("지원하지 않는 카테고리입니다.");
-                }
+        Category categoryEntity = null;
+        if (category != null && !category.equalsIgnoreCase("전체") && !category.isEmpty()) {
+            try {
+                categoryEntity = Category.valueOf(category.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("지원하지 않는 카테고리입니다: " + category);
             }
-            Page<NewsResponse> newsList = newsService.getNews(categoryEntity, keyword, pageable);
-            return ResponseEntity.ok(newsList);
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("서버 에러가 발생했습니다: " + e.getMessage());
         }
+
+        Page<NewsResponse> newsList = newsService.getNews(categoryEntity, keyword, pageable);
+        return ResponseEntity.ok(newsList);
     }
 
+    /**
+     * 특정(단건) 뉴스 상세 조회
+     */
     @GetMapping("/{newsId:[0-9]+}")
     public ResponseEntity<NewsResponse> getNewsById(@PathVariable Long newsId) {
         return ResponseEntity.ok(newsService.getNewsById(newsId));
     }
 
     @PostMapping("/{newsId}/report")
-    public ResponseEntity<?> reportNews(@PathVariable Long newsId, @AuthenticationPrincipal String userIdString) {
-        if (userIdString == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("사용자 인증 정보가 없습니다.");
+    public ResponseEntity<Void> reportNews(@PathVariable Long newsId, @AuthenticationPrincipal String userIdString) {
+        if (userIdString == null || "anonymousUser".equals(userIdString)) {
+            throw new UnauthenticatedUserException("사용자 인증 정보가 없습니다. 로그인이 필요합니다.");
         }
-        Long userId = Long.parseLong(userIdString);
-        newsService.reportNews(newsId, userId);
+        newsService.reportNews(newsId, Long.parseLong(userIdString));
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{newsId}/scrap")
-    public ResponseEntity<?> scrapNews(@PathVariable Long newsId, @AuthenticationPrincipal String userIdString) {
-        if (userIdString == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("사용자 인증 정보가 없습니다.");
+    public ResponseEntity<Void> scrapNews(@PathVariable Long newsId, @AuthenticationPrincipal String userIdString) {
+        if (userIdString == null || "anonymousUser".equals(userIdString)) {
+            throw new UnauthenticatedUserException("사용자 인증 정보가 없습니다. 로그인이 필요합니다.");
         }
-        Long userId = Long.parseLong(userIdString);
-        newsService.scrapNews(newsId, userId);
+        newsService.scrapNews(newsId, Long.parseLong(userIdString));
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/collections")
+    public ResponseEntity<List<ScrapStorageResponse>> getUserCollections(@AuthenticationPrincipal String userIdString) {
+        if (userIdString == null || "anonymousUser".equals(userIdString)) {
+            throw new UnauthenticatedUserException("사용자 인증 정보가 없습니다. 로그인이 필요합니다.");
+        }
+        return ResponseEntity.ok(newsService.getUserScrapStorages(Long.parseLong(userIdString)));
+    }
+
+    @PostMapping("/collections")
+    public ResponseEntity<ScrapStorageResponse> createCollection(
+            @AuthenticationPrincipal String userIdString,
+            @Valid @RequestBody CollectionCreateRequest request) {
+        if (userIdString == null || "anonymousUser".equals(userIdString)) {
+            throw new UnauthenticatedUserException("사용자 인증 정보가 없습니다. 로그인이 필요합니다.");
+        }
+        ScrapStorageResponse newCollection = newsService.createCollection(Long.parseLong(userIdString), request.getStorageName());
+        return new ResponseEntity<>(newCollection, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/collections/{collectionId}/news")
+    public ResponseEntity<Void> addNewsToCollection(
+            @AuthenticationPrincipal String userIdString,
+            @PathVariable Integer collectionId,
+            @Valid @RequestBody AddNewsToCollectionRequest request) {
+        if (userIdString == null || "anonymousUser".equals(userIdString)) {
+            throw new UnauthenticatedUserException("사용자 인증 정보가 없습니다. 로그인이 필요합니다.");
+        }
+        newsService.addNewsToCollection(Long.parseLong(userIdString), collectionId, request.getNewsId());
         return ResponseEntity.ok().build();
     }
 }
