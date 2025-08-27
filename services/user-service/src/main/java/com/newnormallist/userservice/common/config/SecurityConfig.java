@@ -4,6 +4,7 @@ import com.newnormallist.userservice.auth.handler.OAuth2AuthenticationSuccessHan
 import com.newnormallist.userservice.auth.jwt.HeaderAuthenticationFilter;
 import com.newnormallist.userservice.auth.jwt.RestAccessDeniedHandler;
 import com.newnormallist.userservice.auth.jwt.RestAuthenticationEntryPoint;
+import com.newnormallist.userservice.auth.repository.CookieOAuth2AuthorizationRequestRepository;
 import com.newnormallist.userservice.auth.service.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -25,6 +26,7 @@ public class SecurityConfig {
     private final RestAccessDeniedHandler restAccessDeniedHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    private final CookieOAuth2AuthorizationRequestRepository cookieOAuth2AuthorizationRequestRepository;
 
     @Bean
     @Order(1) // Swagger 관련 설정은 우선순위를 높게 설정합니다.
@@ -70,6 +72,10 @@ public class SecurityConfig {
                         .anyRequest().permitAll()
                 )
                 .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(authorization -> authorization
+                                .baseUri("/api/auth/oauth2") // 카카오 인가 요청 URI 설정
+                                .authorizationRequestRepository(cookieOAuth2AuthorizationRequestRepository)
+                        )
                         .redirectionEndpoint(redirection -> redirection
                                 .baseUri("/api/auth/login/oauth2/code/*") // 카카오 리다이렉트 URI 패턴 설정
                         )
