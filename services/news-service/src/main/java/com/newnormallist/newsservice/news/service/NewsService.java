@@ -10,6 +10,8 @@ import com.newnormallist.newsservice.news.entity.Category;
 import com.newnormallist.newsservice.news.entity.NewsCrawl;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import com.newnormallist.newsservice.news.dto.ScrapStorageResponse;
+import com.newnormallist.newsservice.news.dto.ScrappedNewsResponse;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -34,7 +36,9 @@ public interface NewsService {
     Page<NewsListResponse> getRecommendedNews(Long userId, Pageable pageable);
     Page<NewsListResponse> getNewsByCategory(Category category, Pageable pageable);
     Page<NewsListResponse> searchNews(String query, Pageable pageable);
-    Page<NewsListResponse> searchNewsWithFilters(String query, String sortBy, String sortOrder, String category, String press, String startDate, String endDate, Pageable pageable);
+    Page<NewsListResponse> searchNewsWithFilters(String query, String sortBy, String sortOrder,
+                                                String category, String press, String startDate,
+                                                String endDate, Pageable pageable);
     Page<NewsListResponse> getPopularNews(Pageable pageable);
     Page<NewsListResponse> getLatestNews(Pageable pageable);
     List<CategoryDto> getAllCategories();
@@ -45,19 +49,29 @@ public interface NewsService {
     Long getNewsCount();
     Long getNewsCountByCategory(Category category);
 
-    // 관리자용: 크롤링된 뉴스 목록 조회
+    // 관리자용: 크롤링된 뉴스를 승격하여 노출용 뉴스로 전환
     void promoteToNews(Long newsCrawlId);
+
+    // 관리자용: 크롤링된 뉴스 목록 조회
     Page<NewsCrawl> getCrawledNews(Pageable pageable);
 
     // 키워드 구독 관련 메서드들
     KeywordSubscriptionDto subscribeKeyword(Long userId, String keyword);
     void unsubscribeKeyword(Long userId, String keyword);
     List<KeywordSubscriptionDto> getUserKeywordSubscriptions(Long userId);
+
+    // 트렌딩 키워드 관련 메서드들
     List<TrendingKeywordDto> getTrendingKeywords(int limit);
     List<TrendingKeywordDto> getPopularKeywords(int limit);
     List<TrendingKeywordDto> getTrendingKeywordsByCategory(Category category, int limit);
 
-    // 트렌딩 키워드 관련 메서드들
+    // 신고 및 스크랩
     void reportNews(Long newsId, Long userId);
-    void scrapNews(Long newsId, Long userId);
+    void scrapNews(Long newsId, Long userId); // 기본 스크랩
+
+    // 컬렉션 (스크랩 보관함)
+    List<ScrapStorageResponse> getUserScrapStorages(Long userId);
+    ScrapStorageResponse createCollection(Long userId, String storageName);
+    void addNewsToCollection(Long userId, Integer collectionId, Long newsId);
+    Page<ScrappedNewsResponse> getNewsInCollection(Long userId, Integer collectionId, Pageable pageable);
 }
