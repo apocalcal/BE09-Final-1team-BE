@@ -19,28 +19,32 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    // 사용자 정의 인증 필터 (예: JWT 토큰 검증)
     private final HeaderAuthenticationFilter headerAuthenticationFilter;
+    // 인증 실패 시 (예: 로그인 안 된 상태에서 인증 필요한 리소스 접근) 처리 핸들러
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+    // 인가 실패 시 (예: 권한 없는 사용자가 접근) 처리 핸들러
     private final RestAccessDeniedHandler restAccessDeniedHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 // 1. 기본 설정 비활성화
-                .csrf(AbstractHttpConfigurer::disable) // CSRF 보호 비활성화 (stateless API 서버이므로)
-                .formLogin(AbstractHttpConfigurer::disable) // 폼 로그인 비활성화
-                .httpBasic(AbstractHttpConfigurer::disable) // HTTP Basic 인증 비활성화
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 세션을 사용하지 않음
+                .csrf(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 // 2. 예외 처리 핸들러 설정
                 .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(restAuthenticationEntryPoint) // 인증 실패 시 처리
-                        .accessDeniedHandler(restAccessDeniedHandler) // 인가(권한) 실패 시 처리
+                        // 인증 실패 시 (401 Unauthorized) 호출될 핸들러를 지정
+                        .authenticationEntryPoint(restAuthenticationEntryPoint)
+                        // 인가 실패 시 (403 Forbidden - 권한 없음) 호출될 핸들러를 지정
+                        .accessDeniedHandler(restAccessDeniedHandler)
                 )
 
-                // 3. 경로별 접근 권한 설정 (가장 중요: Default-Deny 정책)
+                // 3. 경로별 접근 권한 설정 (Default-Deny 정책: 명시적으로 허용하지 않으면 기본적으로 인증 필요)
                 .authorizeHttpRequests(authz -> authz
-                        // 3-1. 누구나 접근 가능한 경로 (인증 불필요)
                         .requestMatchers(
                                 "/actuator/**",
                                 "/health",
@@ -50,20 +54,19 @@ public class SecurityConfig {
                                 "/news-api-docs/**"
                         ).permitAll()
 
-                        // 3-2. 컬렉션, 마이페이지 관련 경로는 인증 필요
+                        // 3-2. 특정 리소스 (컬렉션, 마이페이지 뉴스) 관련 경로는 반드시 인증이 필요
+                        // "/api/collections/**": 모든 컬렉션 관련 API
+                        // "/api/news/mypage/**": 마이페이지 뉴스 관련 API (예: 내가 스크랩한 뉴스)
                         .requestMatchers("/api/collections/**", "/api/news/mypage/**").authenticated()
 
-                        // 3-3. 뉴스 목록, 상세 조회 등 GET 요청은 누구나 가능하도록 허용
-                        .requestMatchers(HttpMethod.GET, "/api/news/**").permitAll()
-
-                        // 3-4. 위에서 명시적으로 허용한 경로 외의 모든 요청은 반드시 인증이 필요함
+                        // 3-3. 뉴스 목록 조회, 상세 조회 등 GET 요청은 누구나 가능하도록 허용합니다.
+                        // "/api/news/**" 경로에 대한 GET 요청만 허용합니다. (예: /api/news/list, /api/news/123)
+                        .requestMatchers(HttpMethod.GET, "/api/news/**").permitAll() // GET 요청은 모든 사용자에게 접근 허용
                         .anyRequest().authenticated()
                 )
 
                 // 4. 커스텀 필터 추가
-                // 직접 만든 HeaderAuthenticationFilter를 Spring Security의 기본 필터 체인에 추가
                 .addFilterBefore(headerAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 }
