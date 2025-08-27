@@ -22,10 +22,9 @@ management:
 logging:
   level:
     com.newnormallist.userservice: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.web.client.RestTemplate: TRACE
-    # 사용되는 Apache HttpClient의 통신 내용을 상세히 추적
-    org.apache.http.wire: TRACE
+    org.springframework.security: TRACE
+    org.springframework.web.reactive.function.client.ExchangeFunctions: TRACE
+
 
 # 5. swagger 설정
 springdoc:
