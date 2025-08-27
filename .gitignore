@@ -3,6 +3,7 @@ HELP.md
 ### Gradle ###
 .gradle
 build/
+.gradle/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
@@ -42,8 +43,6 @@ out/
 /config/config-files/*-secret.yml
 /config/config-files/*-secrets.yml
 *-local.yml
-.env
-.env.local
 
 ### macOS ###
 .DS_Store
@@ -79,9 +78,9 @@ wheels/
 *.spec
 
 ### Virtual Environments ###
-venv/
-ENV/
-env/
+.venv/
+.ENV/
+.env/
 .venv/
 services/flaskapi/.venv
 
@@ -94,3 +93,10 @@ services/flaskapi/.venv
 *.mo
 *.swp
 *~
+
+# 개인 단독 실행용 설정
+*-solo.yml
+
+# 개인용 폴더 / 개인 실행 설정 및 캐시 등
+.local/
+.run/

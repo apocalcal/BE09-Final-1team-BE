@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify, current_app
 import os
 from pathlib import Path
 from sqlalchemy.exc import OperationalError
+from datetime import datetime
 # 핵심: 오직 extensions.db만 초기화에 사용
 from .extensions import db  # ← 여기! (원래 .models import db 였다면 교체)
 
