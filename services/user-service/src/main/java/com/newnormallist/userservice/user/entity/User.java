@@ -34,11 +34,11 @@ public class User {
     @Column(nullable = false)
     private String name;
 
-    @Column(name = "birth_year", nullable = false)
+    @Column(name = "birth_year")
     private Integer birthYear;
 
 
-    @Column(name = "gender", nullable = false)
+    @Column(name = "gender")
     private String gender;
 
     @Column(name = "letter_ok", nullable = false)
