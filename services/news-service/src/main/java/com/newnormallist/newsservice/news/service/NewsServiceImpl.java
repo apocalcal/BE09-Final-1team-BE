@@ -1,11 +1,6 @@
 package com.newnormallist.newsservice.news.service;
 
-import com.newnormallist.newsservice.news.dto.CategoryDto;
-import com.newnormallist.newsservice.news.dto.KeywordSubscriptionDto;
-import com.newnormallist.newsservice.news.dto.NewsCrawlDto;
-import com.newnormallist.newsservice.news.dto.NewsListResponse;
-import com.newnormallist.newsservice.news.dto.NewsResponse;
-import com.newnormallist.newsservice.news.dto.TrendingKeywordDto;
+import com.newnormallist.newsservice.news.dto.*;
 import com.newnormallist.newsservice.news.entity.*;
 import com.newnormallist.newsservice.news.exception.NewsNotFoundException;
 
@@ -575,7 +570,37 @@ public class NewsServiceImpl implements NewsService {
             return getDefaultKeywordsByCategory(category, limit);
         }
     }
-    
+
+    @Override
+    public void reportNews(Long newsId, Long userId) {
+
+    }
+
+    @Override
+    public void scrapNews(Long newsId, Long userId) {
+
+    }
+
+    @Override
+    public List<ScrapStorageResponse> getUserScrapStorages(Long userId) {
+        return List.of();
+    }
+
+    @Override
+    public ScrapStorageResponse createCollection(Long userId, String storageName) {
+        return null;
+    }
+
+    @Override
+    public void addNewsToCollection(Long userId, Integer collectionId, Long newsId) {
+
+    }
+
+    @Override
+    public Page<ScrappedNewsResponse> getNewsInCollection(Long userId, Integer collectionId, Pageable pageable) {
+        return null;
+    }
+
     /**
      * 뉴스에서 키워드 추출
      */

@@ -62,6 +62,9 @@ public class SecurityConfig {
                         // 3-3. 뉴스 목록 조회, 상세 조회 등 GET 요청은 누구나 가능하도록 허용합니다.
                         // "/api/news/**" 경로에 대한 GET 요청만 허용합니다. (예: /api/news/list, /api/news/123)
                         .requestMatchers(HttpMethod.GET, "/api/news/**").permitAll() // GET 요청은 모든 사용자에게 접근 허용
+                        
+                        // 3-4. 트렌딩 관련 API는 누구나 접근 가능하도록 허용합니다.
+                        .requestMatchers(HttpMethod.GET, "/api/trending/**").permitAll() // 트렌딩 API는 모든 사용자에게 접근 허용
                         .anyRequest().authenticated()
                 )
 

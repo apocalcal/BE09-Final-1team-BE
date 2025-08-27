@@ -2,15 +2,45 @@
 spring:
   config:
     # Config Server의 주소를 localhost로 변경
-    import: configserver:http://192.168.0.38:8888
-    # import: optional:configserver:http://localhost:8888
+    import: optional:configserver:http://localhost:8888
 
 eureka:
   client:
     serviceUrl:
       # Eureka Server의 주소를 localhost로 변경
-      defaultZone: http://192.168.0.38:8761/eureka/
-      # defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://localhost:8761/eureka/
+
+# 서버 포트 설정
+server:
+  port: 8085
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+# Actuator 엔드포인트 노출 설정
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+# 로깅 설정
+logging:
+  level:
+    com.newsletterservice: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Swagger 설정
+springdoc:
+  api-docs:
+    path: /newsletter-api-docs
+  swagger-ui:
+    path: /newsletter-swagger-ui.html
 
 # Feign Client URL 설정
 news:

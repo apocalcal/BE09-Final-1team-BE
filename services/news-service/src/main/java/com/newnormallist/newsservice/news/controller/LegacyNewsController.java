@@ -55,6 +55,12 @@ public class LegacyNewsController {
         return categoryController.getNewsByCategory(categoryName, pageable);
     }
 
+    @GetMapping("/category/{categoryName}/articles")
+    @Deprecated
+    public ResponseEntity<?> getNewsByCategoryArticles(@PathVariable String categoryName, Pageable pageable) {
+        return categoryController.getNewsByCategory(categoryName, pageable);
+    }
+
     @GetMapping("/trending")
     @Deprecated
     public ResponseEntity<?> getTrendingNews(Pageable pageable) {
