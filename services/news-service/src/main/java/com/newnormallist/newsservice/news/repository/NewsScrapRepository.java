@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface NewsScrapRepository extends JpaRepository<NewsScrap, Integer> {
@@ -28,7 +29,12 @@ public interface NewsScrapRepository extends JpaRepository<NewsScrap, Integer> {
 
     Optional<NewsScrap> findByStorageIdAndNewsNewsId(Integer storageId, Long newsId);
 
+    // 특정 컬렉션의 뉴스 개수를 세는 메서드 추가
+    long countByStorageId(Integer storageId);
+
     @Modifying
     @Transactional
     void deleteByStorageId(Integer storageId);
+
+    Page<NewsScrap> findByStorageIdIn(List<Integer> storageIds, Pageable pageable);
 }
