@@ -1,0 +1,16 @@
+# Venv / Python 캐시
+venv/
+.venv/
+env/
+ENV/
+__pycache__/
+*.pyc
+
+# Git 잡동사니
+.git
+.gitignore
+
+# 기타 불필요
+tests/
+*.log
+.DS_Store
