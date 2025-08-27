@@ -6,6 +6,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
 @Table(name = "news")
@@ -63,4 +64,13 @@ public class News {
     // 뉴스레터와의 N:N 연결
     @OneToMany(mappedBy = "news")
     private List<NewsletterNews> newsletterNewsList;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    @Builder.Default
+    private NewsStatus status = NewsStatus.PUBLISHED;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

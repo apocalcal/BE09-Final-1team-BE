@@ -1,4 +1,4 @@
-package com.newnormallist.newsservice.news.dto;
+package com.newnormallist.newsservice.summarizer.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;

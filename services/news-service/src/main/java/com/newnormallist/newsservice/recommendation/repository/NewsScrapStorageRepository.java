@@ -5,6 +5,6 @@ import java.util.List;
 
 import com.newnormallist.newsservice.recommendation.entity.ScrapStorages;
 
-public interface ScrapStorageRepository extends JpaRepository<ScrapStorages, Integer> {
+public interface NewsScrapStorageRepository extends JpaRepository<ScrapStorages, Integer> {
     List<ScrapStorages> findByUserId(Long userId);
 }
