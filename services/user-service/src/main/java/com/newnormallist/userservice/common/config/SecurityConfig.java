@@ -36,6 +36,7 @@ public class SecurityConfig {
                 .securityMatcher(
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
+                        "/user-api-docs/**",
                         "/swagger-resources/**",
                         "/webjars/**"
                 )
@@ -66,6 +67,7 @@ public class SecurityConfig {
                                 "/api/auth/**", // 인증 관련 엔드포인트는 모두 허용
                                 "/api/auth/oauth2/**", // OAuth2 인가 요청 및 콜백 엔드포인트 허용
                                 "/api/users/signup" // 회원가입 엔드포인트는 모두 허용
+                                , "/api/users/categories" // 카테고리 조회 엔드포인트는 모두 허용
                         ).permitAll()
                         .requestMatchers("/api/users/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated() // 그 외의 요청은 인증 필요
