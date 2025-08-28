@@ -1,67 +1,117 @@
-# main.py
-from app import create_app
+# services/flaskapi/main.py
+# 로컬/도커 겸용 Flask 진입점
+# - .env를 자동 로드
+# - sqlite 경로(.data/flaskapi.sqlite3) 자동 보정
+# - /health, /summary 엔드포인트 제공
+# - 포트: 기본 7001 (ENV PORT로 변경)
+
 import os
+import re
+import argparse
+from pathlib import Path
+from typing import List
 
-app = create_app()
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
-print("DATABASE_URL =", os.getenv("DATABASE_URL"))
+# --- .env 로드 (없어도 통과) ---
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
 
-# --- 기본 헬스/핑 ---
-@app.get("/")
-def root():
-    return {"ok": True, "msg": "alive"}, 200
+# --- 경로/환경 기본값 ---
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / ".data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)  # sqlite 등 저장 폴더 보장
 
-# @app.get("/health")
-# def health():
-#     # 필요하면 여기서 필수 ENV, DB 접근 등 점검 후 500 반환 로직 추가
-#     return {"status": "ok"}, 200
+DEFAULT_SQLITE = f"sqlite:///{(DATA_DIR / 'flaskapi.sqlite3').as_posix()}"
+DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_SQLITE)
+APP_ENV = os.getenv("APP_ENV", "local")
+PORT = int(os.getenv("PORT", "7001"))
 
-# --- 실행 환경 감지 (도커 여부) ---
+# --- 유틸 ---
 def running_in_docker() -> bool:
     return os.path.exists("/.dockerenv") or os.getenv("RUN_IN_DOCKER") == "1"
 
-def is_true(v) -> bool:
-    return str(v).lower() in ("1", "true", "yes", "on")
+def _split_sentences(text: str) -> List[str]:
+    # 한국어/영문 단순 문장 분리기 (구둣점 기준)
+    text = re.sub(r"[\r\n]+", " ", text).strip()
+    # 마침표/물음표/느낌표/종결부호 뒤에서 분리
+    parts = re.split(r"(?<=[\.!\?]|[다요죠음임니까]\s*)\s+", text)
+    # 깨끗하게 정리
+    return [p.strip(" .!?\u3002\uFF01\uFF1F") for p in parts if p and p.strip()]
 
-# --- 설정 ---
-PORT = int(os.getenv("PORT", "5000"))
+# --- 앱 팩토리 ---
+def create_app() -> Flask:
+    app = Flask(__name__)
+    CORS(app)
 
-# Eureka 토글 (기본: 비활성)
-EUREKA_ENABLED = is_true(os.getenv("EUREKA_ENABLED", "false"))
-APP_NAME = os.getenv("APP_NAME", "FLASKAPI")
+    # DB URL을 앱 설정에 심어둠(프로젝트에 SQLAlchemy를 쓰는 경우를 대비)
+    app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+    app.config["APP_ENV"] = APP_ENV
+    app.config["RUNNING_IN_DOCKER"] = running_in_docker()
 
-if running_in_docker():
-    # 컨테이너 내부: 도커 네트워크 호스트명 사용
-    DEFAULT_EUREKA = "http://discovery-service:8761/eureka/"
-    DEFAULT_HOST = "flaskapi"
-else:
-    # 로컬 venv: localhost 사용
-    DEFAULT_EUREKA = "http://localhost:8761/eureka/"
-    DEFAULT_HOST = "localhost"
+    @app.get("/")
+    def root():
+        return {
+            "ok": True,
+            "msg": "flaskapi alive",
+            "env": app.config["APP_ENV"],
+            "docker": app.config["RUNNING_IN_DOCKER"],
+        }, 200
 
-# EUREKA_SERVER = os.getenv("EUREKA_SERVER", DEFAULT_EUREKA)
-# INSTANCE_HOST = os.getenv("INSTANCE_HOST", DEFAULT_HOST)
+    @app.get("/health")
+    def health():
+        # 필요 시 DB 접속 점검 로직 추가 가능
+        return {"status": "UP"}, 200
 
-# # --- Eureka 등록 (옵션⭐) ---
-# if EUREKA_ENABLED and EUREKA_SERVER:
-#     try:
-#         import py_eureka_client.eureka_client as eureka_client
-#         # 필요 시 should_register/fetch, heartbeat 등 옵션 추가 가능
-#         eureka_client.init(
-#             eureka_server=EUREKA_SERVER,
-#             app_name=APP_NAME,
-#             instance_host=INSTANCE_HOST,
-#             instance_port=PORT,
-#             should_register=True,
-#             should_fetch=False,
-#         )
-#         print(f"[Eureka] 등록 완료 server={EUREKA_SERVER} app={APP_NAME} host={INSTANCE_HOST}:{PORT}")
-#     except Exception as e:
-#         # 등록 실패해도 API 자체는 동작하도록 조용히 처리
-#         print("[Eureka] 등록 실패:", e)
-# else:
-#     print("[Eureka] 비활성화됨(EUREKA_ENABLED=false) 또는 서버 미지정")
+    @app.post("/summary")
+    def summary():
+        """
+        요청 예시:
+        {
+          "text": "요약할 본문",
+          "lines": 3,
+          "type": "DEFAULT",        # 선택
+          "promptOverride": "..."   # 선택
+        }
+        """
+        body = request.get_json(silent=True) or {}
+        text = (body.get("text") or "").strip()
+        lines = int(body.get("lines") or 3)
+        if not text:
+            return jsonify({"error": "text is required"}), 400
+
+        # TODO: 여기에 실제 요약 모델/외부 API 호출 연결
+        # 현재는 간단한 더미 요약(문장 분리 후 상위 N개)
+        sents = _split_sentences(text)
+        if not sents:
+            return jsonify({"error": "no sentences parsed"}), 400
+
+        n = max(1, lines)
+        result = sents[:n]
+        return jsonify({
+            "lines": result,
+            "count": len(result),
+            "type": body.get("type") or "DEFAULT",
+        }), 200
+
+    # 필요하면 /summary/prompts, /batch 등 추가 엔드포인트도 여기에 정의
+    return app
+
 
 if __name__ == "__main__":
-    # 로컬 실행용(개발 서버). 운영은 gunicorn 사용.
-    app.run(host="0.0.0.0", port=PORT)
+    # 콘솔 출력: 실행 컨텍스트 요약
+    print(f"[flaskapi] ENV={APP_ENV} PORT={PORT}")
+    print(f"[flaskapi] DATABASE_URL={DATABASE_URL}")
+    print(f"[flaskapi] docker={running_in_docker()} base={BASE_DIR}")
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=PORT)
+    args = parser.parse_args()
+
+    app = create_app()
+    # host=0.0.0.0 → 같은 네트워크의 다른 기기/컨테이너에서도 접근 가능
+    app.run(host="0.0.0.0", port=args.port, debug=(APP_ENV == "local"))
