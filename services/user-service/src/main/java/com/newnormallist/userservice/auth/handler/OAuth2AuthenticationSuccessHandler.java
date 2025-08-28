@@ -32,6 +32,9 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     @Value("${oauth2.redirect.frontend-callback-url}")
     String frontendCallbackUrl; // 프론트엔드 리다이렉트 URL
 
+//    @Value("${oauth2.redirect.frontend-additional-info-url}")
+//    String additionalInfoUrl;
+
     @Override
     public void onAuthenticationSuccess (HttpServletRequest request, HttpServletResponse response,
             Authentication authentication) throws IOException, ServletException {
