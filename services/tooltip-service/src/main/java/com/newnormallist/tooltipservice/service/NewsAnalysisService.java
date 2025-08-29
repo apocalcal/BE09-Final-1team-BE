@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ public class NewsAnalysisService {
 
     private final VocabularyTermRepository vocabularyTermRepository;
     private final NlpService nlpService;
+    private final CacheManager cacheManager;
 
     // Redis 캐시로 변경됨 - 메모리 캐시 제거
 
@@ -33,7 +35,10 @@ public class NewsAnalysisService {
         log.info("뉴스 ID {}의 본문 분석을 시작합니다.", request.newsId());
 
         // Redis 캐시에서 어려운 단어 목록을 가져와서 마크업 처리
+        log.info("🟡 어려운 단어 목록 조회를 시작합니다...");
         Set<String> difficultWords = getDifficultWordsFromCache();
+        log.info("🟢 어려운 단어 목록 조회 완료! 총 {}개 (Redis에서 가져왔다면 위 🔴 로그가 없을 것입니다)", difficultWords.size());
+        
         String analyzedContent = getAnalyzedContent(request.newsId(), request.originalContent(), difficultWords);
 
         return new ProcessContentResponse(analyzedContent);
@@ -45,7 +50,10 @@ public class NewsAnalysisService {
      */
     @Cacheable(value = "difficultWords", key = "'all'")
     public Set<String> getDifficultWordsFromCache() {
-        log.info("Redis 캐시 미스! DB에서 어려운 단어 목록을 로드합니다...");
+        log.info("🔴 REDIS 캐시 미스 발생! DB에서 어려운 단어 목록을 로드합니다...");
+        log.info("🔴 CacheManager 타입: {}", cacheManager.getClass().getSimpleName());
+        log.info("🔴 사용 가능한 캐시: {}", cacheManager.getCacheNames());
+        
         List<VocabularyTerm> allTerms = vocabularyTermRepository.findAll();
         
         Set<String> difficultWords = allTerms.stream()
@@ -53,13 +61,14 @@ public class NewsAnalysisService {
                 .peek(term -> log.debug("DB에서 로드된 어려운 단어: '{}'", term))
                 .collect(java.util.stream.Collectors.toSet());
         
-        log.info("총 {}개의 어려운 단어를 Redis 캐시에 저장합니다.", difficultWords.size());
+        log.info("🔴 총 {}개의 어려운 단어를 Spring이 자동으로 Redis에 저장할 예정입니다.", difficultWords.size());
+        log.info("🔴 저장 위치: Redis key = 'difficultWords::all'");
         
         if (difficultWords.isEmpty()) {
             log.warn("⚠️ DB에 vocabulary_term 데이터가 없습니다!");
         }
         
-        return difficultWords;
+        return difficultWords; // 👈 이 return 후에 Spring이 자동으로 Redis에 저장
     }
 
     @Cacheable(value = "processedContent", key = "#newsId")

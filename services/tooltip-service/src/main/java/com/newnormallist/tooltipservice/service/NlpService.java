@@ -86,7 +86,7 @@ public class NlpService {
                 // 툴팁 기능을 위한 span 태그를 추가합니다.
                 log.info("✅ 마크업 적용: '{}'", term);
                 String originalWord = originalContent.substring(beginIndex, endIndex);
-                markedUpContent.append("<span class=\"tooltip-word\" data-term=\"").append(term).append("\">").append(originalWord).append("</span>");
+                markedUpContent.append("<span class=\"inline\" data-term=\"").append(term).append("\">").append(originalWord).append("</span>");
             } else {
                 // 그렇지 않으면 원본 텍스트를 그대로 추가합니다.
                 String originalWord = originalContent.substring(beginIndex, endIndex);
