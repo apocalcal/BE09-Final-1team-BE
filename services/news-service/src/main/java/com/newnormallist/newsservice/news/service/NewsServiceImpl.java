@@ -10,7 +10,9 @@ import com.newnormallist.newsservice.news.repository.NewsRepository;
 import com.newnormallist.newsservice.news.repository.NewsScrapRepository;
 import com.newnormallist.newsservice.news.repository.ScrapStorageRepository;
 import com.newnormallist.newsservice.news.entity.NewsComplaint;
+import com.newnormallist.newsservice.news.entity.NewsStatus;
 import com.newnormallist.newsservice.news.repository.NewsComplaintRepository;
+import com.newnormallist.newsservice.news.dto.ScrappedNewsResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -604,11 +606,9 @@ public class NewsServiceImpl implements NewsService {
         log.info("뉴스 {}의 총 신고 건수: {}", newsId, complaintCount);
 
         if (complaintCount >= 20) {
-            log.warn("뉴스 {}의 신고 건수가 {}건에 도달하여 경고가 필요합니다.", newsId, complaintCount);
-            // 사용자분께서 "경고문 나오게 바꿔놨어"라고 하신 부분에 대한 구체적인 구현이 필요합니다.
-            // 예를 들어, 뉴스의 상태를 변경하는 코드가 여기에 들어갈 수 있습니다.
-            // news.setDedupState(DedupState.BLOCKED);
-            // newsRepository.save(news);
+            log.warn("뉴스 {}의 신고 건수가 {}건에 도달하여 상태를 HIDDEN으로 변경합니다.", newsId, complaintCount);
+            news.setStatus(NewsStatus.HIDDEN);
+            newsRepository.save(news);
         }
     }
 
@@ -709,7 +709,16 @@ public class NewsServiceImpl implements NewsService {
 
     @Override
     public Page<ScrappedNewsResponse> getNewsInCollection(Long userId, Integer collectionId, Pageable pageable) {
-        return null;
+        // 사용자의 보관함이 맞는지 확인
+        scrapStorageRepository.findById(collectionId)
+                .filter(storage -> storage.getUserId().equals(userId))
+                .orElseThrow(() -> new IllegalStateException("유효하지 않은 스크랩 보관함입니다: " + collectionId));
+
+        // 보관함에 있는 뉴스 스크랩 목록을 가져옴
+        Page<NewsScrap> scrapsPage = newsScrapRepository.findByStorageIdWithNews(collectionId, pageable);
+
+        // ScrappedNewsResponse DTO로 변환
+        return scrapsPage.map(ScrappedNewsResponse::from);
     }
 
     /**
