@@ -13,6 +13,9 @@ import com.newnormallist.newsservice.news.entity.NewsComplaint;
 import com.newnormallist.newsservice.news.entity.NewsStatus;
 import com.newnormallist.newsservice.news.repository.NewsComplaintRepository;
 import com.newnormallist.newsservice.news.dto.ScrappedNewsResponse;
+import com.newnormallist.newsservice.tooltip.client.TooltipServiceClient;
+import com.newnormallist.newsservice.tooltip.dto.ProcessContentRequest;
+import com.newnormallist.newsservice.tooltip.dto.ProcessContentResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -38,6 +41,9 @@ public class NewsServiceImpl implements NewsService {
     
     @Autowired
     private NewsRepository newsRepository;
+    
+    @Autowired
+    private TooltipServiceClient tooltipServiceClient;
     
     @Autowired
     private KeywordSubscriptionRepository keywordSubscriptionRepository;
@@ -107,7 +113,50 @@ public class NewsServiceImpl implements NewsService {
     public NewsResponse getNewsById(Long newsId) {
         News news = newsRepository.findById(newsId)
                 .orElseThrow(() -> new NewsNotFoundException("존재하지 않는 뉴스입니다: " + newsId));
-        return convertToNewsResponse(news);
+        // return convertToNewsResponse(news);
+        // ----- 툴팁 기능을 위한 코드 시작 -----
+        // 툴팁 서비스를 호출하여 마크업된 본문 가져오기
+        String processedContent = getProcessedContent(newsId, news.getContent());
+        
+        return convertToNewsResponseWithTooltip(news, processedContent);
+    }
+    
+    /**
+     * 툴팁 서비스를 호출하여 마크업된 본문을 가져옵니다.
+     * 실패 시 원본 본문을 반환합니다.
+     */
+    private String getProcessedContent(Long newsId, String originalContent) {
+        try {
+            log.info("🟡 뉴스 ID {}에 대해 툴팁 서비스 호출을 시작합니다.", newsId);
+            ProcessContentRequest request = new ProcessContentRequest(newsId, originalContent);
+            ProcessContentResponse response = tooltipServiceClient.processContent(request);
+            log.info("🟢 뉴스 ID {} 툴팁 마크업 완료!", newsId);
+            return response.processedContent();
+        } catch (Exception e) {
+            log.warn("⚠️ 뉴스 ID {} 툴팁 서비스 호출 실패, 원본 텍스트 사용: {}", newsId, e.getMessage());
+            return originalContent;
+        }
+    }
+    
+    /**
+     * 툴팁이 적용된 NewsResponse 생성
+     */
+    private NewsResponse convertToNewsResponseWithTooltip(News news, String processedContent) {
+        return NewsResponse.builder()
+                .newsId(news.getNewsId())
+                .title(news.getTitle())
+                .content(processedContent) // 👈 마크업된 본문
+                .press(news.getPress())
+                .publishedAt(parsePublishedAt(news.getPublishedAt()))
+                .reporterName(news.getReporter())
+                .createdAt(news.getCreatedAt())
+                .updatedAt(news.getUpdatedAt())
+                .trusted(news.getTrusted() ? 1 : 0)
+                .imageUrl(news.getImageUrl())
+                .oidAid(news.getOidAid())
+                .categoryName(news.getCategoryName().name())
+                .build();
+                // ----- 툴팁 기능을 위한 코드 끝 -----
     }
     
     @Override
