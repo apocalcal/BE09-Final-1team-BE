@@ -770,6 +770,22 @@ public class NewsServiceImpl implements NewsService {
         return scrapsPage.map(ScrappedNewsResponse::from);
     }
 
+    @Override
+    public void deleteCollection(Long userId, Integer collectionId) {
+        // 1. 보관함이 사용자의 소유인지 확인
+        ScrapStorage scrapStorage = scrapStorageRepository.findById(collectionId)
+                .filter(storage -> storage.getUserId().equals(userId))
+                .orElseThrow(() -> new IllegalStateException("삭제 권한이 없거나 존재하지 않는 컬렉션입니다: " + collectionId));
+
+        // 2. 해당 보관함에 속한 모든 스크랩(news_scrap)을 삭제
+        newsScrapRepository.deleteByStorageId(collectionId);
+        log.info("컬렉션에 포함된 뉴스 스크랩 삭제 완료: storageId={}", collectionId);
+
+        // 3. 보관함 자체를 삭제
+        scrapStorageRepository.delete(scrapStorage);
+        log.info("컬렉션 삭제 완료: userId={}, storageId={}", userId, collectionId);
+    }
+
     /**
      * 뉴스에서 키워드 추출
      */

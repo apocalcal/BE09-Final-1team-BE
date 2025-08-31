@@ -135,4 +135,15 @@ public class NewsController {
         Page<ScrappedNewsResponse> newsPage = newsService.getNewsInCollection(Long.parseLong(userIdString), collectionId, pageable);
         return ResponseEntity.ok(newsPage);
     }
+
+    @DeleteMapping("/collections/{collectionId}")
+    public ResponseEntity<Void> deleteCollection(
+            @AuthenticationPrincipal String userIdString,
+            @PathVariable Integer collectionId) {
+        if (userIdString == null || "anonymousUser".equals(userIdString)) {
+            throw new UnauthenticatedUserException("사용자 인증 정보가 없습니다. 로그인이 필요합니다.");
+        }
+        newsService.deleteCollection(Long.parseLong(userIdString), collectionId);
+        return ResponseEntity.noContent().build();
+    }
 }
