@@ -66,6 +66,7 @@ def _resolve_prompt_and_type(data, news) -> tuple[str, str, int]:
     )
     return resolved_type, prompt_text, lines
 
+
 @summary_bp.before_app_request
 def _bind_request_id():
     """게이트웨이/서비스에서 주입한 X-Request-ID를 로깅 컨텍스트에 바인딩."""
