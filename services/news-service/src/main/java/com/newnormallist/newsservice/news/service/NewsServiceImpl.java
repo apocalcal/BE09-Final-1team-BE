@@ -7,6 +7,15 @@ import com.newnormallist.newsservice.news.exception.NewsNotFoundException;
 import com.newnormallist.newsservice.news.repository.KeywordSubscriptionRepository;
 import com.newnormallist.newsservice.news.repository.NewsCrawlRepository;
 import com.newnormallist.newsservice.news.repository.NewsRepository;
+import com.newnormallist.newsservice.tooltip.client.TooltipServiceClient;
+import com.newnormallist.newsservice.tooltip.dto.ProcessContentRequest;
+import com.newnormallist.newsservice.tooltip.dto.ProcessContentResponse;
+import com.newnormallist.newsservice.news.repository.NewsScrapRepository;
+import com.newnormallist.newsservice.news.repository.ScrapStorageRepository;
+import com.newnormallist.newsservice.news.entity.NewsComplaint;
+import com.newnormallist.newsservice.news.entity.NewsStatus;
+import com.newnormallist.newsservice.news.repository.NewsComplaintRepository;
+import com.newnormallist.newsservice.news.dto.ScrappedNewsResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -34,8 +43,20 @@ public class NewsServiceImpl implements NewsService {
     private NewsRepository newsRepository;
     
     @Autowired
+    private TooltipServiceClient tooltipServiceClient;
+
+    @Autowired
     private KeywordSubscriptionRepository keywordSubscriptionRepository;
-    
+
+    @Autowired
+    private NewsScrapRepository newsScrapRepository;
+
+    @Autowired
+    private ScrapStorageRepository scrapStorageRepository;
+
+    @Autowired
+    private NewsComplaintRepository newsComplaintRepository;
+
 
 
     // 크롤링 관련 메서드들
@@ -92,7 +113,50 @@ public class NewsServiceImpl implements NewsService {
     public NewsResponse getNewsById(Long newsId) {
         News news = newsRepository.findById(newsId)
                 .orElseThrow(() -> new NewsNotFoundException("존재하지 않는 뉴스입니다: " + newsId));
-        return convertToNewsResponse(news);
+        // return convertToNewsResponse(news);
+        // ----- 툴팁 기능을 위한 코드 시작 -----
+        // 툴팁 서비스를 호출하여 마크업된 본문 가져오기
+        String processedContent = getProcessedContent(newsId, news.getContent());
+
+        return convertToNewsResponseWithTooltip(news, processedContent);
+    }
+
+    /**
+     * 툴팁 서비스를 호출하여 마크업된 본문을 가져옵니다.
+     * 실패 시 원본 본문을 반환합니다.
+     */
+    private String getProcessedContent(Long newsId, String originalContent) {
+        try {
+            log.info("🟡 뉴스 ID {}에 대해 툴팁 서비스 호출을 시작합니다.", newsId);
+            ProcessContentRequest request = new ProcessContentRequest(newsId, originalContent);
+            ProcessContentResponse response = tooltipServiceClient.processContent(request);
+            log.info("🟢 뉴스 ID {} 툴팁 마크업 완료!", newsId);
+            return response.processedContent();
+        } catch (Exception e) {
+            log.warn("⚠️ 뉴스 ID {} 툴팁 서비스 호출 실패, 원본 텍스트 사용: {}", newsId, e.getMessage());
+            return originalContent;
+        }
+    }
+
+    /**
+     * 툴팁이 적용된 NewsResponse 생성
+     */
+    private NewsResponse convertToNewsResponseWithTooltip(News news, String processedContent) {
+        return NewsResponse.builder()
+                .newsId(news.getNewsId())
+                .title(news.getTitle())
+                .content(processedContent) // 👈 마크업된 본문
+                .press(news.getPress())
+                .publishedAt(parsePublishedAt(news.getPublishedAt()))
+                .reporterName(news.getReporter())
+                .createdAt(news.getCreatedAt())
+                .updatedAt(news.getUpdatedAt())
+                .trusted(news.getTrusted() ? 1 : 0)
+                .imageUrl(news.getImageUrl())
+                .oidAid(news.getOidAid())
+                .categoryName(news.getCategoryName().name())
+                .build();
+                // ----- 툴팁 기능을 위한 코드 끝 -----
     }
     
     @Override
@@ -573,32 +637,153 @@ public class NewsServiceImpl implements NewsService {
 
     @Override
     public void reportNews(Long newsId, Long userId) {
+        News news = newsRepository.findById(newsId)
+                .orElseThrow(() -> new NewsNotFoundException("뉴스를 찾을 수 없습니다: " + newsId));
 
+        // TODO: 이미 신고한 사용자인지 체크하는 로직을 추가하면 좋습니다. (중복 신고 방지)
+
+        NewsComplaint complaint = NewsComplaint.builder()
+                .userId(userId)
+                .news(news)
+                .build();
+
+        newsComplaintRepository.save(complaint);
+        log.info("사용자 {}가 뉴스 {}를 신고했습니다. DB 저장 완료.", userId, newsId);
+
+        // 신고 건수 확인
+        long complaintCount = newsComplaintRepository.countByNewsNewsId(newsId);
+        log.info("뉴스 {}의 총 신고 건수: {}", newsId, complaintCount);
+
+        if (complaintCount >= 20) {
+            log.warn("뉴스 {}의 신고 건수가 {}건에 도달하여 상태를 HIDDEN으로 변경합니다.", newsId, complaintCount);
+            news.setStatus(NewsStatus.HIDDEN);
+            newsRepository.save(news);
+        }
     }
 
     @Override
     public void scrapNews(Long newsId, Long userId) {
+        News news = newsRepository.findById(newsId)
+                .orElseThrow(() -> new NewsNotFoundException("뉴스를 찾을 수 없습니다: " + newsId));
 
+        // 사용자의 기본 스크랩 보관함을 찾거나 생성합니다.
+        ScrapStorage scrapStorage = scrapStorageRepository.findByUserId(userId)
+                .stream().findFirst()
+                .orElseGet(() -> {
+                    ScrapStorage newStorage = ScrapStorage.builder()
+                            .userId(userId)
+                            .storageName("기본 보관함")
+                            .build();
+                    return scrapStorageRepository.save(newStorage);
+                });
+
+        // 이미 스크랩되었는지 확인합니다.
+        newsScrapRepository.findByStorageIdAndNewsNewsId(scrapStorage.getStorageId(), newsId)
+                .ifPresent(scrap -> {
+                    throw new IllegalStateException("이미 스크랩된 뉴스입니다.");
+                });
+
+        // NewsScrap 엔티티를 생성하고 저장합니다.
+        NewsScrap newsScrap = NewsScrap.builder()
+                .storageId(scrapStorage.getStorageId())
+                .news(news)
+                .build();
+
+        newsScrapRepository.save(newsScrap);
+        log.info("뉴스 스크랩 완료: userId={}, newsId={}, storageId={}", userId, newsId, scrapStorage.getStorageId());
     }
 
     @Override
     public List<ScrapStorageResponse> getUserScrapStorages(Long userId) {
-        return List.of();
+        return scrapStorageRepository.findByUserId(userId)
+                .stream()
+                .map(this::convertToScrapStorageResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
     public ScrapStorageResponse createCollection(Long userId, String storageName) {
-        return null;
+        // 보관함 이름 중복 체크
+        scrapStorageRepository.findByUserId(userId).stream()
+                .filter(storage -> storage.getStorageName().equals(storageName))
+                .findAny()
+                .ifPresent(storage -> {
+                    throw new IllegalStateException("이미 존재하는 보관함 이름입니다: " + storageName);
+                });
+
+        ScrapStorage newStorage = ScrapStorage.builder()
+                .userId(userId)
+                .storageName(storageName)
+                .build();
+        ScrapStorage savedStorage = scrapStorageRepository.save(newStorage);
+        log.info("새 스크랩 보관함 생성: userId={}, storageName={}", userId, storageName);
+        return convertToScrapStorageResponse(savedStorage);
     }
 
     @Override
     public void addNewsToCollection(Long userId, Integer collectionId, Long newsId) {
+        News news = newsRepository.findById(newsId)
+                .orElseThrow(() -> new NewsNotFoundException("뉴스를 찾을 수 없습니다: " + newsId));
 
+        // 사용자의 보관함이 맞는지 확인
+        ScrapStorage scrapStorage = scrapStorageRepository.findById(collectionId)
+                .filter(storage -> storage.getUserId().equals(userId))
+                .orElseThrow(() -> new IllegalStateException("유효하지 않은 스크랩 보관함입니다: " + collectionId));
+
+        // 이미 스크랩되었는지 확인
+        newsScrapRepository.findByStorageIdAndNewsNewsId(scrapStorage.getStorageId(), newsId)
+                .ifPresent(scrap -> {
+                    throw new IllegalStateException("이미 해당 보관함에 스크랩된 뉴스입니다.");
+                });
+
+        NewsScrap newsScrap = NewsScrap.builder()
+                .storageId(scrapStorage.getStorageId())
+                .news(news)
+                .build();
+
+        newsScrapRepository.save(newsScrap);
+        log.info("컬렉션에 뉴스 추가 완료: userId={}, newsId={}, storageId={}", userId, newsId, collectionId);
+    }
+
+    private ScrapStorageResponse convertToScrapStorageResponse(ScrapStorage storage) {
+        long newsCount = newsScrapRepository.countByStorageId(storage.getStorageId());
+        return ScrapStorageResponse.builder()
+                .storageId(storage.getStorageId())
+                .storageName(storage.getStorageName())
+                .newsCount(newsCount)
+                .createdAt(storage.getCreatedAt())
+                .updatedAt(storage.getUpdatedAt())
+                .build();
     }
 
     @Override
     public Page<ScrappedNewsResponse> getNewsInCollection(Long userId, Integer collectionId, Pageable pageable) {
-        return null;
+        // 사용자의 보관함이 맞는지 확인
+        scrapStorageRepository.findById(collectionId)
+                .filter(storage -> storage.getUserId().equals(userId))
+                .orElseThrow(() -> new IllegalStateException("유효하지 않은 스크랩 보관함입니다: " + collectionId));
+
+        // 보관함에 있는 뉴스 스크랩 목록을 가져옴
+        Page<NewsScrap> scrapsPage = newsScrapRepository.findByStorageIdWithNews(collectionId, pageable);
+
+        // ScrappedNewsResponse DTO로 변환
+        return scrapsPage.map(ScrappedNewsResponse::from);
+    }
+
+    @Override
+    public void deleteCollection(Long userId, Integer collectionId) {
+        // 1. 보관함이 사용자의 소유인지 확인
+        ScrapStorage scrapStorage = scrapStorageRepository.findById(collectionId)
+                .filter(storage -> storage.getUserId().equals(userId))
+                .orElseThrow(() -> new IllegalStateException("삭제 권한이 없거나 존재하지 않는 컬렉션입니다: " + collectionId));
+
+        // 2. 해당 보관함에 속한 모든 스크랩(news_scrap)을 삭제
+        newsScrapRepository.deleteByStorageId(collectionId);
+        log.info("컬렉션에 포함된 뉴스 스크랩 삭제 완료: storageId={}", collectionId);
+
+        // 3. 보관함 자체를 삭제
+        scrapStorageRepository.delete(scrapStorage);
+        log.info("컬렉션 삭제 완료: userId={}, storageId={}", userId, collectionId);
     }
 
     /**
