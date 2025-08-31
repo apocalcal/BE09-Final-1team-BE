@@ -12,6 +12,11 @@ spring:
 server:
   port: 8085
   # port 설정
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 # Actuator 엔드포인트 노출 설정
 management:
@@ -19,3 +24,12 @@ management:
     web:
       exposure:
         include: health,info,metrics
+
+# 로깅 설정
+logging:
+  level:
+    com.newsletterservice: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

@@ -70,11 +70,18 @@ public class TrendingController {
             @RequestParam(defaultValue = "8") int limit,
             @RequestParam(defaultValue = "24") int hours
     ) {
+        log.info("카테고리별 트렌딩 키워드 조회 요청: category={}, limit={}, hours={}", categoryName, limit, hours);
+        
         try {
             Category category = Category.valueOf(categoryName.toUpperCase());
+            log.info("카테고리 변환 성공: {} -> {}", categoryName, category);
+            
             List<TrendingKeywordDto> result = newsService.getTrendingKeywordsByCategory(category, limit);
+            log.info("트렌딩 키워드 조회 결과: category={}, resultSize={}", category, result.size());
+            
             return ResponseEntity.ok(ApiResponse.success(result));
         } catch (IllegalArgumentException e) {
+            log.error("유효하지 않은 카테고리: {}", categoryName);
             return ResponseEntity.badRequest()
                 .body(ApiResponse.fail("유효하지 않은 카테고리입니다: " + categoryName));
         } catch (Exception e) {

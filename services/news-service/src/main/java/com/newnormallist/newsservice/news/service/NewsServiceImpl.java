@@ -1,17 +1,22 @@
 package com.newnormallist.newsservice.news.service;
 
-import com.newnormallist.newsservice.news.dto.CategoryDto;
-import com.newnormallist.newsservice.news.dto.KeywordSubscriptionDto;
-import com.newnormallist.newsservice.news.dto.NewsCrawlDto;
-import com.newnormallist.newsservice.news.dto.NewsListResponse;
-import com.newnormallist.newsservice.news.dto.NewsResponse;
-import com.newnormallist.newsservice.news.dto.TrendingKeywordDto;
+import com.newnormallist.newsservice.news.dto.*;
 import com.newnormallist.newsservice.news.entity.*;
 import com.newnormallist.newsservice.news.exception.NewsNotFoundException;
 
 import com.newnormallist.newsservice.news.repository.KeywordSubscriptionRepository;
 import com.newnormallist.newsservice.news.repository.NewsCrawlRepository;
 import com.newnormallist.newsservice.news.repository.NewsRepository;
+import com.newnormallist.newsservice.tooltip.client.TooltipServiceClient;
+import com.newnormallist.newsservice.tooltip.dto.ProcessContentRequest;
+import com.newnormallist.newsservice.tooltip.dto.ProcessContentResponse;
+import com.newnormallist.newsservice.news.repository.NewsScrapRepository;
+import com.newnormallist.newsservice.news.repository.ScrapStorageRepository;
+import com.newnormallist.newsservice.news.entity.NewsComplaint;
+import com.newnormallist.newsservice.news.entity.NewsStatus;
+import com.newnormallist.newsservice.news.repository.NewsComplaintRepository;
+import com.newnormallist.newsservice.news.dto.ScrappedNewsResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,6 +33,7 @@ import java.util.Map;
 
 @Service
 @Transactional
+@Slf4j
 public class NewsServiceImpl implements NewsService {
 
     @Autowired
@@ -37,8 +43,20 @@ public class NewsServiceImpl implements NewsService {
     private NewsRepository newsRepository;
     
     @Autowired
+    private TooltipServiceClient tooltipServiceClient;
+
+    @Autowired
     private KeywordSubscriptionRepository keywordSubscriptionRepository;
-    
+
+    @Autowired
+    private NewsScrapRepository newsScrapRepository;
+
+    @Autowired
+    private ScrapStorageRepository scrapStorageRepository;
+
+    @Autowired
+    private NewsComplaintRepository newsComplaintRepository;
+
 
 
     // 크롤링 관련 메서드들
@@ -95,7 +113,50 @@ public class NewsServiceImpl implements NewsService {
     public NewsResponse getNewsById(Long newsId) {
         News news = newsRepository.findById(newsId)
                 .orElseThrow(() -> new NewsNotFoundException("존재하지 않는 뉴스입니다: " + newsId));
-        return convertToNewsResponse(news);
+        // return convertToNewsResponse(news);
+        // ----- 툴팁 기능을 위한 코드 시작 -----
+        // 툴팁 서비스를 호출하여 마크업된 본문 가져오기
+        String processedContent = getProcessedContent(newsId, news.getContent());
+
+        return convertToNewsResponseWithTooltip(news, processedContent);
+    }
+
+    /**
+     * 툴팁 서비스를 호출하여 마크업된 본문을 가져옵니다.
+     * 실패 시 원본 본문을 반환합니다.
+     */
+    private String getProcessedContent(Long newsId, String originalContent) {
+        try {
+            log.info("🟡 뉴스 ID {}에 대해 툴팁 서비스 호출을 시작합니다.", newsId);
+            ProcessContentRequest request = new ProcessContentRequest(newsId, originalContent);
+            ProcessContentResponse response = tooltipServiceClient.processContent(request);
+            log.info("🟢 뉴스 ID {} 툴팁 마크업 완료!", newsId);
+            return response.processedContent();
+        } catch (Exception e) {
+            log.warn("⚠️ 뉴스 ID {} 툴팁 서비스 호출 실패, 원본 텍스트 사용: {}", newsId, e.getMessage());
+            return originalContent;
+        }
+    }
+
+    /**
+     * 툴팁이 적용된 NewsResponse 생성
+     */
+    private NewsResponse convertToNewsResponseWithTooltip(News news, String processedContent) {
+        return NewsResponse.builder()
+                .newsId(news.getNewsId())
+                .title(news.getTitle())
+                .content(processedContent) // 👈 마크업된 본문
+                .press(news.getPress())
+                .publishedAt(parsePublishedAt(news.getPublishedAt()))
+                .reporterName(news.getReporter())
+                .createdAt(news.getCreatedAt())
+                .updatedAt(news.getUpdatedAt())
+                .trusted(news.getTrusted() ? 1 : 0)
+                .imageUrl(news.getImageUrl())
+                .oidAid(news.getOidAid())
+                .categoryName(news.getCategoryName().name())
+                .build();
+                // ----- 툴팁 기능을 위한 코드 끝 -----
     }
     
     @Override
@@ -125,7 +186,7 @@ public class NewsServiceImpl implements NewsService {
         // 현재는 view count 필드가 없으므로 나중에 구현
     }
 
-    // 새로운 API 엔드포인트들을 위한 메서드들
+
     @Override
     public Page<NewsListResponse> getTrendingNews(Pageable pageable) {
         return newsRepository.findTrendingNews(pageable)
@@ -510,29 +571,45 @@ public class NewsServiceImpl implements NewsService {
     
     @Override
     public List<TrendingKeywordDto> getTrendingKeywordsByCategory(Category category, int limit) {
-        // 해당 카테고리의 최근 뉴스에서 키워드 추출
-        LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
+        log.info("카테고리별 트렌딩 키워드 조회 시작: category={}, limit={}", category, limit);
+        
+        // 해당 카테고리의 최근 뉴스에서 키워드 추출 (기간을 30일로 확장)
+        LocalDateTime monthAgo = LocalDateTime.now().minusDays(30);
+        log.info("조회 기간: {} ~ {}", monthAgo, LocalDateTime.now());
         
         try {
-            // 해당 카테고리의 최근 뉴스 조회
-            Page<News> categoryNews = newsRepository.findByCategory(category, Pageable.ofSize(100));
+            // 해당 카테고리의 최근 뉴스 조회 (개수를 500개로 증가)
+            Page<News> categoryNews = newsRepository.findByCategory(category, Pageable.ofSize(500));
+            log.info("카테고리 {} 전체 뉴스 수: {}", category, categoryNews.getTotalElements());
+            
             List<News> recentNews = categoryNews.getContent().stream()
                     .filter(news -> {
                         try {
                             LocalDateTime publishedAt = LocalDateTime.parse(news.getPublishedAt());
-                            return publishedAt.isAfter(weekAgo);
+                            return publishedAt.isAfter(monthAgo);
                         } catch (Exception e) {
+                            log.debug("날짜 파싱 실패: newsId={}, publishedAt={}", news.getNewsId(), news.getPublishedAt());
                             return false;
                         }
                     })
                     .collect(Collectors.toList());
+            
+            log.info("카테고리 {}의 최근 뉴스 수: {}", category, recentNews.size());
+            
+            if (recentNews.isEmpty()) {
+                log.warn("최근 뉴스가 없어 기본 키워드를 반환합니다: category={}", category);
+                return getDefaultKeywordsByCategory(category, limit);
+            }
             
             // 키워드 추출 및 빈도 계산
             Map<String, Long> keywordCounts = recentNews.stream()
                     .flatMap(news -> extractKeywordsFromNews(news).stream())
                     .collect(Collectors.groupingBy(keyword -> keyword, Collectors.counting()));
             
-            return keywordCounts.entrySet().stream()
+            log.info("추출된 키워드 수: {}", keywordCounts.size());
+            log.debug("키워드 빈도: {}", keywordCounts);
+            
+            List<TrendingKeywordDto> result = keywordCounts.entrySet().stream()
                     .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
                     .limit(limit)
                     .map(entry -> TrendingKeywordDto.builder()
@@ -541,13 +618,174 @@ public class NewsServiceImpl implements NewsService {
                             .trendScore(entry.getValue().doubleValue())
                             .build())
                     .collect(Collectors.toList());
+            
+            log.info("카테고리별 트렌드 키워드 결과: category={}, resultSize={}", category, result.size());
+            
+            // 결과가 비어있으면 기본 키워드 반환
+            if (result.isEmpty()) {
+                log.info("추출된 키워드가 없어 기본 키워드를 반환합니다: category={}", category);
+                return getDefaultKeywordsByCategory(category, limit);
+            }
+            
+            return result;
                     
         } catch (Exception e) {
-            // log.warn("카테고리별 트렌딩 키워드 조회 실패: category={}", category, e); // Original code had this line commented out
-            return getDefaultKeywords(limit);
+            log.error("카테고리별 트렌딩 키워드 조회 실패: category={}, error={}", category, e.getMessage(), e);
+            return getDefaultKeywordsByCategory(category, limit);
         }
     }
-    
+
+    @Override
+    public void reportNews(Long newsId, Long userId) {
+        News news = newsRepository.findById(newsId)
+                .orElseThrow(() -> new NewsNotFoundException("뉴스를 찾을 수 없습니다: " + newsId));
+
+        // TODO: 이미 신고한 사용자인지 체크하는 로직을 추가하면 좋습니다. (중복 신고 방지)
+
+        NewsComplaint complaint = NewsComplaint.builder()
+                .userId(userId)
+                .news(news)
+                .build();
+
+        newsComplaintRepository.save(complaint);
+        log.info("사용자 {}가 뉴스 {}를 신고했습니다. DB 저장 완료.", userId, newsId);
+
+        // 신고 건수 확인
+        long complaintCount = newsComplaintRepository.countByNewsNewsId(newsId);
+        log.info("뉴스 {}의 총 신고 건수: {}", newsId, complaintCount);
+
+        if (complaintCount >= 20) {
+            log.warn("뉴스 {}의 신고 건수가 {}건에 도달하여 상태를 HIDDEN으로 변경합니다.", newsId, complaintCount);
+            news.setStatus(NewsStatus.HIDDEN);
+            newsRepository.save(news);
+        }
+    }
+
+    @Override
+    public void scrapNews(Long newsId, Long userId) {
+        News news = newsRepository.findById(newsId)
+                .orElseThrow(() -> new NewsNotFoundException("뉴스를 찾을 수 없습니다: " + newsId));
+
+        // 사용자의 기본 스크랩 보관함을 찾거나 생성합니다.
+        ScrapStorage scrapStorage = scrapStorageRepository.findByUserId(userId)
+                .stream().findFirst()
+                .orElseGet(() -> {
+                    ScrapStorage newStorage = ScrapStorage.builder()
+                            .userId(userId)
+                            .storageName("기본 보관함")
+                            .build();
+                    return scrapStorageRepository.save(newStorage);
+                });
+
+        // 이미 스크랩되었는지 확인합니다.
+        newsScrapRepository.findByStorageIdAndNewsNewsId(scrapStorage.getStorageId(), newsId)
+                .ifPresent(scrap -> {
+                    throw new IllegalStateException("이미 스크랩된 뉴스입니다.");
+                });
+
+        // NewsScrap 엔티티를 생성하고 저장합니다.
+        NewsScrap newsScrap = NewsScrap.builder()
+                .storageId(scrapStorage.getStorageId())
+                .news(news)
+                .build();
+
+        newsScrapRepository.save(newsScrap);
+        log.info("뉴스 스크랩 완료: userId={}, newsId={}, storageId={}", userId, newsId, scrapStorage.getStorageId());
+    }
+
+    @Override
+    public List<ScrapStorageResponse> getUserScrapStorages(Long userId) {
+        return scrapStorageRepository.findByUserId(userId)
+                .stream()
+                .map(this::convertToScrapStorageResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public ScrapStorageResponse createCollection(Long userId, String storageName) {
+        // 보관함 이름 중복 체크
+        scrapStorageRepository.findByUserId(userId).stream()
+                .filter(storage -> storage.getStorageName().equals(storageName))
+                .findAny()
+                .ifPresent(storage -> {
+                    throw new IllegalStateException("이미 존재하는 보관함 이름입니다: " + storageName);
+                });
+
+        ScrapStorage newStorage = ScrapStorage.builder()
+                .userId(userId)
+                .storageName(storageName)
+                .build();
+        ScrapStorage savedStorage = scrapStorageRepository.save(newStorage);
+        log.info("새 스크랩 보관함 생성: userId={}, storageName={}", userId, storageName);
+        return convertToScrapStorageResponse(savedStorage);
+    }
+
+    @Override
+    public void addNewsToCollection(Long userId, Integer collectionId, Long newsId) {
+        News news = newsRepository.findById(newsId)
+                .orElseThrow(() -> new NewsNotFoundException("뉴스를 찾을 수 없습니다: " + newsId));
+
+        // 사용자의 보관함이 맞는지 확인
+        ScrapStorage scrapStorage = scrapStorageRepository.findById(collectionId)
+                .filter(storage -> storage.getUserId().equals(userId))
+                .orElseThrow(() -> new IllegalStateException("유효하지 않은 스크랩 보관함입니다: " + collectionId));
+
+        // 이미 스크랩되었는지 확인
+        newsScrapRepository.findByStorageIdAndNewsNewsId(scrapStorage.getStorageId(), newsId)
+                .ifPresent(scrap -> {
+                    throw new IllegalStateException("이미 해당 보관함에 스크랩된 뉴스입니다.");
+                });
+
+        NewsScrap newsScrap = NewsScrap.builder()
+                .storageId(scrapStorage.getStorageId())
+                .news(news)
+                .build();
+
+        newsScrapRepository.save(newsScrap);
+        log.info("컬렉션에 뉴스 추가 완료: userId={}, newsId={}, storageId={}", userId, newsId, collectionId);
+    }
+
+    private ScrapStorageResponse convertToScrapStorageResponse(ScrapStorage storage) {
+        long newsCount = newsScrapRepository.countByStorageId(storage.getStorageId());
+        return ScrapStorageResponse.builder()
+                .storageId(storage.getStorageId())
+                .storageName(storage.getStorageName())
+                .newsCount(newsCount)
+                .createdAt(storage.getCreatedAt())
+                .updatedAt(storage.getUpdatedAt())
+                .build();
+    }
+
+    @Override
+    public Page<ScrappedNewsResponse> getNewsInCollection(Long userId, Integer collectionId, Pageable pageable) {
+        // 사용자의 보관함이 맞는지 확인
+        scrapStorageRepository.findById(collectionId)
+                .filter(storage -> storage.getUserId().equals(userId))
+                .orElseThrow(() -> new IllegalStateException("유효하지 않은 스크랩 보관함입니다: " + collectionId));
+
+        // 보관함에 있는 뉴스 스크랩 목록을 가져옴
+        Page<NewsScrap> scrapsPage = newsScrapRepository.findByStorageIdWithNews(collectionId, pageable);
+
+        // ScrappedNewsResponse DTO로 변환
+        return scrapsPage.map(ScrappedNewsResponse::from);
+    }
+
+    @Override
+    public void deleteCollection(Long userId, Integer collectionId) {
+        // 1. 보관함이 사용자의 소유인지 확인
+        ScrapStorage scrapStorage = scrapStorageRepository.findById(collectionId)
+                .filter(storage -> storage.getUserId().equals(userId))
+                .orElseThrow(() -> new IllegalStateException("삭제 권한이 없거나 존재하지 않는 컬렉션입니다: " + collectionId));
+
+        // 2. 해당 보관함에 속한 모든 스크랩(news_scrap)을 삭제
+        newsScrapRepository.deleteByStorageId(collectionId);
+        log.info("컬렉션에 포함된 뉴스 스크랩 삭제 완료: storageId={}", collectionId);
+
+        // 3. 보관함 자체를 삭제
+        scrapStorageRepository.delete(scrapStorage);
+        log.info("컬렉션 삭제 완료: userId={}, storageId={}", userId, collectionId);
+    }
+
     /**
      * 뉴스에서 키워드 추출
      */
@@ -556,18 +794,23 @@ public class NewsServiceImpl implements NewsService {
         
         // 제목에서 키워드 추출
         if (news.getTitle() != null) {
-            keywords.addAll(extractKeywordsFromText(news.getTitle()));
+            List<String> titleKeywords = extractKeywordsFromText(news.getTitle());
+            log.debug("제목에서 추출된 키워드: {}", titleKeywords);
+            keywords.addAll(titleKeywords);
         }
         
-        // 내용에서 키워드 추출 (내용이 너무 길면 앞부분만 사용)
+        // 내용에서 키워드 추출 (내용이 너무 길면 앞부분만 사용, 길이를 1000자로 증가)
         if (news.getContent() != null) {
             String content = news.getContent();
-            if (content.length() > 500) {
-                content = content.substring(0, 500);
+            if (content.length() > 1000) {
+                content = content.substring(0, 1000);
             }
-            keywords.addAll(extractKeywordsFromText(content));
+            List<String> contentKeywords = extractKeywordsFromText(content);
+            log.debug("내용에서 추출된 키워드 수: {}", contentKeywords.size());
+            keywords.addAll(contentKeywords);
         }
         
+        log.debug("전체 추출된 키워드: {}", keywords);
         return keywords;
     }
     
@@ -579,12 +822,64 @@ public class NewsServiceImpl implements NewsService {
             return new ArrayList<>();
         }
         
-        // 간단한 키워드 추출 로직
-        return Arrays.stream(text.split("\\s+"))
-                .map(word -> word.replaceAll("[^가-힣0-9A-Za-z]", ""))
-                .filter(word -> word.length() >= 2 && word.matches(".*[가-힣].*"))
-                .filter(word -> !STOPWORDS.contains(word))
-                .collect(Collectors.toList());
+        List<String> keywords = new ArrayList<>();
+        
+        // 1. 공백으로 분할
+        String[] words = text.split("\\s+");
+        
+        for (String word : words) {
+            if (word == null || word.trim().isEmpty()) {
+                continue;
+            }
+            
+            // 2. 특수문자 제거 (한글, 영문, 숫자만 남김)
+            String cleanedWord = word.replaceAll("[^가-힣0-9A-Za-z]", "");
+            
+            // 3. 더 관대한 키워드 필터링 조건
+            if (cleanedWord.length() >= 2 && 
+                !STOPWORDS.contains(cleanedWord) &&
+                !cleanedWord.equals("있다") && 
+                !cleanedWord.equals("없다") && 
+                !cleanedWord.equals("하다") && 
+                !cleanedWord.equals("되다") && 
+                !cleanedWord.equals("이다") &&
+                !cleanedWord.equals("것") &&
+                !cleanedWord.equals("수") &&
+                !cleanedWord.equals("등") &&
+                !cleanedWord.equals("및") &&
+                !cleanedWord.equals("또는") &&
+                !cleanedWord.equals("그리고") &&
+                !cleanedWord.equals("이번") &&
+                !cleanedWord.equals("지난") &&
+                !cleanedWord.equals("현재") &&
+                !cleanedWord.equals("최대") &&
+                !cleanedWord.equals("최소") &&
+                !cleanedWord.equals("현장") &&
+                !cleanedWord.equals("관련") &&
+                !cleanedWord.equals("기자") &&
+                !cleanedWord.equals("사진") &&
+                !cleanedWord.equals("영상") &&
+                !cleanedWord.equals("단독") &&
+                !cleanedWord.equals("인터뷰") &&
+                !cleanedWord.equals("종합") &&
+                !cleanedWord.equals("오늘") &&
+                !cleanedWord.equals("내일") &&
+                !cleanedWord.equals("정부") &&
+                !cleanedWord.equals("대통령") &&
+                !cleanedWord.equals("국회") &&
+                !cleanedWord.equals("한국") &&
+                !cleanedWord.equals("대한민국") &&
+                !cleanedWord.equals("뉴스") &&
+                !cleanedWord.equals("기사") &&
+                !cleanedWord.equals("외신")) {
+                
+                keywords.add(cleanedWord);
+                log.debug("추출된 키워드: '{}' (원본: '{}')", cleanedWord, word);
+            }
+        }
+        
+        log.debug("텍스트에서 추출된 키워드 수: {}", keywords.size());
+        return keywords;
     }
     
     /**
@@ -605,11 +900,59 @@ public class NewsServiceImpl implements NewsService {
                 .collect(Collectors.toList());
     }
     
+    /**
+     * 카테고리별 기본 키워드 반환
+     */
+    private List<TrendingKeywordDto> getDefaultKeywordsByCategory(Category category, int limit) {
+        List<String> defaultKeywords = switch (category) {
+            case VEHICLE -> Arrays.asList(
+                "전기차", "자율주행", "대중교통", "도로교통", "친환경", "모빌리티", "자동차시장", "교통정책"
+            );
+            case ECONOMY -> Arrays.asList(
+                "주식", "부동산", "금리", "환율", "투자", "경제정책", "기업실적", "시장동향"
+            );
+            case POLITICS -> Arrays.asList(
+                "정치", "국회", "정부", "외교", "정책", "선거", "여야", "국정감사"
+            );
+            case SOCIETY -> Arrays.asList(
+                "사회", "교육", "복지", "의료", "환경", "안전", "범죄", "사회문제"
+            );
+            case IT_SCIENCE -> Arrays.asList(
+                "AI", "빅데이터", "클라우드", "블록체인", "5G", "반도체", "소프트웨어", "디지털전환"
+            );
+            case INTERNATIONAL -> Arrays.asList(
+                "국제", "외교", "무역", "글로벌", "외국", "국제정세", "외교정책", "국제협력"
+            );
+            case LIFE -> Arrays.asList(
+                "생활", "문화", "건강", "요리", "패션", "여행", "취미", "라이프스타일"
+            );
+            case TRAVEL_FOOD -> Arrays.asList(
+                "여행", "음식", "맛집", "관광", "호텔", "레스토랑", "카페", "여행지"
+            );
+            case ART -> Arrays.asList(
+                "예술", "영화", "음악", "미술", "공연", "문화", "창작", "아트"
+            );
+            default -> Arrays.asList(
+                "주요뉴스", "핫이슈", "트렌드", "분석", "전망", "동향", "소식", "업데이트"
+            );
+        };
+        
+        return defaultKeywords.stream()
+                .limit(limit)
+                .map(keyword -> TrendingKeywordDto.builder()
+                        .keyword(keyword)
+                        .count(1L)
+                        .trendScore(1.0)
+                        .build())
+                .collect(Collectors.toList());
+    }
+    
     // 너무 일반적인 단어는 제외
     private static final Set<String> STOPWORDS = Set.of(
         "속보", "영상", "단독", "인터뷰", "기자", "사진", "종합", "오늘", "내일",
         "정부", "대통령", "국회", "한국", "대한민국", "뉴스", "기사", "외신",
-        "관련", "이번", "지난", "현재", "최대", "최소", "전망", "분석", "현장"
+        "관련", "이번", "지난", "현재", "최대", "최소", "현장", "및", "또는", "그리고",
+        "있다", "없다", "하다", "되다", "이다"
     );
     
     private KeywordSubscriptionDto convertToKeywordSubscriptionDto(KeywordSubscription subscription) {
