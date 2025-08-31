@@ -74,4 +74,5 @@ public interface NewsService {
     ScrapStorageResponse createCollection(Long userId, String storageName);
     void addNewsToCollection(Long userId, Integer collectionId, Long newsId);
     Page<ScrappedNewsResponse> getNewsInCollection(Long userId, Integer collectionId, Pageable pageable);
+    void deleteCollection(Long userId, Integer collectionId);
 }

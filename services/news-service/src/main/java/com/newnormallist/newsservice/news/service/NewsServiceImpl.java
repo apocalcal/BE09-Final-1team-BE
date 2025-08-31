@@ -7,15 +7,15 @@ import com.newnormallist.newsservice.news.exception.NewsNotFoundException;
 import com.newnormallist.newsservice.news.repository.KeywordSubscriptionRepository;
 import com.newnormallist.newsservice.news.repository.NewsCrawlRepository;
 import com.newnormallist.newsservice.news.repository.NewsRepository;
+import com.newnormallist.newsservice.tooltip.client.TooltipServiceClient;
+import com.newnormallist.newsservice.tooltip.dto.ProcessContentRequest;
+import com.newnormallist.newsservice.tooltip.dto.ProcessContentResponse;
 import com.newnormallist.newsservice.news.repository.NewsScrapRepository;
 import com.newnormallist.newsservice.news.repository.ScrapStorageRepository;
 import com.newnormallist.newsservice.news.entity.NewsComplaint;
 import com.newnormallist.newsservice.news.entity.NewsStatus;
 import com.newnormallist.newsservice.news.repository.NewsComplaintRepository;
 import com.newnormallist.newsservice.news.dto.ScrappedNewsResponse;
-import com.newnormallist.newsservice.tooltip.client.TooltipServiceClient;
-import com.newnormallist.newsservice.tooltip.dto.ProcessContentRequest;
-import com.newnormallist.newsservice.tooltip.dto.ProcessContentResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -44,7 +44,7 @@ public class NewsServiceImpl implements NewsService {
     
     @Autowired
     private TooltipServiceClient tooltipServiceClient;
-    
+
     @Autowired
     private KeywordSubscriptionRepository keywordSubscriptionRepository;
 
@@ -56,7 +56,7 @@ public class NewsServiceImpl implements NewsService {
 
     @Autowired
     private NewsComplaintRepository newsComplaintRepository;
-    
+
 
 
     // 크롤링 관련 메서드들
@@ -117,10 +117,10 @@ public class NewsServiceImpl implements NewsService {
         // ----- 툴팁 기능을 위한 코드 시작 -----
         // 툴팁 서비스를 호출하여 마크업된 본문 가져오기
         String processedContent = getProcessedContent(newsId, news.getContent());
-        
+
         return convertToNewsResponseWithTooltip(news, processedContent);
     }
-    
+
     /**
      * 툴팁 서비스를 호출하여 마크업된 본문을 가져옵니다.
      * 실패 시 원본 본문을 반환합니다.
@@ -137,7 +137,7 @@ public class NewsServiceImpl implements NewsService {
             return originalContent;
         }
     }
-    
+
     /**
      * 툴팁이 적용된 NewsResponse 생성
      */
@@ -768,6 +768,22 @@ public class NewsServiceImpl implements NewsService {
 
         // ScrappedNewsResponse DTO로 변환
         return scrapsPage.map(ScrappedNewsResponse::from);
+    }
+
+    @Override
+    public void deleteCollection(Long userId, Integer collectionId) {
+        // 1. 보관함이 사용자의 소유인지 확인
+        ScrapStorage scrapStorage = scrapStorageRepository.findById(collectionId)
+                .filter(storage -> storage.getUserId().equals(userId))
+                .orElseThrow(() -> new IllegalStateException("삭제 권한이 없거나 존재하지 않는 컬렉션입니다: " + collectionId));
+
+        // 2. 해당 보관함에 속한 모든 스크랩(news_scrap)을 삭제
+        newsScrapRepository.deleteByStorageId(collectionId);
+        log.info("컬렉션에 포함된 뉴스 스크랩 삭제 완료: storageId={}", collectionId);
+
+        // 3. 보관함 자체를 삭제
+        scrapStorageRepository.delete(scrapStorage);
+        log.info("컬렉션 삭제 완료: userId={}, storageId={}", userId, collectionId);
     }
 
     /**
