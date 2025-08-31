@@ -115,7 +115,7 @@ public class SummarizerClient {
 
     private Map<String, Object> baseBody(String type, Integer lines, String promptOverride) {
         Map<String, Object> m = new HashMap<>();
-        if (type != null && !type.isBlank()) m.put("type", type);
+        if (type != null && !type.isBlank() && !"DEFAULT".equals(type)) m.put("type", type);
         if (lines != null && lines > 0) m.put("lines", lines);
         if (promptOverride != null && !promptOverride.isBlank()) m.put("prompt", promptOverride);
         return m;
