@@ -38,7 +38,7 @@ springdoc:
     tags-sorter: alpha # 태그 알파벳 정렬
   # 스캔 범위 제한(선택) — 뉴스 서비스 컨트롤러만 문서화
   packages-to-scan: com.newnormallist.newsservice.news.controller
-  paths-to-match: /api/news/**
+  paths-to-match: /api/**
 
 # 6. 추천 시스템 설정
 reco:
