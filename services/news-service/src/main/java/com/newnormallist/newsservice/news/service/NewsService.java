@@ -71,8 +71,11 @@ public interface NewsService {
 
     // 컬렉션 (스크랩 보관함)
     List<ScrapStorageResponse> getUserScrapStorages(Long userId);
+    ScrapStorageResponse getCollectionDetails(Long userId, Integer collectionId);
     ScrapStorageResponse createCollection(Long userId, String storageName);
     void addNewsToCollection(Long userId, Integer collectionId, Long newsId);
     Page<ScrappedNewsResponse> getNewsInCollection(Long userId, Integer collectionId, Pageable pageable);
     void deleteCollection(Long userId, Integer collectionId);
+
+    void assignScrapToStorage(Long userId, Integer newsScrapId, Integer targetStorageId);
 }
