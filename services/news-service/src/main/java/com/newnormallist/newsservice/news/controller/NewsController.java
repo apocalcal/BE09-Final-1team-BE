@@ -3,6 +3,7 @@ package com.newnormallist.newsservice.news.controller;
 import com.newnormallist.newsservice.news.dto.AddNewsToCollectionRequest;
 import com.newnormallist.newsservice.news.dto.CollectionCreateRequest;
 import com.newnormallist.newsservice.news.dto.NewsResponse;
+import com.newnormallist.newsservice.news.dto.ScrappedNewsResponse;
 import com.newnormallist.newsservice.news.dto.ScrapStorageResponse;
 import com.newnormallist.newsservice.news.entity.Category;
 import com.newnormallist.newsservice.news.exception.UnauthenticatedUserException;
@@ -121,5 +122,28 @@ public class NewsController {
         }
         newsService.addNewsToCollection(Long.parseLong(userIdString), collectionId, request.getNewsId());
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/collections/{collectionId}/news")
+    public ResponseEntity<Page<ScrappedNewsResponse>> getNewsInCollection(
+            @AuthenticationPrincipal String userIdString,
+            @PathVariable Integer collectionId,
+            Pageable pageable) {
+        if (userIdString == null || "anonymousUser".equals(userIdString)) {
+            throw new UnauthenticatedUserException("사용자 인증 정보가 없습니다. 로그인이 필요합니다.");
+        }
+        Page<ScrappedNewsResponse> newsPage = newsService.getNewsInCollection(Long.parseLong(userIdString), collectionId, pageable);
+        return ResponseEntity.ok(newsPage);
+    }
+
+    @DeleteMapping("/collections/{collectionId}")
+    public ResponseEntity<Void> deleteCollection(
+            @AuthenticationPrincipal String userIdString,
+            @PathVariable Integer collectionId) {
+        if (userIdString == null || "anonymousUser".equals(userIdString)) {
+            throw new UnauthenticatedUserException("사용자 인증 정보가 없습니다. 로그인이 필요합니다.");
+        }
+        newsService.deleteCollection(Long.parseLong(userIdString), collectionId);
+        return ResponseEntity.noContent().build();
     }
 }
